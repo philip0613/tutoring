@@ -1,6 +1,7 @@
 let currentUser = null;
 let selectedStudentId = null;
 
+// HTML 요소 가져오기
 const loginSection = document.getElementById("loginSection");
 const teacherDashboard = document.getElementById("teacherDashboard");
 const studentDashboard = document.getElementById("studentDashboard");
@@ -12,12 +13,12 @@ const myExamList = document.getElementById("myExamList");
 const myQuestionList = document.getElementById("myQuestionList"); 
 const questionListAdmin = document.getElementById("questionListAdmin"); 
 
-// 🌟 [핵심 스킬] 사진 파일을 텍스트(Base64)로 변환해 주는 마법의 함수
+// 사진 파일을 텍스트(Base64)로 변환해 주는 함수
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]); // 진짜 데이터 부분만 잘라냄
+        reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.onerror = error => reject(error);
     });
 }
@@ -54,7 +55,7 @@ function updateUI() {
     }
 }
 
-// 선생님용 학생 목록
+// [선생님용] 학생 목록
 async function loadStudentList() {
     studentListUl.innerHTML = '<li class="placeholder-text">학생 목록을 불러오는 중... ⏳</li>';
     try {
@@ -82,7 +83,7 @@ async function loadStudentList() {
     }
 }
 
-// 선생님용 질문 목록 (학생 사진 포함)
+// [선생님용] 특정 학생의 질문 목록 (클릭 시 사진 토글)
 async function loadStudentQuestionsAdmin(studentId) {
     questionListAdmin.innerHTML = '<li class="placeholder-text">질문 목록을 불러오는 중... ⏳</li>';
     try {
@@ -98,19 +99,31 @@ async function loadStudentQuestionsAdmin(studentId) {
 
         data.forEach(q => {
             const li = document.createElement("li");
-            // 🌟 사진이 있으면 이미지 태그 추가
-            const imgHtml = q.question_image_url ? `<br><img src="${q.question_image_url}" style="max-width:100%; max-height:200px; border-radius:8px; margin-top:10px;">` : '';
+            li.style.cursor = "pointer"; // 마우스 커서를 손모양으로
+            
+            // 🌟 사진 컨테이너에 기본적으로 hidden 클래스를 부여해서 숨김!
+            const imgHtml = q.question_image_url ? `<div class="img-container hidden" style="margin-top:10px;"><img src="${q.question_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>` : '';
             
             if (q.is_answered) {
                 li.innerHTML = `<span style="color:green">[답변완료]</span> <strong>Q:</strong> ${q.question_text} ${imgHtml}
                     <div style="margin-top:8px; padding:8px; background:#e8f8f5; border-radius:5px;"><strong>👨‍🏫 내 답변:</strong> ${q.answer_text}</div>`;
             } else {
                 li.innerHTML = `<span style="color:red">[답변대기]</span> <strong>Q:</strong> ${q.question_text} ${imgHtml}
-                    <div style="margin-top:10px; display:flex; gap:10px;">
+                    <div class="reply-box" style="margin-top:10px; display:flex; gap:10px;">
                         <input type="text" id="answerInput_${q.id}" placeholder="답변을 입력하세요..." style="flex:1; margin:0; padding:8px; font-size:13px;">
                         <button onclick="submitAnswer(${q.id})" class="secondary-btn" style="width:auto; margin:0; padding:8px 15px; font-size:13px;">답변 달기</button>
                     </div>`;
             }
+
+            // 🌟 질문 클릭 시 사진 보이기/숨기기 토글 이벤트
+            li.addEventListener("click", (e) => {
+                // ⚠️ 답변 입력창(INPUT)이나 버튼(BUTTON)을 누를 때는 사진이 열리지 않도록 차단!
+                if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
+                
+                const imgContainer = li.querySelector(".img-container");
+                if (imgContainer) imgContainer.classList.toggle("hidden");
+            });
+
             questionListAdmin.appendChild(li);
         });
     } catch (err) {
@@ -136,7 +149,7 @@ window.submitAnswer = async function(questionId) {
     }
 };
 
-// 학생용 내 시험결과 (시험지 사진 포함)
+// [학생용] 내 시험결과 (클릭 시 사진 토글)
 async function loadMyExams() {
     myExamList.innerHTML = '<li>불러오는 중... ⏳</li>';
     try {
@@ -149,12 +162,21 @@ async function loadMyExams() {
         } else {
             data.forEach(exam => {
                 const li = document.createElement("li");
+                li.style.cursor = "pointer";
+                
                 let html = `<strong>${exam.exam_title}</strong>: ${exam.score}점`;
-                // 🌟 사진이 있으면 이미지 태그 추가
+                // 🌟 기본적으로 hidden 상태로 컨테이너 생성
                 if (exam.paper_image_url) {
-                    html += `<br><img src="${exam.paper_image_url}" style="max-width:100%; max-height:200px; border-radius:8px; margin-top:10px;">`;
+                    html += `<div class="img-container hidden" style="margin-top:10px;"><img src="${exam.paper_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>`;
                 }
                 li.innerHTML = html;
+
+                // 🌟 시험 결과 클릭 시 사진 토글
+                li.addEventListener("click", () => {
+                    const imgContainer = li.querySelector(".img-container");
+                    if (imgContainer) imgContainer.classList.toggle("hidden");
+                });
+
                 myExamList.appendChild(li);
             });
         }
@@ -163,7 +185,7 @@ async function loadMyExams() {
     }
 }
 
-// 학생용 질문 리스트 (내 사진 포함)
+// [학생용] 내 질문 리스트 (클릭 시 사진 토글)
 async function loadMyQuestions() {
     myQuestionList.innerHTML = '<li>불러오는 중... ⏳</li>';
     try {
@@ -176,12 +198,21 @@ async function loadMyQuestions() {
         } else {
             data.forEach(q => {
                 const li = document.createElement("li");
+                li.style.cursor = "pointer";
+                
                 const status = q.is_answered ? `<span style="color:green">[답변완료]</span>` : `<span style="color:red">[답변대기]</span>`;
                 const answerText = q.is_answered ? `<div style="margin-top:8px; padding:8px; background:#e8f8f5; border-radius:5px;"><strong>👨‍🏫 선생님:</strong> ${q.answer_text}</div>` : '';
-                // 🌟 사진이 있으면 추가
-                const imgHtml = q.question_image_url ? `<br><img src="${q.question_image_url}" style="max-width:100%; max-height:200px; border-radius:8px; margin-top:10px;">` : '';
+                // 🌟 기본적으로 hidden 상태로 사진 숨김
+                const imgHtml = q.question_image_url ? `<div class="img-container hidden" style="margin-top:10px;"><img src="${q.question_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>` : '';
                 
                 li.innerHTML = `${status} <strong>나:</strong> ${q.question_text} ${imgHtml} ${answerText}`;
+                
+                // 🌟 내 질문 클릭 시 사진 토글
+                li.addEventListener("click", () => {
+                    const imgContainer = li.querySelector(".img-container");
+                    if (imgContainer) imgContainer.classList.toggle("hidden");
+                });
+
                 myQuestionList.appendChild(li);
             });
         }
@@ -190,7 +221,7 @@ async function loadMyQuestions() {
     }
 }
 
-// 로그인/로그아웃/학생생성 처리
+// 로그인/로그아웃/학생생성 처리 관련 리스너
 document.getElementById("loginBtn").addEventListener("click", async () => {
     const id = document.getElementById("idInput").value.trim(); 
     const password = document.getElementById("passwordInput").value;
@@ -230,7 +261,7 @@ document.getElementById("createStudentBtn").addEventListener("click", async () =
     } catch (err) { alert("생성 실패: " + err.message); }
 });
 
-// 🌟 [업그레이드] 시험 점수 + '사진' DB에 저장하기 (선생님용)
+// 시험 점수 및 사진 저장
 document.getElementById("uploadExamBtn").addEventListener("click", async () => {
     if (!selectedStudentId) return alert("먼저 학생을 선택해주세요!");
     const title = document.getElementById("examTitle").value.trim();
@@ -239,7 +270,6 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
 
     if (!title || !score) return alert("시험명과 점수를 모두 입력하세요.");
 
-    // 파일 로딩 중임을 알려주는 UI 변경 (업로드가 좀 걸리니까!)
     const btn = document.getElementById("uploadExamBtn");
     btn.innerText = "업로드 중... ⏳";
     btn.disabled = true;
@@ -250,7 +280,7 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
 
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
-            if (file.size > 4 * 1024 * 1024) throw new Error("Vercel 서버 한계로 파일 크기는 4MB를 넘을 수 없습니다."); // 4MB 제한
+            if (file.size > 4 * 1024 * 1024) throw new Error("파일 크기는 4MB를 넘을 수 없습니다.");
             image_base64 = await fileToBase64(file);
             image_name = file.name;
         }
@@ -269,10 +299,10 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
-        alert("✅ 시험 점수(및 사진)가 성공적으로 저장되었습니다!");
+        alert("✅ 시험 점수가 성공적으로 저장되었습니다!");
         document.getElementById("examTitle").value = "";
         document.getElementById("examScore").value = "";
-        fileInput.value = ""; // 파일 선택 창 초기화
+        fileInput.value = ""; 
     } catch (err) {
         alert("저장 실패: " + err.message);
     } finally {
@@ -281,7 +311,7 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
     }
 });
 
-// 🌟 [업그레이드] 모르는 문제 + '사진' 질문 올리기 (학생용)
+// 질문 올리기
 document.getElementById("askQuestionBtn").addEventListener("click", async () => {
     const questionText = document.getElementById("questionText").value.trim();
     const fileInput = document.getElementById("questionImage");
@@ -316,7 +346,7 @@ document.getElementById("askQuestionBtn").addEventListener("click", async () => 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
-        alert("✅ 질문과 사진이 성공적으로 등록되었습니다!");
+        alert("✅ 질문이 성공적으로 등록되었습니다!");
         document.getElementById("questionText").value = "";
         fileInput.value = "";
         loadMyQuestions(); 
