@@ -7,6 +7,8 @@ const teacherDashboard = document.getElementById("teacherDashboard");
 const studentDashboard = document.getElementById("studentDashboard");
 const userInfo = document.getElementById("userInfo");
 const userGreeting = document.getElementById("userGreeting");
+const studentListUl = document.getElementById("studentList");
+const myExamList = document.getElementById("myExamList");
 
 // 1. 초기 상태 체크 (자동 로그인)
 window.onload = () => {
@@ -32,13 +34,36 @@ function updateUI() {
         if (currentUser.role === "admin") {
             teacherDashboard.classList.remove("hidden");
             studentDashboard.classList.add("hidden");
-            
-            // 선생님 로그인 시 학생 목록 불러오기 실행
             loadStudentList(); 
         } else {
             studentDashboard.classList.remove("hidden");
             teacherDashboard.classList.add("hidden");
+            loadMyExams(); // 🌟 학생 로그인 시 내 점수 불러오기 실행!
         }
+    }
+}
+
+// 🌟 [추가됨] 학생이 자기 점수 불러오는 함수
+async function loadMyExams() {
+    myExamList.innerHTML = '<li>불러오는 중... ⏳</li>';
+    try {
+        const res = await fetch(`/api/getExams?student_id=${currentUser.id}`);
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error);
+
+        myExamList.innerHTML = "";
+        if (data.length === 0) {
+            myExamList.innerHTML = '<li>아직 등록된 시험 점수가 없습니다.</li>';
+        } else {
+            data.forEach(exam => {
+                const li = document.createElement("li");
+                li.innerHTML = `<strong>${exam.exam_title}</strong>: ${exam.score}점`;
+                myExamList.appendChild(li);
+            });
+        }
+    } catch (err) {
+        myExamList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`;
     }
 }
 
