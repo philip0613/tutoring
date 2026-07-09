@@ -8,7 +8,6 @@ const studentDashboard = document.getElementById("studentDashboard");
 const userInfo = document.getElementById("userInfo");
 const userGreeting = document.getElementById("userGreeting");
 
-// 학생/선생님 화면용 리스트 요소
 const studentListUl = document.getElementById("studentList");
 const myExamList = document.getElementById("myExamList");
 
@@ -121,12 +120,7 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
 
         if (!res.ok) throw new Error(data.error);
 
-        currentUser = {
-            id: data.user.id,
-            name: data.name,
-            role: data.role,
-            token: data.token // 🌟 토큰도 잘 저장해둠
-        };
+        currentUser = { id: data.user.id, name: data.name, role: data.role, token: data.token };
         localStorage.setItem("tutor_user", JSON.stringify(currentUser));
         
         alert("로그인 성공!");
@@ -144,13 +138,13 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
     updateUI();
     document.getElementById("idInput").value = "";
     document.getElementById("passwordInput").value = "";
+    if(document.getElementById("studentManagePanel")) document.getElementById("studentManagePanel").classList.add("hidden"); 
     
-    // 선생님 패널 숨기기
-    const studentManagePanel = document.getElementById("studentManagePanel");
-    if(studentManagePanel) studentManagePanel.classList.add("hidden"); 
+    // 로그아웃 시 비밀번호 변경창이 열려있었다면 다시 닫아두기
+    document.getElementById("passwordFormContainer").classList.remove("active-form");
 });
 
-// 7. 신규 학생 계정 생성 (선생님용)
+// 7. 신규 학생 계정 생성
 document.getElementById("createStudentBtn").addEventListener("click", async () => {
     const name = document.getElementById("newStudentName").value.trim();
     const id = document.getElementById("newStudentId").value.trim(); 
@@ -171,14 +165,13 @@ document.getElementById("createStudentBtn").addEventListener("click", async () =
         alert(`✅ ${name} 학생 계정이 생성되었습니다!\n(아이디: ${id} / 기본비밀번호: 123456)`);
         document.getElementById("newStudentName").value = "";
         document.getElementById("newStudentId").value = "";
-        
         loadStudentList(); 
     } catch (err) {
         alert("생성 실패: " + err.message);
     }
 });
 
-// 8. 시험 점수 DB에 저장하기 (선생님용)
+// 8. 시험 점수 DB에 저장하기
 document.getElementById("uploadExamBtn").addEventListener("click", async () => {
     if (!selectedStudentId) return alert("먼저 위에서 학생을 선택해주세요!");
 
@@ -191,51 +184,42 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
         const res = await fetch('/api/uploadExam', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                student_id: selectedStudentId, 
-                exam_title: title, 
-                score: parseInt(score) 
-            }) 
+            body: JSON.stringify({ student_id: selectedStudentId, exam_title: title, score: parseInt(score) }) 
         });
         const data = await res.json();
-
         if (!res.ok) throw new Error(data.error);
 
         alert("✅ 시험 점수가 성공적으로 저장되었습니다!");
         document.getElementById("examTitle").value = "";
         document.getElementById("examScore").value = "";
-        
     } catch (err) {
         alert("저장 실패: " + err.message);
     }
 });
 
-// 🌟 9. [새로 추가됨] 비밀번호 변경하기 (학생용)
+// 🌟 9. [추가됨] 비밀번호 변경 폼 열고 닫는 토글 버튼 로직
+document.getElementById("togglePasswordBtn").addEventListener("click", () => {
+    const formContainer = document.getElementById("passwordFormContainer");
+    formContainer.classList.toggle("active-form"); // CSS 클래스를 붙였다 뗐다 하며 슬라이드 애니메이션 실행
+});
+
+// 10. 비밀번호 진짜로 변경하는 처리
 document.getElementById("changePasswordBtn").addEventListener("click", async () => {
     const newPassword = document.getElementById("newPassword").value;
-    
-    // Supabase는 기본적으로 6자리 이상의 비밀번호를 요구해!
     if (newPassword.length < 6) return alert("비밀번호는 최소 6자리 이상이어야 합니다.");
 
     try {
         const res = await fetch('/api/changePassword', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                newPassword: newPassword,
-                token: currentUser.token // 내가 진짜 이 계정 주인이라는 증명서!
-            }) 
+            body: JSON.stringify({ newPassword: newPassword, token: currentUser.token }) 
         });
         const data = await res.json();
-
         if (!res.ok) throw new Error(data.error);
 
         alert("✅ 비밀번호가 성공적으로 변경되었습니다!\n안전을 위해 다시 로그인해 주세요.");
         document.getElementById("newPassword").value = "";
-        
-        // 변경 완료 후 강제 로그아웃 시키기
         document.getElementById("logoutBtn").click(); 
-        
     } catch (err) {
         alert("비밀번호 변경 실패: " + err.message);
     }
