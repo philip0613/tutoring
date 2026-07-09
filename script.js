@@ -15,7 +15,7 @@ const feedbackListAdmin = document.getElementById("feedbackListAdmin");
 const myFeedbackList = document.getElementById("myFeedbackList");
 const examListAdmin = document.getElementById("examListAdmin"); 
 
-// 🌟 [통합됨] 하나의 만능 API(adminAction)로 수정/삭제 통신!
+// 만능 수정/삭제 도우미 함수
 async function universalUpdate(table, id, updateData) {
     const res = await fetch('/api/adminAction', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -185,6 +185,7 @@ document.getElementById("sendFeedbackBtn").addEventListener("click", async () =>
     } catch (err) { alert("등록 실패: " + err.message); }
 });
 
+// 🌟 [선생님용] 학생 질문 리스트 (내가 쓴 답변 수정/삭제 로직 추가)
 async function loadStudentQuestionsAdmin(studentId) {
     questionListAdmin.innerHTML = '<li class="placeholder-text">질문 목록을 불러오는 중... ⏳</li>';
     try {
@@ -198,8 +199,35 @@ async function loadStudentQuestionsAdmin(studentId) {
             const ansImgHtml = q.answer_image_url ? `<div style="margin-top:10px;"><img src="${q.answer_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>` : '';
 
             if (q.is_answered) {
+                // 🌟 답변이 완료된 상태일 때 수정/삭제 버튼을 답변 박스 안에 추가
                 li.innerHTML = `<span style="color:green">[답변완료]</span> <strong>Q:</strong> ${q.question_text} ${imgHtml}
-                    <div style="margin-top:8px; padding:8px; background:#e8f8f5; border-radius:5px;"><strong>👨‍🏫 내 답변:</strong> ${q.answer_text} ${ansImgHtml}</div>`;
+                    <div class="answer-box" style="margin-top:8px; padding:8px; background:#e8f8f5; border-radius:5px;">
+                        <strong>👨‍🏫 내 답변:</strong> <span class="ans-text">${q.answer_text}</span> ${ansImgHtml}
+                    </div>`;
+
+                const btnGroup = createActionButtons(
+                    async () => {
+                        const newText = prompt("답변을 수정하세요:", q.answer_text);
+                        if(newText && newText !== q.answer_text) {
+                            try {
+                                await universalUpdate('questions', q.id, { answer_text: newText });
+                                loadStudentQuestionsAdmin(studentId); // 리스트 새로고침
+                            } catch(e) { alert(e.message); }
+                        }
+                    },
+                    async () => {
+                        if(!confirm("이 답변을 지우고 다시 '답변 대기' 상태로 되돌리시겠습니까?")) return;
+                        try {
+                            // 🌟 학생 질문은 살려두고 내 답변 데이터만 null로 리셋!
+                            await universalUpdate('questions', q.id, { answer_text: null, is_answered: false, answer_image_url: null });
+                            loadStudentQuestionsAdmin(studentId);
+                        } catch(e) { alert(e.message); }
+                    }
+                );
+                
+                // 답변 박스 안에 버튼 그룹을 붙여줌
+                li.querySelector('.answer-box').appendChild(btnGroup);
+
             } else {
                 li.innerHTML = `<span style="color:red">[답변대기]</span> <strong>Q:</strong> ${q.question_text} ${imgHtml}
                     <div class="reply-box" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
@@ -378,7 +406,6 @@ document.getElementById("changePasswordBtn").addEventListener("click", async () 
     } catch (err) { alert("변경 실패: " + err.message); }
 });
 
-// 🌟 [통합됨] 학생 정보 완전 삭제 기능도 adminAction API로 통신
 document.getElementById("deleteStudentBtn").addEventListener("click", async () => {
     if (!selectedStudentId) return alert("선택된 학생이 없습니다.");
     if (!confirm("🚨 정말 삭제하시겠습니까? 데이터가 복구 불가능하게 지워집니다.")) return; 
