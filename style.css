@@ -45,13 +45,10 @@ button { width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border:
 .text-link-btn { width: auto; background: none; color: #888; font-size: 13px; font-weight: normal; padding: 0; margin: 0; text-decoration: underline; display: inline-block; }
 .text-link-btn:hover { color: #555; background: none; }
 
-/* 🌟 여기를 수정함: 애니메이션 대신 확실하게 display: none / flex 사용 */
-.hidden-form { display: none; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 10px; }
-.hidden-form.active-form { display: flex; } 
-
+.hidden-form { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 10px; }
+.hidden-form.active-form { max-height: 100px; } /* 클릭 시 부드럽게 열림 */
 .hidden-form input[type="password"] { width: 220px; padding: 8px 12px; font-size: 13px; margin: 0; }
 .small-btn { width: auto; padding: 8px 15px; font-size: 13px; background-color: #7f8c8d; color: white; margin: 0; }
-.small-btn:hover { background-color: #616a6b; }3px; background-color: #7f8c8d; color: white; margin: 0; }
 .small-btn:hover { background-color: #616a6b; }
 
 /* 유틸리티 */
