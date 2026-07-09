@@ -1,7 +1,6 @@
 let currentUser = null;
 let selectedStudentId = null;
 
-// HTML 요소 가져오기
 const loginSection = document.getElementById("loginSection");
 const teacherDashboard = document.getElementById("teacherDashboard");
 const studentDashboard = document.getElementById("studentDashboard");
@@ -12,8 +11,6 @@ const studentListUl = document.getElementById("studentList");
 const myExamList = document.getElementById("myExamList");
 const myQuestionList = document.getElementById("myQuestionList"); 
 const questionListAdmin = document.getElementById("questionListAdmin"); 
-
-// 🌟 신규 피드백 관련 요소
 const feedbackListAdmin = document.getElementById("feedbackListAdmin");
 const myFeedbackList = document.getElementById("myFeedbackList");
 
@@ -54,12 +51,11 @@ function updateUI() {
             teacherDashboard.classList.add("hidden");
             loadMyExams(); 
             loadMyQuestions(); 
-            loadMyFeedbacks(); // 🌟 학생 로그인 시 피드백 불러오기
+            loadMyFeedbacks(); 
         }
     }
 }
 
-// [선생님용] 학생 목록
 async function loadStudentList() {
     studentListUl.innerHTML = '<li class="placeholder-text">학생 목록을 불러오는 중... ⏳</li>';
     try {
@@ -79,7 +75,7 @@ async function loadStudentList() {
                 document.getElementById("studentManagePanel").classList.remove("hidden");
                 document.getElementById("manageStudentTitle").innerText = `📝 ${student.name} 학생 상세 관리`;
                 loadStudentQuestionsAdmin(student.id);
-                loadStudentFeedbacksAdmin(student.id); // 🌟 클릭 시 피드백 내역도 같이 가져옴
+                loadStudentFeedbacksAdmin(student.id); 
             });
             studentListUl.appendChild(li);
         });
@@ -88,14 +84,12 @@ async function loadStudentList() {
     }
 }
 
-// [선생님용] 특정 학생 피드백 내역 불러오기
 async function loadStudentFeedbacksAdmin(studentId) {
     feedbackListAdmin.innerHTML = '<li class="placeholder-text">기록을 불러오는 중...</li>';
     try {
         const res = await fetch(`/api/getFeedbacks?student_id=${studentId}`);
         const data = await res.json();
         if(!res.ok) throw new Error(data.error);
-
         feedbackListAdmin.innerHTML = "";
         if(data.length === 0) {
             feedbackListAdmin.innerHTML = '<li class="placeholder-text">작성된 피드백이 없습니다.</li>';
@@ -113,7 +107,6 @@ async function loadStudentFeedbacksAdmin(studentId) {
     }
 }
 
-// [선생님용] 피드백 전송 버튼 클릭 이벤트
 document.getElementById("sendFeedbackBtn").addEventListener("click", async () => {
     if (!selectedStudentId) return alert("선택된 학생이 없습니다.");
     const text = document.getElementById("feedbackTextAdmin").value.trim();
@@ -130,13 +123,10 @@ document.getElementById("sendFeedbackBtn").addEventListener("click", async () =>
 
         alert("✅ 피드백이 등록되었습니다!");
         document.getElementById("feedbackTextAdmin").value = "";
-        loadStudentFeedbacksAdmin(selectedStudentId); // 내역 새로고침
-    } catch (err) {
-        alert("등록 실패: " + err.message);
-    }
+        loadStudentFeedbacksAdmin(selectedStudentId); 
+    } catch (err) { alert("등록 실패: " + err.message); }
 });
 
-// [선생님용] 학생 질문 리스트
 async function loadStudentQuestionsAdmin(studentId) {
     questionListAdmin.innerHTML = '<li class="placeholder-text">질문 목록을 불러오는 중... ⏳</li>';
     try {
@@ -178,12 +168,9 @@ async function loadStudentQuestionsAdmin(studentId) {
                 const imgContainer = li.querySelector(".img-container");
                 if (imgContainer) imgContainer.classList.toggle("hidden");
             });
-
             questionListAdmin.appendChild(li);
         });
-    } catch (err) {
-        questionListAdmin.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`;
-    }
+    } catch (err) { questionListAdmin.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`; }
 }
 
 window.submitAnswer = async function(questionId) { 
@@ -212,7 +199,6 @@ window.submitAnswer = async function(questionId) {
     finally { btn.innerText = "답변 등록"; btn.disabled = false; }
 };
 
-// [학생용] 내 시험결과
 async function loadMyExams() {
     myExamList.innerHTML = '<li>불러오는 중... ⏳</li>';
     try {
@@ -241,7 +227,6 @@ async function loadMyExams() {
     } catch (err) { myExamList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`; }
 }
 
-// [학생용] 내 질문 리스트
 async function loadMyQuestions() {
     myQuestionList.innerHTML = '<li>불러오는 중... ⏳</li>';
     try {
@@ -269,7 +254,6 @@ async function loadMyQuestions() {
     } catch (err) { myQuestionList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`; }
 }
 
-// 🌟 [학생용] 선생님이 나에게 준 피드백 확인 기능
 async function loadMyFeedbacks() {
     myFeedbackList.innerHTML = '<li>불러오는 중...</li>';
     try {
@@ -290,12 +274,9 @@ async function loadMyFeedbacks() {
             li.style.background = "#fff";
             myFeedbackList.appendChild(li);
         });
-    } catch (err) {
-        myFeedbackList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`;
-    }
+    } catch (err) { myFeedbackList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`; }
 }
 
-// 로그인/로그아웃/학생생성 처리 관련 리스너
 document.getElementById("loginBtn").addEventListener("click", async () => {
     const id = document.getElementById("idInput").value.trim(); 
     const password = document.getElementById("passwordInput").value;
@@ -400,4 +381,32 @@ document.getElementById("changePasswordBtn").addEventListener("click", async () 
         alert("✅ 비밀번호 변경 완료!\n다시 로그인해 주세요.");
         document.getElementById("newPassword").value = ""; document.getElementById("logoutBtn").click(); 
     } catch (err) { alert("비밀번호 변경 실패: " + err.message); }
+});
+
+// 🌟 [추가됨] 학생 정보 완전 삭제 기능
+document.getElementById("deleteStudentBtn").addEventListener("click", async () => {
+    if (!selectedStudentId) return alert("선택된 학생이 없습니다.");
+    
+    const doubleCheck = confirm("🚨 [경고] 정말로 이 학생을 삭제하시겠습니까?\n삭제 시 학생의 시험 점수, 질문 내역, 알림장 기록이 '복구 불가능'하게 완전히 지워집니다.");
+    
+    if (!doubleCheck) return; 
+
+    try {
+        const res = await fetch('/api/deleteStudent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: selectedStudentId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        alert("✅ 학생의 모든 정보가 데이터베이스에서 완벽하게 삭제되었습니다.");
+        
+        document.getElementById("studentManagePanel").classList.add("hidden");
+        selectedStudentId = null;
+        
+        loadStudentList(); 
+    } catch (err) {
+        alert("삭제 작업 실패: " + err.message);
+    }
 });
