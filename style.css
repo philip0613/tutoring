@@ -1,0 +1,45 @@
+/* 기본 리셋 및 폰트 설정 */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Pretendard', 'Arial', sans-serif; background-color: #f0f2f5; color: #333; line-height: 1.6; }
+
+/* 헤더 스타일 */
+header { background-color: #ffffff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+header h1 { font-size: 20px; color: #2c3e50; }
+#userInfo { display: flex; align-items: center; gap: 15px; font-weight: bold; }
+
+/* 레이아웃 구조 */
+.container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+.grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 768px) { .grid-container { grid-template-columns: 1fr; } } /* 모바일 호환 */
+
+/* 카드(패널) 디자인 */
+.card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 20px; }
+.sub-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+
+/* 대시보드 헤더 (선생님 vs 학생 색상 구분) */
+.dashboard-header { padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; text-align: center; }
+.admin-bg { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+.student-bg { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+
+/* 입력창(Input) 및 버튼 디자인 */
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="file"] {
+    width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 15px;
+}
+input:focus { border-color: #4facfe; outline: none; }
+
+button { width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+.primary-btn { background-color: #3498db; color: white; }
+.primary-btn:hover { background-color: #2980b9; }
+.secondary-btn { background-color: #2ecc71; color: white; }
+.secondary-btn:hover { background-color: #27ae60; }
+#logoutBtn { width: auto; padding: 8px 15px; font-size: 14px; background-color: #e74c3c; margin-top: 0; }
+
+/* 목록(리스트) 스타일 */
+.item-list { list-style: none; margin-top: 10px; max-height: 300px; overflow-y: auto; }
+.item-list li { background: #fff; border: 1px solid #e1e4e8; padding: 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
+.item-list li:hover { border-color: #3498db; transform: translateY(-2px); }
+.placeholder-text { color: #888; text-align: center; border: none !important; cursor: default !important; }
+
+/* 유틸리티 */
+.hidden { display: none !important; }
+.mt-20 { margin-top: 20px; }
