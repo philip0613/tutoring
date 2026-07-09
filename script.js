@@ -1,6 +1,7 @@
 let currentUser = null;
 let selectedStudentId = null;
 
+// HTML 요소 가져오기
 const loginSection = document.getElementById("loginSection");
 const teacherDashboard = document.getElementById("teacherDashboard");
 const studentDashboard = document.getElementById("studentDashboard");
@@ -11,6 +12,10 @@ const studentListUl = document.getElementById("studentList");
 const myExamList = document.getElementById("myExamList");
 const myQuestionList = document.getElementById("myQuestionList"); 
 const questionListAdmin = document.getElementById("questionListAdmin"); 
+
+// 🌟 신규 피드백 관련 요소
+const feedbackListAdmin = document.getElementById("feedbackListAdmin");
+const myFeedbackList = document.getElementById("myFeedbackList");
 
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -49,10 +54,12 @@ function updateUI() {
             teacherDashboard.classList.add("hidden");
             loadMyExams(); 
             loadMyQuestions(); 
+            loadMyFeedbacks(); // 🌟 학생 로그인 시 피드백 불러오기
         }
     }
 }
 
+// [선생님용] 학생 목록
 async function loadStudentList() {
     studentListUl.innerHTML = '<li class="placeholder-text">학생 목록을 불러오는 중... ⏳</li>';
     try {
@@ -72,6 +79,7 @@ async function loadStudentList() {
                 document.getElementById("studentManagePanel").classList.remove("hidden");
                 document.getElementById("manageStudentTitle").innerText = `📝 ${student.name} 학생 상세 관리`;
                 loadStudentQuestionsAdmin(student.id);
+                loadStudentFeedbacksAdmin(student.id); // 🌟 클릭 시 피드백 내역도 같이 가져옴
             });
             studentListUl.appendChild(li);
         });
@@ -80,7 +88,55 @@ async function loadStudentList() {
     }
 }
 
-// 🌟 [선생님용] 학생 질문 리스트 & 답변에 사진 첨부 UI 추가
+// [선생님용] 특정 학생 피드백 내역 불러오기
+async function loadStudentFeedbacksAdmin(studentId) {
+    feedbackListAdmin.innerHTML = '<li class="placeholder-text">기록을 불러오는 중...</li>';
+    try {
+        const res = await fetch(`/api/getFeedbacks?student_id=${studentId}`);
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error);
+
+        feedbackListAdmin.innerHTML = "";
+        if(data.length === 0) {
+            feedbackListAdmin.innerHTML = '<li class="placeholder-text">작성된 피드백이 없습니다.</li>';
+            return;
+        }
+        data.forEach(f => {
+            const li = document.createElement("li");
+            const date = new Date(f.created_at).toLocaleDateString();
+            li.innerHTML = `<small style="color:#888;">[${date}]</small> ${f.feedback_text}`;
+            li.style.cursor = "default";
+            feedbackListAdmin.appendChild(li);
+        });
+    } catch (err) {
+        feedbackListAdmin.innerHTML = `<li>에러: ${err.message}</li>`;
+    }
+}
+
+// [선생님용] 피드백 전송 버튼 클릭 이벤트
+document.getElementById("sendFeedbackBtn").addEventListener("click", async () => {
+    if (!selectedStudentId) return alert("선택된 학생이 없습니다.");
+    const text = document.getElementById("feedbackTextAdmin").value.trim();
+    if (!text) return alert("피드백 내용을 입력해 주세요.");
+
+    try {
+        const res = await fetch('/api/sendFeedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: selectedStudentId, feedback_text: text })
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error);
+
+        alert("✅ 피드백이 등록되었습니다!");
+        document.getElementById("feedbackTextAdmin").value = "";
+        loadStudentFeedbacksAdmin(selectedStudentId); // 내역 새로고침
+    } catch (err) {
+        alert("등록 실패: " + err.message);
+    }
+});
+
+// [선생님용] 학생 질문 리스트
 async function loadStudentQuestionsAdmin(studentId) {
     questionListAdmin.innerHTML = '<li class="placeholder-text">질문 목록을 불러오는 중... ⏳</li>';
     try {
@@ -99,14 +155,12 @@ async function loadStudentQuestionsAdmin(studentId) {
             li.style.cursor = "pointer"; 
             
             const imgHtml = q.question_image_url ? `<div class="img-container hidden" style="margin-top:10px;"><img src="${q.question_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>` : '';
-            // 🌟 선생님이 올린 답변 사진 HTML 생성
             const ansImgHtml = q.answer_image_url ? `<div style="margin-top:10px;"><img src="${q.answer_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>` : '';
 
             if (q.is_answered) {
                 li.innerHTML = `<span style="color:green">[답변완료]</span> <strong>Q:</strong> ${q.question_text} ${imgHtml}
                     <div style="margin-top:8px; padding:8px; background:#e8f8f5; border-radius:5px;">
-                        <strong>👨‍🏫 내 답변:</strong> ${q.answer_text}
-                        ${ansImgHtml}
+                        <strong>👨‍🏫 내 답변:</strong> ${q.answer_text} ${ansImgHtml}
                     </div>`;
             } else {
                 li.innerHTML = `<span style="color:red">[답변대기]</span> <strong>Q:</strong> ${q.question_text} ${imgHtml}
@@ -132,51 +186,33 @@ async function loadStudentQuestionsAdmin(studentId) {
     }
 }
 
-// 🌟 [선생님용] 답변 보낼 때 사진 데이터도 같이 전송
 window.submitAnswer = async function(questionId) { 
     const answerText = document.getElementById(`answerInput_${questionId}`).value.trim();
     const fileInput = document.getElementById(`answerImage_${questionId}`);
     const btn = document.getElementById(`answerBtn_${questionId}`);
-
     if (!answerText) return alert("답변 내용을 입력하세요.");
-
-    btn.innerText = "등록 중... ⏳";
-    btn.disabled = true;
-
+    btn.innerText = "등록 중... ⏳"; btn.disabled = true;
     try {
-        let image_base64 = null;
-        let image_name = null;
-
+        let image_base64 = null; let image_name = null;
         if (fileInput && fileInput.files.length > 0) {
             const file = fileInput.files[0];
             if (file.size > 4 * 1024 * 1024) throw new Error("파일 크기는 4MB를 넘을 수 없습니다.");
-            image_base64 = await fileToBase64(file);
-            image_name = file.name;
+            image_base64 = await fileToBase64(file); image_name = file.name;
         }
-
         const res = await fetch('/api/answerQuestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                question_id: questionId, 
-                answer_text: answerText,
-                image_base64: image_base64,
-                image_name: image_name
-            })
+            body: JSON.stringify({ question_id: questionId, answer_text: answerText, image_base64: image_base64, image_name: image_name })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-
-        alert("✅ 답변(및 사진) 등록 완료!");
+        alert("✅ 답변 등록 완료!");
         loadStudentQuestionsAdmin(selectedStudentId); 
-    } catch (err) {
-        alert("답변 등록 실패: " + err.message);
-    } finally {
-        btn.innerText = "답변 등록";
-        btn.disabled = false;
-    }
+    } catch (err) { alert("답변 등록 실패: " + err.message); } 
+    finally { btn.innerText = "답변 등록"; btn.disabled = false; }
 };
 
+// [학생용] 내 시험결과
 async function loadMyExams() {
     myExamList.innerHTML = '<li>불러오는 중... ⏳</li>';
     try {
@@ -190,27 +226,22 @@ async function loadMyExams() {
             data.forEach(exam => {
                 const li = document.createElement("li");
                 li.style.cursor = "pointer";
-                
                 let html = `<strong>${exam.exam_title}</strong>: ${exam.score}점`;
                 if (exam.paper_image_url) {
                     html += `<div class="img-container hidden" style="margin-top:10px;"><img src="${exam.paper_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>`;
                 }
                 li.innerHTML = html;
-
                 li.addEventListener("click", () => {
                     const imgContainer = li.querySelector(".img-container");
                     if (imgContainer) imgContainer.classList.toggle("hidden");
                 });
-
                 myExamList.appendChild(li);
             });
         }
-    } catch (err) {
-        myExamList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`;
-    }
+    } catch (err) { myExamList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`; }
 }
 
-// 🌟 [학생용] 선생님이 달아준 사진 보기 추가
+// [학생용] 내 질문 리스트
 async function loadMyQuestions() {
     myQuestionList.innerHTML = '<li>불러오는 중... ⏳</li>';
     try {
@@ -222,35 +253,49 @@ async function loadMyQuestions() {
             myQuestionList.innerHTML = '<li>아직 등록된 질문이 없습니다.</li>';
         } else {
             data.forEach(q => {
-                const li = document.createElement("li");
-                li.style.cursor = "pointer";
-                
+                const li = document.createElement("li"); li.style.cursor = "pointer";
                 const status = q.is_answered ? `<span style="color:green">[답변완료]</span>` : `<span style="color:red">[답변대기]</span>`;
-                
-                // 학생 본인이 올린 사진 (숨김 처리)
                 const imgHtml = q.question_image_url ? `<div class="img-container hidden" style="margin-top:10px;"><img src="${q.question_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>` : '';
-                
-                // 🌟 선생님이 올려준 사진 (기본으로 보이게 세팅)
                 const ansImgHtml = q.answer_image_url ? `<div style="margin-top:10px;"><img src="${q.answer_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>` : '';
-                
                 const answerText = q.is_answered ? `<div style="margin-top:8px; padding:8px; background:#e8f8f5; border-radius:5px;"><strong>👨‍🏫 선생님:</strong> ${q.answer_text} ${ansImgHtml}</div>` : '';
-                
                 li.innerHTML = `${status} <strong>나:</strong> ${q.question_text} ${imgHtml} ${answerText}`;
-                
                 li.addEventListener("click", () => {
                     const imgContainer = li.querySelector(".img-container");
                     if (imgContainer) imgContainer.classList.toggle("hidden");
                 });
-
                 myQuestionList.appendChild(li);
             });
         }
+    } catch (err) { myQuestionList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`; }
+}
+
+// 🌟 [학생용] 선생님이 나에게 준 피드백 확인 기능
+async function loadMyFeedbacks() {
+    myFeedbackList.innerHTML = '<li>불러오는 중...</li>';
+    try {
+        const res = await fetch(`/api/getFeedbacks?student_id=${currentUser.id}`);
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error);
+
+        myFeedbackList.innerHTML = "";
+        if(data.length === 0) {
+            myFeedbackList.innerHTML = '<li class="placeholder-text">아직 도착한 알림장/피드백이 없습니다.</li>';
+            return;
+        }
+        data.forEach(f => {
+            const li = document.createElement("li");
+            const date = new Date(f.created_at).toLocaleDateString();
+            li.innerHTML = `<small style="color:#3498db; font-weight:bold;">[📅 ${date} 과외 일지]</small><br><p style="margin-top:5px; font-size:14px; color:#444;">${f.feedback_text}</p>`;
+            li.style.cursor = "default";
+            li.style.background = "#fff";
+            myFeedbackList.appendChild(li);
+        });
     } catch (err) {
-        myQuestionList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`;
+        myFeedbackList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`;
     }
 }
 
-// 로그인/로그아웃/학생생성 처리
+// 로그인/로그아웃/학생생성 처리 관련 리스너
 document.getElementById("loginBtn").addEventListener("click", async () => {
     const id = document.getElementById("idInput").value.trim(); 
     const password = document.getElementById("passwordInput").value;
@@ -268,8 +313,7 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
     localStorage.removeItem("tutor_user");
-    currentUser = null; selectedStudentId = null; 
-    updateUI();
+    currentUser = null; selectedStudentId = null; updateUI();
     document.getElementById("idInput").value = ""; document.getElementById("passwordInput").value = "";
     if(document.getElementById("studentManagePanel")) document.getElementById("studentManagePanel").classList.add("hidden"); 
     document.getElementById("passwordFormContainer").classList.remove("active-form");
@@ -295,23 +339,15 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
     const title = document.getElementById("examTitle").value.trim();
     const score = document.getElementById("examScore").value;
     const fileInput = document.getElementById("examImage");
-
     if (!title || !score) return alert("시험명과 점수를 모두 입력하세요.");
-
-    const btn = document.getElementById("uploadExamBtn");
-    btn.innerText = "업로드 중... ⏳";
-    btn.disabled = true;
-
+    const btn = document.getElementById("uploadExamBtn"); btn.innerText = "업로드 중... ⏳"; btn.disabled = true;
     try {
-        let image_base64 = null;
-        let image_name = null;
+        let image_base64 = null; let image_name = null;
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
             if (file.size > 4 * 1024 * 1024) throw new Error("파일 크기는 4MB를 넘을 수 없습니다.");
-            image_base64 = await fileToBase64(file);
-            image_name = file.name;
+            image_base64 = await fileToBase64(file); image_name = file.name;
         }
-
         const res = await fetch('/api/uploadExam', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -319,11 +355,8 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-
         alert("✅ 시험 점수가 성공적으로 저장되었습니다!");
-        document.getElementById("examTitle").value = "";
-        document.getElementById("examScore").value = "";
-        fileInput.value = ""; 
+        document.getElementById("examTitle").value = ""; document.getElementById("examScore").value = ""; fileInput.value = ""; 
     } catch (err) { alert("저장 실패: " + err.message); } 
     finally { btn.innerText = "시험지 업로드 및 점수 저장"; btn.disabled = false; }
 });
@@ -331,23 +364,15 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
 document.getElementById("askQuestionBtn").addEventListener("click", async () => {
     const questionText = document.getElementById("questionText").value.trim();
     const fileInput = document.getElementById("questionImage");
-
     if (!questionText) return alert("질문할 내용을 입력해주세요!");
-
-    const btn = document.getElementById("askQuestionBtn");
-    btn.innerText = "질문 올리는 중... ⏳";
-    btn.disabled = true;
-
+    const btn = document.getElementById("askQuestionBtn"); btn.innerText = "질문 올리는 중... ⏳"; btn.disabled = true;
     try {
-        let image_base64 = null;
-        let image_name = null;
+        let image_base64 = null; let image_name = null;
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
             if (file.size > 4 * 1024 * 1024) throw new Error("파일 크기는 4MB를 넘을 수 없습니다.");
-            image_base64 = await fileToBase64(file);
-            image_name = file.name;
+            image_base64 = await fileToBase64(file); image_name = file.name;
         }
-
         const res = await fetch('/api/askQuestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -355,11 +380,8 @@ document.getElementById("askQuestionBtn").addEventListener("click", async () => 
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-
         alert("✅ 질문이 성공적으로 등록되었습니다!");
-        document.getElementById("questionText").value = "";
-        fileInput.value = "";
-        loadMyQuestions(); 
+        document.getElementById("questionText").value = ""; fileInput.value = ""; loadMyQuestions(); 
     } catch (err) { alert("질문 등록 실패: " + err.message); } 
     finally { btn.innerText = "질문 올리기"; btn.disabled = false; }
 });
@@ -376,7 +398,6 @@ document.getElementById("changePasswordBtn").addEventListener("click", async () 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         alert("✅ 비밀번호 변경 완료!\n다시 로그인해 주세요.");
-        document.getElementById("newPassword").value = "";
-        document.getElementById("logoutBtn").click(); 
+        document.getElementById("newPassword").value = ""; document.getElementById("logoutBtn").click(); 
     } catch (err) { alert("비밀번호 변경 실패: " + err.message); }
 });
