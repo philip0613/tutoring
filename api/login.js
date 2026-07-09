@@ -1,11 +1,13 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
-    const { email, password } = req.body;
+    
+    const { id, password } = req.body;
+    const email = `${id}@tutor.com`; // 꼼수: 아이디를 이메일 형식으로 변환
+    
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_KEY;
 
     try {
-        // 1. Supabase 로그인 요청
         const authRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'apikey': supabaseKey },
@@ -16,7 +18,6 @@ export default async function handler(req, res) {
 
         const userId = authData.user.id;
 
-        // 2. profiles 테이블에서 이름과 역할(role) 가져오기
         const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=role,name`, {
             headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${authData.access_token}` }
         });
