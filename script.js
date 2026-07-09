@@ -1,5 +1,5 @@
 let currentUser = null;
-let selectedStudentId = null; // 클릭한 학생의 ID를 저장할 변수
+let selectedStudentId = null;
 
 // HTML 요소 가져오기
 const loginSection = document.getElementById("loginSection");
@@ -7,6 +7,8 @@ const teacherDashboard = document.getElementById("teacherDashboard");
 const studentDashboard = document.getElementById("studentDashboard");
 const userInfo = document.getElementById("userInfo");
 const userGreeting = document.getElementById("userGreeting");
+
+// 학생/선생님 화면용 리스트 요소
 const studentListUl = document.getElementById("studentList");
 const myExamList = document.getElementById("myExamList");
 
@@ -38,12 +40,47 @@ function updateUI() {
         } else {
             studentDashboard.classList.remove("hidden");
             teacherDashboard.classList.add("hidden");
-            loadMyExams(); // 🌟 학생 로그인 시 내 점수 불러오기 실행!
+            loadMyExams(); 
         }
     }
 }
 
-// 🌟 [추가됨] 학생이 자기 점수 불러오는 함수
+// 3. 학생 목록 불러오기 (선생님용)
+async function loadStudentList() {
+    studentListUl.innerHTML = '<li class="placeholder-text">학생 목록을 불러오는 중... ⏳</li>';
+
+    try {
+        const res = await fetch('/api/getStudents');
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error);
+
+        studentListUl.innerHTML = "";
+
+        if (data.length === 0) {
+            studentListUl.innerHTML = '<li class="placeholder-text">등록된 학생이 없습니다.</li>';
+            return;
+        }
+
+        data.forEach(student => {
+            const li = document.createElement("li");
+            li.innerText = `👤 ${student.name} 학생`;
+            
+            li.addEventListener("click", () => {
+                selectedStudentId = student.id; 
+                document.getElementById("studentManagePanel").classList.remove("hidden");
+                document.getElementById("manageStudentTitle").innerText = `📝 ${student.name} 학생 상세 관리`;
+            });
+            
+            studentListUl.appendChild(li);
+        });
+
+    } catch (err) {
+        studentListUl.innerHTML = `<li class="placeholder-text" style="color:red;">에러: ${err.message}</li>`;
+    }
+}
+
+// 4. 내 시험 결과 불러오기 (학생용)
 async function loadMyExams() {
     myExamList.innerHTML = '<li>불러오는 중... ⏳</li>';
     try {
@@ -67,45 +104,7 @@ async function loadMyExams() {
     }
 }
 
-// 3. 학생 목록 불러오기 및 클릭 이벤트
-async function loadStudentList() {
-    const studentListUl = document.getElementById("studentList");
-    studentListUl.innerHTML = '<li class="placeholder-text">학생 목록을 불러오는 중... ⏳</li>';
-
-    try {
-        const res = await fetch('/api/getStudents');
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error);
-
-        studentListUl.innerHTML = "";
-
-        if (data.length === 0) {
-            studentListUl.innerHTML = '<li class="placeholder-text">등록된 학생이 없습니다.</li>';
-            return;
-        }
-
-        // 학생 목록 생성 및 클릭 이벤트 추가
-        data.forEach(student => {
-            const li = document.createElement("li");
-            li.innerText = `👤 ${student.name} 학생`;
-            
-            // 리스트를 클릭했을 때 패널 열기
-            li.addEventListener("click", () => {
-                selectedStudentId = student.id; // 누구를 클릭했는지 ID 기억하기
-                document.getElementById("studentManagePanel").classList.remove("hidden");
-                document.getElementById("manageStudentTitle").innerText = `📝 ${student.name} 학생 상세 관리`;
-            });
-            
-            studentListUl.appendChild(li);
-        });
-
-    } catch (err) {
-        studentListUl.innerHTML = `<li class="placeholder-text" style="color:red;">에러: ${err.message}</li>`;
-    }
-}
-
-// 4. 로그인 처리
+// 5. 로그인 처리
 document.getElementById("loginBtn").addEventListener("click", async () => {
     const id = document.getElementById("idInput").value.trim(); 
     const password = document.getElementById("passwordInput").value;
@@ -126,7 +125,7 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
             id: data.user.id,
             name: data.name,
             role: data.role,
-            token: data.token
+            token: data.token // 🌟 토큰도 잘 저장해둠
         };
         localStorage.setItem("tutor_user", JSON.stringify(currentUser));
         
@@ -137,18 +136,21 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
     }
 });
 
-// 5. 로그아웃 처리
+// 6. 로그아웃 처리
 document.getElementById("logoutBtn").addEventListener("click", () => {
     localStorage.removeItem("tutor_user");
     currentUser = null;
-    selectedStudentId = null; // 로그아웃 시 선택된 학생도 초기화
+    selectedStudentId = null; 
     updateUI();
     document.getElementById("idInput").value = "";
     document.getElementById("passwordInput").value = "";
-    document.getElementById("studentManagePanel").classList.add("hidden"); // 패널 닫기
+    
+    // 선생님 패널 숨기기
+    const studentManagePanel = document.getElementById("studentManagePanel");
+    if(studentManagePanel) studentManagePanel.classList.add("hidden"); 
 });
 
-// 6. [선생님 전용] 신규 학생 계정 생성
+// 7. 신규 학생 계정 생성 (선생님용)
 document.getElementById("createStudentBtn").addEventListener("click", async () => {
     const name = document.getElementById("newStudentName").value.trim();
     const id = document.getElementById("newStudentId").value.trim(); 
@@ -170,13 +172,13 @@ document.getElementById("createStudentBtn").addEventListener("click", async () =
         document.getElementById("newStudentName").value = "";
         document.getElementById("newStudentId").value = "";
         
-        loadStudentList(); // 리스트 새로고침
+        loadStudentList(); 
     } catch (err) {
         alert("생성 실패: " + err.message);
     }
 });
 
-// 7. [선생님 전용] 시험 점수 DB에 저장하기
+// 8. 시험 점수 DB에 저장하기 (선생님용)
 document.getElementById("uploadExamBtn").addEventListener("click", async () => {
     if (!selectedStudentId) return alert("먼저 위에서 학생을 선택해주세요!");
 
@@ -205,5 +207,36 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
         
     } catch (err) {
         alert("저장 실패: " + err.message);
+    }
+});
+
+// 🌟 9. [새로 추가됨] 비밀번호 변경하기 (학생용)
+document.getElementById("changePasswordBtn").addEventListener("click", async () => {
+    const newPassword = document.getElementById("newPassword").value;
+    
+    // Supabase는 기본적으로 6자리 이상의 비밀번호를 요구해!
+    if (newPassword.length < 6) return alert("비밀번호는 최소 6자리 이상이어야 합니다.");
+
+    try {
+        const res = await fetch('/api/changePassword', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                newPassword: newPassword,
+                token: currentUser.token // 내가 진짜 이 계정 주인이라는 증명서!
+            }) 
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error);
+
+        alert("✅ 비밀번호가 성공적으로 변경되었습니다!\n안전을 위해 다시 로그인해 주세요.");
+        document.getElementById("newPassword").value = "";
+        
+        // 변경 완료 후 강제 로그아웃 시키기
+        document.getElementById("logoutBtn").click(); 
+        
+    } catch (err) {
+        alert("비밀번호 변경 실패: " + err.message);
     }
 });
