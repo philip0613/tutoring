@@ -9,7 +9,7 @@ body {
     font-family: 'Pretendard', '-apple-system', BlinkMacSystemFont, 'Arial', sans-serif; 
     background-color: #f5f7fa; 
     color: #333; 
-    line-height: 1.5;
+    line-height: 1.6;
     word-break: keep-all; /* 한글 말줄임 방지 */
 }
 
