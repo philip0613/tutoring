@@ -13,21 +13,21 @@ const myQuestionList = document.getElementById("myQuestionList");
 const questionListAdmin = document.getElementById("questionListAdmin"); 
 const feedbackListAdmin = document.getElementById("feedbackListAdmin");
 const myFeedbackList = document.getElementById("myFeedbackList");
-const examListAdmin = document.getElementById("examListAdmin"); // 🌟 선생님용 점수 리스트
+const examListAdmin = document.getElementById("examListAdmin"); 
 
-// 🌟 [핵심 스킬] 만능 수정/삭제 도우미 함수
+// 🌟 [통합됨] 하나의 만능 API(adminAction)로 수정/삭제 통신!
 async function universalUpdate(table, id, updateData) {
-    const res = await fetch('/api/updateData', {
+    const res = await fetch('/api/adminAction', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table, id, updateData })
+        body: JSON.stringify({ action: 'update', table, id, updateData })
     });
     if (!res.ok) throw new Error("수정 실패");
 }
 
 async function universalDelete(table, id) {
-    const res = await fetch('/api/deleteData', {
+    const res = await fetch('/api/adminAction', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table, id })
+        body: JSON.stringify({ action: 'delete', table, id })
     });
     if (!res.ok) throw new Error("삭제 실패");
 }
@@ -41,7 +41,6 @@ function fileToBase64(file) {
     });
 }
 
-// 작은 수정/삭제 버튼을 만들어주는 헬퍼 함수
 function createActionButtons(onEdit, onDelete) {
     const container = document.createElement("div");
     container.style.cssText = "display:inline-flex; gap:5px; margin-left:10px;";
@@ -49,7 +48,7 @@ function createActionButtons(onEdit, onDelete) {
     const editBtn = document.createElement("button");
     editBtn.innerText = "수정";
     editBtn.style.cssText = "padding:3px 8px; font-size:11px; background:#f39c12; color:white; border:none; border-radius:4px; cursor:pointer;";
-    editBtn.onclick = (e) => { e.stopPropagation(); onEdit(); }; // 사진 열리는 이벤트 막기
+    editBtn.onclick = (e) => { e.stopPropagation(); onEdit(); }; 
 
     const delBtn = document.createElement("button");
     delBtn.innerText = "삭제";
@@ -95,14 +94,13 @@ async function loadStudentList() {
                 document.getElementById("manageStudentTitle").innerText = `📝 ${student.name} 학생 상세 관리`;
                 loadStudentQuestionsAdmin(student.id);
                 loadStudentFeedbacksAdmin(student.id); 
-                loadStudentExamsAdmin(student.id); // 🌟 점수 내역도 불러오기!
+                loadStudentExamsAdmin(student.id); 
             });
             studentListUl.appendChild(li);
         });
     } catch (err) { studentListUl.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`; }
 }
 
-// 🌟 [선생님용] 점수 내역 확인 및 수정/삭제
 async function loadStudentExamsAdmin(studentId) {
     examListAdmin.innerHTML = '<li class="placeholder-text">점수를 불러오는 중...</li>';
     try {
@@ -115,7 +113,7 @@ async function loadStudentExamsAdmin(studentId) {
             li.innerHTML = `<strong>${exam.exam_title}</strong>: ${exam.score}점`;
             
             const btnGroup = createActionButtons(
-                async () => { // 수정
+                async () => {
                     const newTitle = prompt("수정할 시험명을 입력하세요:", exam.exam_title);
                     if(newTitle === null) return;
                     const newScore = prompt("수정할 점수를 입력하세요:", exam.score);
@@ -123,10 +121,10 @@ async function loadStudentExamsAdmin(studentId) {
                     
                     try {
                         await universalUpdate('exams', exam.id, { exam_title: newTitle, score: parseInt(newScore) });
-                        loadStudentExamsAdmin(studentId); // 성공 시 리스트만 새로고침
+                        loadStudentExamsAdmin(studentId); 
                     } catch(e) { alert(e.message); }
                 },
-                async () => { // 삭제
+                async () => {
                     if(!confirm("정말 이 시험 점수를 삭제하시겠습니까?")) return;
                     try {
                         await universalDelete('exams', exam.id);
@@ -140,7 +138,6 @@ async function loadStudentExamsAdmin(studentId) {
     } catch (err) { examListAdmin.innerHTML = `<li>에러: ${err.message}</li>`; }
 }
 
-// 🌟 [선생님용] 피드백 수정/삭제 적용
 async function loadStudentFeedbacksAdmin(studentId) {
     feedbackListAdmin.innerHTML = '<li class="placeholder-text">기록을 불러오는 중...</li>';
     try {
@@ -154,7 +151,7 @@ async function loadStudentFeedbacksAdmin(studentId) {
             li.innerHTML = `<small style="color:#888;">[${date}]</small> ${f.feedback_text}`;
             
             const btnGroup = createActionButtons(
-                async () => { // 수정
+                async () => { 
                     const newText = prompt("피드백 내용을 수정하세요:", f.feedback_text);
                     if(newText && newText !== f.feedback_text) {
                         try {
@@ -163,7 +160,7 @@ async function loadStudentFeedbacksAdmin(studentId) {
                         } catch(e) { alert(e.message); }
                     }
                 },
-                async () => { // 삭제
+                async () => {
                     if(!confirm("이 피드백을 삭제하시겠습니까?")) return;
                     try {
                         await universalDelete('feedbacks', f.id);
@@ -199,6 +196,7 @@ async function loadStudentQuestionsAdmin(studentId) {
             const li = document.createElement("li"); li.style.cursor = "pointer"; 
             const imgHtml = q.question_image_url ? `<div class="img-container hidden" style="margin-top:10px;"><img src="${q.question_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>` : '';
             const ansImgHtml = q.answer_image_url ? `<div style="margin-top:10px;"><img src="${q.answer_image_url}" style="max-width:100%; max-height:250px; border-radius:8px;"></div>` : '';
+
             if (q.is_answered) {
                 li.innerHTML = `<span style="color:green">[답변완료]</span> <strong>Q:</strong> ${q.question_text} ${imgHtml}
                     <div style="margin-top:8px; padding:8px; background:#e8f8f5; border-radius:5px;"><strong>👨‍🏫 내 답변:</strong> ${q.answer_text} ${ansImgHtml}</div>`;
@@ -255,7 +253,6 @@ async function loadMyExams() {
     } catch (err) { myExamList.innerHTML = `<li style="color:red;">에러: ${err.message}</li>`; }
 }
 
-// 🌟 [학생용] 질문 수정/삭제 적용
 async function loadMyQuestions() {
     myQuestionList.innerHTML = '<li>불러오는 중... ⏳</li>';
     try {
@@ -272,7 +269,6 @@ async function loadMyQuestions() {
             
             li.innerHTML = `${status} <strong>나:</strong> <span class="q-text">${q.question_text}</span> ${imgHtml} ${answerText}`;
             
-            // 질문 수정/삭제 버튼 추가
             const btnGroup = createActionButtons(
                 async () => {
                     const newText = prompt("질문 내용을 수정하세요:", q.question_text);
@@ -292,11 +288,10 @@ async function loadMyQuestions() {
                 }
             );
             
-            // 첫 번째 줄(내 질문 영역) 끝에 버튼 그룹을 붙여줌
             li.insertBefore(btnGroup, li.querySelector('.img-container') || li.querySelector('div') || null);
 
             li.addEventListener("click", (e) => {
-                if(e.target.tagName === "BUTTON") return; // 버튼 누를 땐 사진 토글 방지
+                if(e.target.tagName === "BUTTON") return; 
                 const imgContainer = li.querySelector(".img-container"); if (imgContainer) imgContainer.classList.toggle("hidden");
             });
             myQuestionList.appendChild(li);
@@ -357,7 +352,7 @@ document.getElementById("uploadExamBtn").addEventListener("click", async () => {
         if (fileInput.files.length > 0) { image_base64 = await fileToBase64(fileInput.files[0]); image_name = fileInput.files[0].name; }
         await fetch('/api/uploadExam', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: selectedStudentId, exam_title: title, score: parseInt(score), image_base64: image_base64, image_name: image_name }) });
         alert("✅ 시험 점수 저장 완료!"); document.getElementById("examTitle").value = ""; document.getElementById("examScore").value = ""; fileInput.value = ""; 
-        loadStudentExamsAdmin(selectedStudentId); // 🌟 저장 후 리스트 새로고침!
+        loadStudentExamsAdmin(selectedStudentId); 
     } catch (err) { alert("저장 실패: " + err.message); } finally { btn.innerText = "시험지 업로드 및 저장"; btn.disabled = false; }
 });
 
@@ -383,11 +378,15 @@ document.getElementById("changePasswordBtn").addEventListener("click", async () 
     } catch (err) { alert("변경 실패: " + err.message); }
 });
 
+// 🌟 [통합됨] 학생 정보 완전 삭제 기능도 adminAction API로 통신
 document.getElementById("deleteStudentBtn").addEventListener("click", async () => {
     if (!selectedStudentId) return alert("선택된 학생이 없습니다.");
     if (!confirm("🚨 정말 삭제하시겠습니까? 데이터가 복구 불가능하게 지워집니다.")) return; 
     try {
-        await fetch('/api/deleteStudent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: selectedStudentId }) });
+        await fetch('/api/adminAction', { 
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ action: 'deleteStudent', student_id: selectedStudentId }) 
+        });
         alert("✅ 삭제되었습니다."); document.getElementById("studentManagePanel").classList.add("hidden"); selectedStudentId = null; loadStudentList(); 
     } catch (err) { alert("삭제 실패: " + err.message); }
 });
