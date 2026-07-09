@@ -1,55 +1,180 @@
-/* 기본 리셋 및 폰트 설정 */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Pretendard', 'Arial', sans-serif; background-color: #f0f2f5; color: #333; line-height: 1.6; }
-
-/* 헤더 스타일 */
-header { background-color: #ffffff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-header h1 { font-size: 20px; color: #2c3e50; }
-#userInfo { display: flex; align-items: center; gap: 15px; font-weight: bold; }
-
-/* 레이아웃 구조 */
-.container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
-.grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-@media (max-width: 768px) { .grid-container { grid-template-columns: 1fr; } }
-
-/* 카드(패널) 디자인 */
-.card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 20px; }
-.sub-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
-
-/* 대시보드 헤더 */
-.dashboard-header { padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; text-align: center; }
-.admin-bg { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
-.student-bg { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-
-/* 입력창(Input) 및 버튼 디자인 */
-input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="file"] {
-    width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 15px;
+/* 1. 기본 리셋 및 모바일 친화적 폰트 설정 */
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+    -webkit-tap-highlight-color: transparent; /* 모바일 터치 시 파란 잔상 제거 */
 }
-input:focus { border-color: #4facfe; outline: none; }
+body { 
+    font-family: 'Pretendard', '-apple-system', BlinkMacSystemFont, 'Arial', sans-serif; 
+    background-color: #f5f7fa; 
+    color: #333; 
+    line-height: 1.5;
+    word-break: keep-all; /* 한글 말줄임 방지 */
+}
 
-button { width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+/* 2. 헤더 디자인 (모바일 상단바 스타일) */
+header { 
+    background-color: #ffffff; 
+    padding: 15px 20px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05); 
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+header h1 { 
+    font-size: 18px; 
+    color: #2c3e50; 
+    font-weight: 800;
+}
+#userInfo { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    font-size: 13px;
+    font-weight: 600; 
+}
+
+/* 3. 레이아웃 구조 (세로모드/앱 스타일 1열 배치 기본화) */
+.container { 
+    max-width: 650px; /* 세로모드에서 가장 안정적인 컴팩트 너비 */
+    margin: 0 auto; 
+    padding: 20px 15px 40px 15px; /* 하단 여백 확보 */
+}
+
+/* 🌟 핵심 변경: 기본 구조를 무조건 1열(위에서 아래로) 스택 구조로 설정! */
+.grid-container { 
+    display: flex;
+    flex-direction: column;
+    gap: 15px; 
+}
+
+/* 4. 카드 및 패널 디자인 (모바일 카드 UI) */
+.card { 
+    background: white; 
+    padding: 20px; 
+    border-radius: 14px; 
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04); 
+}
+.card h2 {
+    font-size: 20px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+.card h3 {
+    font-size: 16px;
+    color: #2c3e50;
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+.card p {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-bottom: 15px;
+}
+.sub-card { 
+    background: #f8f9fa; 
+    padding: 16px; 
+    border-radius: 10px; 
+    border: 1px solid #eaeded; 
+    margin-top: 10px;
+}
+.sub-card h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+/* 5. 대시보드 상단 배너 */
+.dashboard-header { 
+    padding: 18px; 
+    border-radius: 14px; 
+    margin-bottom: 15px; 
+    color: white; 
+    text-align: center; 
+}
+.admin-bg { background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); }
+.student-bg { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+.dashboard-header h2 { font-size: 18px; font-weight: 700; margin: 0; }
+
+/* 6. 모바일 터치 최적화 입력창 및 버튼 */
+input[type="text"], input[type="password"], input[type="number"], textarea {
+    width: 100%; 
+    padding: 12px; 
+    margin: 8px 0; 
+    border: 1px solid #ddd; 
+    border-radius: 8px; 
+    font-size: 14px;
+    background-color: #fafbfc;
+    transition: 0.2s;
+}
+input:focus, textarea:focus { 
+    border-color: #3498db; 
+    background-color: #fff;
+    outline: none; 
+}
+
+button { 
+    width: 100%; 
+    padding: 14px; /* 모바일에서 누르기 편하게 두께 키움 */
+    font-size: 15px; 
+    font-weight: 700; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    transition: 0.15s active; 
+    margin-top: 8px; 
+}
+button:active {
+    transform: scale(0.98); /* 터치 시 쫀득한 클릭 피드백 */
+}
 .primary-btn { background-color: #3498db; color: white; }
-.primary-btn:hover { background-color: #2980b9; }
 .secondary-btn { background-color: #2ecc71; color: white; }
-.secondary-btn:hover { background-color: #27ae60; }
-#logoutBtn { width: auto; padding: 8px 15px; font-size: 14px; background-color: #e74c3c; margin-top: 0; }
+#logoutBtn { width: auto; padding: 6px 12px; font-size: 12px; background-color: #e74c3c; color: white; margin-top: 0; }
 
-/* 목록(리스트) 스타일 */
-.item-list { list-style: none; margin-top: 10px; max-height: 300px; overflow-y: auto; }
-.item-list li { background: #fff; border: 1px solid #e1e4e8; padding: 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
-.item-list li:hover { border-color: #3498db; transform: translateY(-2px); }
-.placeholder-text { color: #888; text-align: center; border: none !important; cursor: default !important; }
+/* 7. 목록(리스트) 스타일 */
+.item-list { list-style: none; margin-top: 5px; }
+.item-list li { 
+    background: #fff; 
+    border: 1px solid #e1e4e8; 
+    padding: 14px; 
+    border-radius: 10px; 
+    margin-bottom: 8px; 
+    position: relative;
+}
+.placeholder-text { color: #95a5a6; text-align: center; border: none !important; background: none !important; font-size: 13px; }
 
-/* ⚙️ 작고 세련된 비밀번호 토글 커스텀 스타일 */
-.password-toggle-container { margin-top: 25px; text-align: right; padding: 0 10px; }
-.text-link-btn { width: auto; background: none; color: #888; font-size: 13px; font-weight: normal; padding: 0; margin: 0; text-decoration: underline; display: inline-block; }
-.text-link-btn:hover { color: #555; background: none; }
+/* 8. 사진/이미지 세로모드 최적화 (★화면 탈출 방지) */
+.img-container img, .answer-box img, li img {
+    width: 100%;
+    max-width: 100%;
+    height: auto; /* 고정 높이 해제하여 비율 유지 */
+    max-height: 350px; /* 세로가 너무 길어지지 않게 상한선 세팅 */
+    object-fit: contain; /* 사진이 잘리지 않고 온전히 다 보이게 함 */
+    border-radius: 8px;
+    margin-top: 8px;
+    background: #f1f2f6;
+}
 
-.hidden-form { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 10px; }
-.hidden-form.active-form { max-height: 100px; } /* 클릭 시 부드럽게 열림 */
-.hidden-form input[type="password"] { width: 220px; padding: 8px 12px; font-size: 13px; margin: 0; }
-.small-btn { width: auto; padding: 8px 15px; font-size: 13px; background-color: #7f8c8d; color: white; margin: 0; }
-.small-btn:hover { background-color: #616a6b; }
+/* 9. ⚙️ 비밀번호 변경 토글 영역 */
+.password-toggle-container { margin-top: 25px; text-align: center; }
+.text-link-btn { width: auto; background: none; color: #95a5a6; font-size: 12px; font-weight: normal; padding: 5px; margin: 0; text-decoration: underline; }
+.hidden-form { display: none; gap: 8px; align-items: center; justify-content: center; margin-top: 10px; }
+.hidden-form.active-form { display: flex; flex-direction: column; width: 100%; }
+.hidden-form input[type="password"] { width: 100%; }
+
+/* 10. PC 및 태블릿 가로모드용 미디어 쿼리 (넓은 화면에서만 2열 작동) */
+@media (min-width: 1025px) {
+    .container { max-width: 1000px; }
+    .grid-container { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 20px; 
+    }
+}
 
 /* 유틸리티 */
 .hidden { display: none !important; }
