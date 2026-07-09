@@ -16,27 +16,31 @@
     </header>
 
     <main class="container">
+        <!-- 1. 로그인 창 (아이디 기반으로 변경) -->
         <section id="loginSection" class="card">
             <h2>로그인</h2>
-            <p>이메일과 비밀번호를 입력하세요.</p>
-            <input type="email" id="emailInput" placeholder="이메일 (예: teacher@test.com)">
+            <p>아이디와 비밀번호를 입력하세요.</p>
+            <input type="text" id="idInput" placeholder="아이디 (예: admin)">
             <input type="password" id="passwordInput" placeholder="비밀번호">
             <button id="loginBtn" class="primary-btn">로그인</button>
         </section>
 
+        <!-- 2. 선생님(Admin) 전용 대시보드 -->
         <section id="teacherDashboard" class="hidden">
             <div class="dashboard-header admin-bg">
                 <h2>👨‍🏫 선생님 대시보드</h2>
             </div>
             
             <div class="grid-container">
+                <!-- 학생 등록 패널 (아이디 기반으로 변경) -->
                 <div class="card">
                     <h3>👥 신규 학생 등록</h3>
                     <input type="text" id="newStudentName" placeholder="학생 이름">
-                    <input type="email" id="newStudentEmail" placeholder="학생 이메일">
+                    <input type="text" id="newStudentId" placeholder="학생용 아이디 부여">
                     <button id="createStudentBtn" class="primary-btn">학생 계정 생성 (기본비번: 123456)</button>
                 </div>
 
+                <!-- 학생 목록 패널 -->
                 <div class="card">
                     <h3>📋 나의 학생 목록</h3>
                     <ul id="studentList" class="item-list">
@@ -45,10 +49,12 @@
                 </div>
             </div>
 
+            <!-- 특정 학생 관리 패널 -->
             <div id="studentManagePanel" class="card hidden mt-20">
                 <h3 id="manageStudentTitle">학생 상세 관리</h3>
                 
                 <div class="grid-container">
+                    <!-- 시험지 업로드 -->
                     <div class="sub-card">
                         <h4>📝 쪽지시험 점수 입력</h4>
                         <input type="text" id="examTitle" placeholder="시험명 (예: 3월 모의고사)">
@@ -57,27 +63,29 @@
                         <button id="uploadExamBtn" class="secondary-btn">시험지 업로드 및 점수 저장</button>
                     </div>
 
+                    <!-- 학생 질문 리스트 -->
                     <div class="sub-card">
                         <h4>❓ 학생이 올린 질문</h4>
-                        <ul id="questionListAdmin" class="item-list">
-                            </ul>
+                        <ul id="questionListAdmin" class="item-list"></ul>
                     </div>
                 </div>
             </div>
         </section>
 
+        <!-- 3. 학생(Student) 전용 대시보드 -->
         <section id="studentDashboard" class="hidden">
             <div class="dashboard-header student-bg">
                 <h2>🎓 학생 대시보드</h2>
             </div>
 
             <div class="grid-container">
+                <!-- 내 시험 결과 보기 -->
                 <div class="card">
                     <h3>📈 내 쪽지시험 결과</h3>
-                    <ul id="myExamList" class="item-list">
-                        </ul>
+                    <ul id="myExamList" class="item-list"></ul>
                 </div>
 
+                <!-- 모르는 문제 질문하기 -->
                 <div class="card">
                     <h3>🙋‍♂️ 모르는 문제 질문하기</h3>
                     <input type="text" id="questionText" placeholder="어떤 부분이 이해 안 가시나요?">
@@ -85,11 +93,11 @@
                     <button id="askQuestionBtn" class="primary-btn">질문 올리기</button>
                     
                     <h4 class="mt-20">나의 질문 내역</h4>
-                    <ul id="myQuestionList" class="item-list">
-                        </ul>
+                    <ul id="myQuestionList" class="item-list"></ul>
                 </div>
             </div>
 
+            <!-- 비밀번호 변경 패널 -->
             <div class="card mt-20">
                 <h3>🔐 비밀번호 변경</h3>
                 <input type="password" id="newPassword" placeholder="새로운 비밀번호 (6자리 이상)">
@@ -98,6 +106,7 @@
         </section>
     </main>
 
+    <!-- 자바스크립트 연결 -->
     <script src="script.js"></script>
 </body>
 </html>
