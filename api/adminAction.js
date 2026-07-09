@@ -11,7 +11,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${supabaseKey}`
     };
 
-    // 🌟 [추가됨] URL에서 순수 파일 이름만 뽑아내는 마법의 헬퍼 함수
+    // URL에서 파일 이름만 정확하게 추출하는 함수
     const extractFilename = (url) => {
         if (!url) return null;
         const parts = url.split('/tutor_files/');
@@ -28,15 +28,25 @@ export default async function handler(req, res) {
             if (!response.ok) throw new Error('DB 데이터 수정 실패');
         } 
         else if (action === 'delete') {
-            // 🌟 [추가됨] 개별 삭제 시: 먼저 데이터를 조회해서 사진이 있으면 창고에서 지워버림!
+            // [개별 삭제] 질문이나 시험 점수를 하나씩 지울 때도 사진 같이 삭제
             if (table === 'questions' || table === 'exams') {
                 const getRes = await fetch(`${supabaseUrl}/rest/v1/${table}?id=eq.${id}`, { headers });
                 const getData = await getRes.json();
                 if (getData && getData.length > 0) {
                     const item = getData[0];
-                    const files = [extractFilename(item.question_image_url), extractFilename(item.answer_image_url), extractFilename(item.paper_image_url)].filter(Boolean);
-                    for (const file of files) {
-                        await fetch(`${supabaseUrl}/storage/v1/object/tutor_files/${file}`, { method: 'DELETE', headers });
+                    const files = [
+                        extractFilename(item.question_image_url), 
+                        extractFilename(item.answer_image_url), 
+                        extractFilename(item.paper_image_url)
+                    ].filter(Boolean);
+                    
+                    // Supabase 공식 대량 삭제 API 규격 부합화 (body에 파일명 배열 전송)
+                    if (files.length > 0) {
+                        await fetch(`${supabaseUrl}/storage/v1/object/tutor_files`, {
+                            method: 'DELETE',
+                            headers: headers,
+                            body: JSON.stringify({ prefixes: files })
+                        });
                     }
                 }
             }
@@ -47,7 +57,7 @@ export default async function handler(req, res) {
             if (!response.ok) throw new Error('DB 데이터 삭제 실패');
         } 
         else if (action === 'deleteStudent') {
-            // 🌟 [추가됨] 1. 학생과 관련된 모든 시험/질문 데이터를 가져와서 사진 파일명만 싹 수집!
+            // [학생 전체 삭제] 1. 이 학생과 관련된 모든 사진 파일명 명단 수집
             const examsRes = await fetch(`${supabaseUrl}/rest/v1/exams?student_id=eq.${student_id}`, { headers });
             const exams = await examsRes.json();
             
@@ -61,26 +71,27 @@ export default async function handler(req, res) {
             if (questions && questions.length > 0) {
                 questions.forEach(q => {
                     filesToDelete.push(extractFilename(q.question_image_url));
-                    filesToDelete.push(extractFilename(q.answer_image_url)); // 선생님 답변 사진도 수집!
+                    filesToDelete.push(extractFilename(q.answer_image_url)); // 선생님 답변 사진 포함
                 });
             }
-            // null 값 찌끄레기들 제거
             filesToDelete = filesToDelete.filter(Boolean); 
 
-            // 🌟 [추가됨] 2. 수집된 사진들을 Storage 창고에서 진짜로 폭파시키기!
-            for (const file of filesToDelete) {
-                await fetch(`${supabaseUrl}/storage/v1/object/tutor_files/${file}`, { 
-                    method: 'DELETE', headers 
+            // 2. 수집된 명단이 있다면 Supabase 공식 API를 이용해 창고(Storage)에서 한방에 완전 폭파!
+            if (filesToDelete.length > 0) {
+                await fetch(`${supabaseUrl}/storage/v1/object/tutor_files`, { 
+                    method: 'DELETE', 
+                    headers: headers,
+                    body: JSON.stringify({ prefixes: filesToDelete }) // 규격 매칭
                 });
             }
 
-            // 3. 기존대로 텍스트 데이터(DB) 삭제
+            // 3. 데이터베이스 글자 데이터(DB) 삭제
             await fetch(`${supabaseUrl}/rest/v1/exams?student_id=eq.${student_id}`, { method: 'DELETE', headers });
             await fetch(`${supabaseUrl}/rest/v1/questions?student_id=eq.${student_id}`, { method: 'DELETE', headers });
             await fetch(`${supabaseUrl}/rest/v1/feedbacks?student_id=eq.${student_id}`, { method: 'DELETE', headers });
             await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${student_id}`, { method: 'DELETE', headers });
 
-            // 4. 마지막 Auth 유저 계정 폭파
+            // 4. Auth 유저 로그인 계정 폭파
             await fetch(`${supabaseUrl}/auth/v1/admin/users/${student_id}`, {
                 method: 'DELETE',
                 headers: headers
