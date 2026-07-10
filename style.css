@@ -50,7 +50,7 @@ header h1 {
     border: 1px solid #eaeaea; 
 }
 
-/* 그리드 시스템 (PC는 양옆, 모바일은 위아래로 자연스럽게 배치) */
+/* 그리드 시스템 */
 .grid-container { 
     display: grid; 
     grid-template-columns: 1fr; 
@@ -100,7 +100,7 @@ button {
 .small-btn { background: #6c757d; color: white; padding: 5px 10px; font-size: 0.9rem; }
 .text-link-btn { background: none; color: #6c757d; text-decoration: underline; padding: 0; font-weight: normal; }
 
-/* 입력 폼 (인풋 박스) 스타일 */
+/* 입력 폼 스타일 */
 input[type="text"], input[type="password"], input[type="number"], input[type="file"], textarea {
     width: 100%; 
     padding: 12px; 
@@ -116,27 +116,23 @@ textarea {
     min-height: 80px; 
 }
 
-/* 리스트 스타일 (질문, 피드백 목록 등) */
+/* 리스트 스타일 (줄바꿈 유지 포함) */
 .item-list { 
     list-style: none; 
     padding: 0; 
     margin-top: 10px; 
 }
 
-/* 💡 [v1.0 패치] 리스트 안의 텍스트 줄바꿈 유지 및 삐져나옴 방지 */
 .item-list li {
     background: #f8f9fa; 
     border: 1px solid #e9ecef; 
     border-radius: 6px; 
     padding: 15px; 
     margin-bottom: 10px;
-    
-    /* 핵심 마법 코드 2줄 */
     white-space: pre-wrap; 
     word-break: break-word; 
 }
 
-/* 리스트 안에 들어가는 이미지 (사진 뚫고 나가는 것 방지) */
 .item-list li img { 
     max-width: 100%; 
     border-radius: 4px; 
@@ -144,7 +140,48 @@ textarea {
     display: block; 
 }
 
-/* 유틸리티 (상태 제어용 클래스) */
+/* 유틸리티 */
 .hidden { display: none !important; }
 .hidden-form { display: none; margin-top: 10px; }
 .mt-20 { margin-top: 20px; }
+
+/* =========================================
+   💡 [신규 추가] UI 개선을 위한 속성들
+   ========================================= */
+
+/* 1. 리스트 스크롤 제어 (오버플로우 방지) */
+.scrollable-list {
+    max-height: 300px; /* 최대 높이 지정 */
+    overflow-y: auto;  /* 세로축 요소가 박스 높이를 초과할 경우 스크롤바 생성 */
+    padding-right: 5px;
+}
+
+/* 2. 피드백 아코디언(토글) 제목 버튼 */
+.feedback-title-btn {
+    font-weight: bold;
+    color: #007bff;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 1rem;
+    padding: 0 0 5px 0;
+    width: 100%;
+}
+
+.feedback-title-btn:hover {
+    text-decoration: underline;
+}
+
+/* 3. 피드백 상세 내용 (초기 상태: 숨김) */
+.feedback-detail {
+    display: none; /* 화면에 렌더링하지 않음 */
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #ccc;
+    font-size: 0.95rem;
+}
+
+/* 4. 피드백 상세 내용 표시 (JavaScript로 클래스 제어) */
+.feedback-detail.show {
+    display: block; /* 요소를 블록 형태로 화면에 렌더링 */
+}
