@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // 💡 유틸리티 함수 (마법의 도구들)
 // ==========================================
 
-// 1. 백엔드 데이터 껍데기 까기 (어떤 포장지로 오든 배열 알맹이만 정확히 추출)
+// 1. 백엔드 데이터 껍데기 까기
 function extractDataArray(responseData) {
     if (!responseData) return [];
     if (Array.isArray(responseData)) return responseData; 
@@ -95,8 +95,8 @@ function renderFeedbackList(feedbacksRaw, containerElement) {
     });
 }
 
-// 질문 리스트 그리기
-function renderQuestionList(questionsRaw, containerElement) {
+// 💡 [완벽 복구] 질문 및 선생님 답변(댓글) 리스트 그리기
+function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
     containerElement.innerHTML = '';
     const questions = extractDataArray(questionsRaw);
 
@@ -107,19 +107,56 @@ function renderQuestionList(questionsRaw, containerElement) {
 
     questions.forEach(q => {
         const li = document.createElement('li');
+        li.style.position = 'relative';
+        li.style.marginBottom = '15px';
+        
         const dateStr = q.created_at ? new Date(q.created_at).toLocaleDateString() : '날짜 없음';
         
-        // 이미지 유무에 따른 동적 태그 생성
-        let imgTag = '';
-        if (q.question_image_url) {
-            imgTag = `<img src="${q.question_image_url}" alt="질문 이미지" style="max-width:100%; border-radius:4px; margin-top:10px;">`;
+        // 1. 학생 질문 본문 및 이미지 생성
+        let imgTag = q.question_image_url ? `<img src="${q.question_image_url}" alt="질문 이미지" style="max-width:100%; border-radius:4px; margin-top:10px; display:block;">` : '';
+        
+        let htmlContent = `
+            <div class="question-box">
+                <p><strong>🙋‍♂️ 질문:</strong> ${q.question_text || '내용 없음'}</p>
+                ${imgTag}
+                <div style="text-align: right; font-size: 0.8em; color: #aaa; margin-top: 5px;">${dateStr}</div>
+            </div>
+            <hr style="border: 0; border-top: 1px dashed #eee; margin: 10px 0;">
+        `;
+
+        // 2. 이미 등록된 선생님 답변이 있다면 출력
+        if (q.answer_text) {
+            let ansImgTag = q.answer_image_url ? `<img src="${q.answer_image_url}" alt="답변 이미지" style="max-width:100%; border-radius:4px; margin-top:10px; display:block;">` : '';
+            htmlContent += `
+                <div class="answer-box" style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 10px; border-radius: 4px; margin-top: 5px;">
+                    <p><strong>👨‍🏫 선생님 답변:</strong> ${q.answer_text}</p>
+                    ${ansImgTag}
+                </div>
+            `;
+        } else {
+            htmlContent += `<p style="font-size:0.9em; color:#999; italic">💡 아직 등록된 답변이 없습니다.</p>`;
         }
 
-        li.innerHTML = `
-            <p><strong>🙋‍♂️ 질문 내용:</strong> ${q.question_text || '내용 없음'}</p>
-            ${imgTag}
-            <div style="text-align: right; margin-top: 5px; font-size: 0.8em; color: #aaa;">${dateStr}</div>
-        `;
+        li.innerHTML = htmlContent;
+
+        // 3. 만약 '선생님 대시보드'이고 아직 답변이 없다면, 답변 작성 폼을 동적으로 생성해서 붙여줌!
+        if (isAdmin && !q.answer_text) {
+            const adminForm = document.createElement('div');
+            adminForm.style.marginTop = '10px';
+            adminForm.innerHTML = `
+                <input type="text" id="ansText_${q.id}" placeholder="이 질문에 대한 답변을 입력하세요" style="width:70%; padding:8px; font-size:0.9rem;">
+                <input type="file" id="ansImg_${q.id}" accept="image/*" style="width:25%; font-size:0.8rem; display:inline-block; margin-top:0;">
+                <button id="ansBtn_${q.id}" class="small-btn" style="background:#22c55e; margin-top:5px; width:100%;">답변 등록하기</button>
+            `;
+            
+            // 답변 등록 버튼 클릭 이벤트 바인딩
+            adminForm.querySelector(`#ansBtn_${q.id}`).addEventListener('click', () => {
+                handleAnswerQuestion(q.id);
+            });
+            
+            li.appendChild(adminForm);
+        }
+
         containerElement.appendChild(li);
     });
 }
@@ -128,7 +165,6 @@ function renderQuestionList(questionsRaw, containerElement) {
 // 💡 대시보드 데이터 로드 로직
 // ==========================================
 
-// 선생님용 대시보드 로드 (학생 명단)
 async function loadTeacherDashboard() {
     try {
         const response = await fetch('/api/getStudents');
@@ -159,7 +195,6 @@ async function loadTeacherDashboard() {
     }
 }
 
-// 특정 학생 관리 패널 열릴 때 데이터 조회
 async function loadStudentDetail(studentId) {
     try {
         // 1. 쪽지시험 리스트 조회
@@ -172,9 +207,9 @@ async function loadStudentDetail(studentId) {
             examList.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
         }
 
-        // 2. 질문 내역 조회
+        // 2. 질문 내역 조회 (선생님 권한 true 전달)
         const questionRes = await fetch(`/api/getQuestions?studentId=${studentId}&student_id=${studentId}`);
-        renderQuestionList(await questionRes.json(), document.getElementById('questionListAdmin'));
+        renderQuestionList(await questionRes.json(), document.getElementById('questionListAdmin'), true);
 
         // 3. 피드백 내역 조회
         const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${studentId}&student_id=${studentId}`);
@@ -185,7 +220,6 @@ async function loadStudentDetail(studentId) {
     }
 }
 
-// 학생용 대시보드 로드
 async function loadStudentDashboard() {
     try {
         // 1. 본인 시험 결과 조회
@@ -198,9 +232,9 @@ async function loadStudentDashboard() {
             myExamList.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
         }
 
-        // 2. 본인 질문 내역 조회
+        // 2. 본인 질문 내역 조회 (학생 권한 false 전달)
         const questionRes = await fetch(`/api/getQuestions?studentId=${currentUser.id}&student_id=${currentUser.id}`);
-        renderQuestionList(await questionRes.json(), document.getElementById('myQuestionList'));
+        renderQuestionList(await questionRes.json(), document.getElementById('myQuestionList'), false);
 
         // 3. 선생님 한마디(피드백) 조회
         const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${currentUser.id}&student_id=${currentUser.id}`);
@@ -230,7 +264,6 @@ async function handleLogin() {
         const data = await response.json();
 
         if (response.ok) {
-            // 백엔드 파라미터 구조 분산에 대응하는 완벽 병합 세션 데이터 생성
             const userData = { ...(data.user || {}), ...data }; 
             localStorage.setItem('session', JSON.stringify(userData));
             checkSession();
@@ -277,10 +310,60 @@ function checkSession() {
 }
 
 // ==========================================
-// 💡 관리자(선생님) 전용 API 통신 함수
+// 💡 관리자(선생님) 전용 API 통신 함수 모음
 // ==========================================
 
-// 1. 신규 학생 생성 등록 완료 버전
+// 1. 학생 대답(댓글) 달기 로직 구현 완료 버전!
+async function handleAnswerQuestion(questionId) {
+    const textInput = document.getElementById(`ansText_${questionId}`);
+    const fileInput = document.getElementById(`ansImg_${questionId}`);
+    const text = textInput.value.trim();
+
+    if (!text) return alert('답변 내용을 입력해주세요.');
+
+    const btn = document.getElementById(`ansBtn_${questionId}`);
+    btn.innerText = "답변 등록 중... ⏳";
+    btn.disabled = true;
+
+    try {
+        let image_base64 = null;
+        let image_name = null;
+
+        if (fileInput.files && fileInput.files.length > 0) {
+            image_name = fileInput.files[0].name;
+            image_base64 = await fileToBase64(fileInput.files[0]);
+        }
+
+        // 백엔드 주소인 /api/answerQuestion 호출
+        const res = await fetch('/api/answerQuestion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                questionId: questionId,
+                id: questionId, // 백엔드 변수명 매칭 방어
+                answer_text: text,
+                answerText: text,
+                image_base64: image_base64,
+                image_name: image_name
+            })
+        });
+
+        if (res.ok) {
+            alert('✅ 답변이 성공적으로 등록되었습니다!');
+            loadStudentDetail(currentStudentId); // 대시보드 새로고침
+        } else {
+            const err = await res.json().catch(() => ({}));
+            alert('답변 등록 실패: ' + (err.error || err.message || '서버 오류'));
+        }
+    } catch (err) {
+        alert('에러 발생: ' + err.message);
+    } finally {
+        btn.innerText = "답변 등록하기";
+        btn.disabled = false;
+    }
+}
+
+// 2. 신규 학생 생성
 async function handleCreateStudent() {
     const nameInput = document.getElementById('newStudentName');
     const idInput = document.getElementById('newStudentId');
@@ -305,71 +388,46 @@ async function handleCreateStudent() {
             loadTeacherDashboard();
         } else {
             const err = await res.json().catch(() => ({}));
-            alert('학생 생성 실패: ' + (err.error || err.message || '서버 응답 오류'));
+            alert('학생 생성 실패: ' + (err.error || err.message || '오류'));
         }
-    } catch (err) { 
-        alert('에러 발생: ' + err.message); 
-    } finally { 
-        btn.disabled = false; 
-    }
+    } catch (err) { alert('에러 발생: ' + err.message); } 
+    finally { btn.disabled = false; }
 }
 
-// 2. 쪽지시험 점수 및 사진 업로드 (완벽 복구본)
+// 3. 쪽지시험 점수 및 사진 업로드
 async function handleUploadExam() {
     if (!currentStudentId) return alert("먼저 학생을 선택해주세요!");
-    
     const titleInput = document.getElementById("examTitle");
     const scoreInput = document.getElementById("examScore");
     const fileInput = document.getElementById("examImage");
-    
     const title = titleInput.value.trim();
     const score = scoreInput.value;
     
     if (!title || !score) return alert("시험명과 점수를 모두 입력하세요.");
-    
     const btn = document.getElementById("uploadExamBtn");
-    btn.innerText = "업로드 중... ⏳"; 
-    btn.disabled = true;
+    btn.innerText = "업로드 중... ⏳"; btn.disabled = true;
     
     try {
-        let image_base64 = null; 
-        let image_name = null;
-        
+        let image_base64 = null; let image_name = null;
         if (fileInput.files.length > 0) {
             image_base64 = await fileToBase64(fileInput.files[0]);
             image_name = fileInput.files[0].name;
         }
-        
         const res = await fetch('/api/uploadExam', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                student_id: currentStudentId, 
-                exam_title: title, 
-                score: parseInt(score), 
-                image_base64: image_base64, 
-                image_name: image_name 
-            })
+            body: JSON.stringify({ student_id: currentStudentId, exam_title: title, score: parseInt(score), image_base64: image_base64, image_name: image_name })
         });
-
         if (res.ok) {
             alert("✅ 시험 점수 저장 완료!");
-            titleInput.value = "";
-            scoreInput.value = "";
-            fileInput.value = "";
+            titleInput.value = ""; scoreInput.value = ""; fileInput.value = "";
             loadStudentDetail(currentStudentId); 
-        } else {
-            alert('시험 점수 저장 실패');
-        }
-    } catch (err) { 
-        alert("저장 실패: " + err.message); 
-    } finally { 
-        btn.innerText = "시험지 업로드 및 저장"; 
-        btn.disabled = false; 
-    }
+        } else { alert('시험 점수 저장 실패'); }
+    } catch (err) { alert("저장 실패: " + err.message); } 
+    finally { btn.innerText = "시험지 업로드 및 저장"; btn.disabled = false; }
 }
 
-// 3. 개별 피드백 전송 (v1.0.1 신규 제목 필드 포함)
+// 4. 개별 피드백 전송
 async function handleSendFeedback() {
     const titleInput = document.getElementById('feedbackTitleAdmin');
     const textInput = document.getElementById('feedbackTextAdmin');
@@ -382,28 +440,17 @@ async function handleSendFeedback() {
         const response = await fetch('/api/adminAction', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'addFeedback',
-                studentId: currentStudentId,
-                feedbackTitle: title,
-                feedbackText: text
-            })
+            body: JSON.stringify({ action: 'addFeedback', studentId: currentStudentId, feedbackTitle: title, feedbackText: text })
         });
-
         if (response.ok) {
             alert('✅ 피드백이 성공적으로 전송되었습니다!');
-            titleInput.value = '';
-            textInput.value = '';
+            titleInput.value = ''; textInput.value = '';
             loadStudentDetail(currentStudentId); 
-        } else {
-            alert('피드백 전송 실패');
-        }
-    } catch (error) { 
-        console.error('피드백 전송 에러:', error); 
-    }
+        } else { alert('피드백 전송 실패'); }
+    } catch (error) { console.error('피드백 전송 에러:', error); }
 }
 
-// 4. 학생 계정 완전 삭제 (스토리지 및 데이터베이스 연쇄 정화)
+// 5. 학생 계정 완전 삭제
 async function handleDeleteStudent() {
     if (!currentStudentId) return;
     if (!confirm('🚨 정말 이 학생의 모든 데이터를 삭제하시겠습니까? (복구 불가능)')) return;
@@ -412,68 +459,48 @@ async function handleDeleteStudent() {
         const res = await fetch('/api/adminAction', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                action: 'deleteStudent', 
-                student_id: currentStudentId, 
-                studentId: currentStudentId 
-            }) 
+            body: JSON.stringify({ action: 'deleteStudent', student_id: currentStudentId, studentId: currentStudentId }) 
         });
-        
         if (res.ok) {
             alert('✅ 학생 계정 및 데이터 삭제 완료');
             document.getElementById('studentManagePanel').classList.add('hidden');
             currentStudentId = null;
             loadTeacherDashboard(); 
-        } else {
-            alert('학생 삭제 처리 중 에러 발생');
-        }
-    } catch (err) { 
-        alert('에러 발생: ' + err.message); 
-    }
+        } else { alert('학생 삭제 처리 중 에러 발생'); }
+    } catch (err) { alert('에러 발생: ' + err.message); }
 }
 
 // ==========================================
-// 💡 학생 전용 API 통신 함수
+// 💡 학생 전용 API 통신 함수 모음
 // ==========================================
-// 💡 [최종 방어 패치] 모르는 문제 질문 올리기 (파라미터 올인원 버전)
+
+// 1. 모르는 문제 질문 올리기 (askQuestion 주소 맵핑 수정 완료)
 async function handleAskQuestion() {
     const textInput = document.getElementById('questionText');
     const fileInput = document.getElementById('questionImage');
     const text = textInput.value.trim();
     
     if (!text) return alert('질문 내용을 입력해주세요.');
-
     const btn = document.getElementById('askQuestionBtn');
-    btn.innerText = "업로드 중... ⏳"; 
-    btn.disabled = true;
+    btn.innerText = "업로드 중... ⏳"; btn.disabled = true;
 
     try {
-        let image_base64 = null; 
-        let image_name = null;
-        
+        let image_base64 = null; let image_name = null;
         if (fileInput.files && fileInput.files.length > 0) {
             const file = fileInput.files[0];
             image_name = file.name;
             image_base64 = await fileToBase64(file);
         }
 
-        // 💡 디버깅용: 콘솔에 현재 전송하려는 유저 데이터 상태 찍기 (F12에서 확인 가능)
-        console.log("✈️ 질문 전송 시도 유저 세션:", currentUser);
-
-        // 💡 백엔드가 낚시줄을 어떤 이름으로 던졌을지 몰라서 다 준비함
-        const userId = currentUser.id || currentUser.student_id || currentUser.login_id;
-
+        // 💡 아까 해결한 올바른 파일 주소 매칭 (/api/askQuestion)
         const res = await fetch('/api/askQuestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                // 1. 학생 고유 ID 계열 (백엔드 변수명 매칭 에러 원천 차단)
-                student_id: userId,
-                studentId: userId,
-                id: userId,
-                userId: userId,
-                
-                // 2. 내용 및 이미지 데이터
+                student_id: currentUser.id || currentUser.login_id,
+                studentId: currentUser.id,
+                id: currentUser.id,
+                userId: currentUser.id,
                 question_text: text,
                 questionText: text,
                 image_base64: image_base64,
@@ -483,29 +510,20 @@ async function handleAskQuestion() {
 
         if (res.ok) {
             alert('✅ 질문이 성공적으로 등록되었습니다!');
-            textInput.value = '';
-            fileInput.value = '';
-            loadStudentDashboard(); // 내 질문 목록 새로고침
+            textInput.value = ''; fileInput.value = '';
+            loadStudentDashboard(); 
         } else {
-            // 💡 서버가 구체적으로 왜 까부는지 에러 원인 응답 본문 뜯어내기
             const errData = await res.json().catch(() => ({}));
-            console.error("❌ 백엔드가 뱉은 에러 원문:", errData);
-            
-            const errMsg = errData.error || errData.message || errData.details || JSON.stringify(errData);
-            alert('질문 등록 실패: ' + (errMsg !== '{}' ? errMsg : '백엔드 API 서버 에러 (500/400)'));
+            alert('질문 등록 실패: ' + (errData.error || errData.message || '서버 에러'));
         }
-    } catch (err) { 
-        alert('네트워크 또는 브라우저 에러 발생: ' + err.message); 
-    } finally { 
-        btn.innerText = "질문 올리기"; 
-        btn.disabled = false; 
-    }
+    } catch (err) { alert('에러 발생: ' + err.message); } 
+    finally { btn.innerText = "질문 올리기"; btn.disabled = false; }
 }
-// 2. 학생 비밀번호 변경 로직 구현 완료 버전
+
+// 2. 학생 비밀번호 변경
 async function handleChangePassword() {
     const passwordInput = document.getElementById('newPassword');
     const newPw = passwordInput.value.trim();
-    
     if (!newPw || newPw.length < 6) return alert('비밀번호는 최소 6자리 이상이어야 합니다.');
 
     try {
@@ -514,15 +532,10 @@ async function handleChangePassword() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: currentUser.id, newPassword: newPw })
         });
-        
         if (res.ok) {
             alert('✅ 비밀번호가 변경되었습니다. 새 비밀번호로 다시 로그인해주세요!');
             passwordInput.value = '';
             handleLogout(); 
-        } else {
-            alert('비밀번호 변경 처리 실패');
-        }
-    } catch (err) { 
-        alert('에러 발생: ' + err.message); 
-    }
+        } else { alert('비밀번호 변경 처리 실패'); }
+    } catch (err) { alert('에러 발생: ' + err.message); }
 }
