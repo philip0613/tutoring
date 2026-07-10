@@ -463,7 +463,7 @@ async function handleAskQuestion() {
         // 💡 백엔드가 낚시줄을 어떤 이름으로 던졌을지 몰라서 다 준비함
         const userId = currentUser.id || currentUser.student_id || currentUser.login_id;
 
-        const res = await fetch('/api/uploadQuestion', {
+        const res = await fetch('/api/askQuestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
