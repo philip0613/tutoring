@@ -312,8 +312,8 @@ async function handleAnswerQuestion(questionId) {
             image_base64 = await fileToBase64(fileInput.files[0]);
         }
 
-        // 🚨 여기 주소 소문자로 완벽 맵핑 완료!
-        const res = await fetch('/api/answerquestion', {
+        // 🚨 여기 주소 대문자로 완벽 맵핑 완료!
+        const res = await fetch('/api/answerQuestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
