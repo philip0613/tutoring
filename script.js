@@ -435,8 +435,7 @@ async function handleDeleteStudent() {
 // ==========================================
 // 💡 학생 전용 API 통신 함수
 // ==========================================
-
-// 1. 모르는 문제 질문 올리기 완료 버전 (방어 로직 설계 강화)
+// 💡 [최종 방어 패치] 모르는 문제 질문 올리기 (파라미터 올인원 버전)
 async function handleAskQuestion() {
     const textInput = document.getElementById('questionText');
     const fileInput = document.getElementById('questionImage');
@@ -458,12 +457,25 @@ async function handleAskQuestion() {
             image_base64 = await fileToBase64(file);
         }
 
+        // 💡 디버깅용: 콘솔에 현재 전송하려는 유저 데이터 상태 찍기 (F12에서 확인 가능)
+        console.log("✈️ 질문 전송 시도 유저 세션:", currentUser);
+
+        // 💡 백엔드가 낚시줄을 어떤 이름으로 던졌을지 몰라서 다 준비함
+        const userId = currentUser.id || currentUser.student_id || currentUser.login_id;
+
         const res = await fetch('/api/uploadQuestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                student_id: currentUser.id || currentUser.login_id,
+                // 1. 학생 고유 ID 계열 (백엔드 변수명 매칭 에러 원천 차단)
+                student_id: userId,
+                studentId: userId,
+                id: userId,
+                userId: userId,
+                
+                // 2. 내용 및 이미지 데이터
                 question_text: text,
+                questionText: text,
                 image_base64: image_base64,
                 image_name: image_name
             })
@@ -473,19 +485,22 @@ async function handleAskQuestion() {
             alert('✅ 질문이 성공적으로 등록되었습니다!');
             textInput.value = '';
             fileInput.value = '';
-            loadStudentDashboard(); 
+            loadStudentDashboard(); // 내 질문 목록 새로고침
         } else {
+            // 💡 서버가 구체적으로 왜 까부는지 에러 원인 응답 본문 뜯어내기
             const errData = await res.json().catch(() => ({}));
-            alert('질문 등록 실패: ' + (errData.error || errData.message || '서버 에러가 발생했습니다.'));
+            console.error("❌ 백엔드가 뱉은 에러 원문:", errData);
+            
+            const errMsg = errData.error || errData.message || errData.details || JSON.stringify(errData);
+            alert('질문 등록 실패: ' + (errMsg !== '{}' ? errMsg : '백엔드 API 서버 에러 (500/400)'));
         }
     } catch (err) { 
-        alert('에러 발생: ' + err.message); 
+        alert('네트워크 또는 브라우저 에러 발생: ' + err.message); 
     } finally { 
         btn.innerText = "질문 올리기"; 
         btn.disabled = false; 
     }
 }
-
 // 2. 학생 비밀번호 변경 로직 구현 완료 버전
 async function handleChangePassword() {
     const passwordInput = document.getElementById('newPassword');
