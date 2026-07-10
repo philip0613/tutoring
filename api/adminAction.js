@@ -1,7 +1,8 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
 
-    const { action, table, id, updateData, student_id } = req.body;
+    // 💡 프론트에서 넘어오는 데이터에 피드백 관련 변수(feedbackTitle, feedbackText, studentId) 추가 추출
+    const { action, table, id, updateData, student_id, studentId, feedbackTitle, feedbackText } = req.body;
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_KEY; 
 
@@ -97,6 +98,28 @@ export default async function handler(req, res) {
                 headers: headers
             });
         } 
+        // ==========================================
+        // 💡 [신규 추가] 피드백 저장 액션
+        // ==========================================
+        else if (action === 'addFeedback') {
+            // 프론트엔드에서 보낸 studentId 변수명 대응 (혹시 모를 에러 방지)
+            const targetStudentId = student_id || studentId; 
+            
+            const response = await fetch(`${supabaseUrl}/rest/v1/feedbacks`, {
+                method: 'POST',
+                headers: { ...headers, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({
+                    student_id: targetStudentId,
+                    feedback_title: feedbackTitle, // 👉 프론트에서 온 제목
+                    feedback_text: feedbackText    // 👉 프론트에서 온 내용
+                })
+            });
+            
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(`피드백 저장 실패: ${JSON.stringify(errData)}`);
+            }
+        }
         else {
             throw new Error('알 수 없는 명령입니다.');
         }
