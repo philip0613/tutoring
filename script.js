@@ -1,29 +1,23 @@
 // ==========================================
 // 💡 전역 상태 관리 변수
 // ==========================================
-let currentUser = null; // 현재 로그인한 유저 정보 (role: 'admin' 또는 'student')
-let currentStudentId = null; // 선생님이 현재 관리 중인(클릭한) 학생의 ID
+let currentUser = null; 
+let currentStudentId = null; 
 
 document.addEventListener('DOMContentLoaded', () => {
-    checkSession(); // 화면이 켜지면 로그인 상태인지 먼저 확인!
+    checkSession(); 
 
-    // ==========================================
     // 1. 공통 및 로그인 이벤트
-    // ==========================================
     document.getElementById('loginBtn').addEventListener('click', handleLogin);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 
-    // ==========================================
     // 2. 선생님(Admin) 대시보드 이벤트
-    // ==========================================
     document.getElementById('createStudentBtn').addEventListener('click', handleCreateStudent);
     document.getElementById('uploadExamBtn').addEventListener('click', handleUploadExam);
     document.getElementById('sendFeedbackBtn').addEventListener('click', handleSendFeedback);
     document.getElementById('deleteStudentBtn').addEventListener('click', handleDeleteStudent);
 
-    // ==========================================
     // 3. 학생(Student) 대시보드 이벤트
-    // ==========================================
     document.getElementById('askQuestionBtn').addEventListener('click', handleAskQuestion);
     document.getElementById('togglePasswordBtn').addEventListener('click', () => {
         document.getElementById('passwordFormContainer').classList.toggle('hidden-form');
@@ -32,10 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 💡 유틸리티 함수 (마법의 도구들)
+// 💡 유틸리티 함수
 // ==========================================
-
-// 1. 백엔드 데이터 껍데기 까기
 function extractDataArray(responseData) {
     if (!responseData) return [];
     if (Array.isArray(responseData)) return responseData; 
@@ -46,7 +38,6 @@ function extractDataArray(responseData) {
     return []; 
 }
 
-// 2. 파일(이미지)을 텍스트(Base64)로 인코딩하는 함수
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -60,7 +51,6 @@ function fileToBase64(file) {
 // 💡 화면 그리기(렌더링) 함수 모음
 // ==========================================
 
-// 피드백 리스트 그리기 (v1.0.1 아코디언 토글 적용)
 function renderFeedbackList(feedbacksRaw, containerElement) {
     containerElement.innerHTML = ''; 
     const feedbacks = extractDataArray(feedbacksRaw);
@@ -95,7 +85,6 @@ function renderFeedbackList(feedbacksRaw, containerElement) {
     });
 }
 
-// 💡 [완벽 복구] 질문 및 선생님 답변(댓글) 리스트 그리기
 function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
     containerElement.innerHTML = '';
     const questions = extractDataArray(questionsRaw);
@@ -111,8 +100,6 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
         li.style.marginBottom = '15px';
         
         const dateStr = q.created_at ? new Date(q.created_at).toLocaleDateString() : '날짜 없음';
-        
-        // 1. 학생 질문 본문 및 이미지 생성
         let imgTag = q.question_image_url ? `<img src="${q.question_image_url}" alt="질문 이미지" style="max-width:100%; border-radius:4px; margin-top:10px; display:block;">` : '';
         
         let htmlContent = `
@@ -124,7 +111,6 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
             <hr style="border: 0; border-top: 1px dashed #eee; margin: 10px 0;">
         `;
 
-        // 2. 이미 등록된 선생님 답변이 있다면 출력
         if (q.answer_text) {
             let ansImgTag = q.answer_image_url ? `<img src="${q.answer_image_url}" alt="답변 이미지" style="max-width:100%; border-radius:4px; margin-top:10px; display:block;">` : '';
             htmlContent += `
@@ -139,7 +125,6 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
 
         li.innerHTML = htmlContent;
 
-        // 3. 만약 '선생님 대시보드'이고 아직 답변이 없다면, 답변 작성 폼을 동적으로 생성해서 붙여줌!
         if (isAdmin && !q.answer_text) {
             const adminForm = document.createElement('div');
             adminForm.style.marginTop = '10px';
@@ -149,7 +134,6 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
                 <button id="ansBtn_${q.id}" class="small-btn" style="background:#22c55e; margin-top:5px; width:100%;">답변 등록하기</button>
             `;
             
-            // 답변 등록 버튼 클릭 이벤트 바인딩
             adminForm.querySelector(`#ansBtn_${q.id}`).addEventListener('click', () => {
                 handleAnswerQuestion(q.id);
             });
@@ -197,7 +181,6 @@ async function loadTeacherDashboard() {
 
 async function loadStudentDetail(studentId) {
     try {
-        // 1. 쪽지시험 리스트 조회
         const examRes = await fetch(`/api/getExams?studentId=${studentId}&student_id=${studentId}`);
         const exams = extractDataArray(await examRes.json());
         const examList = document.getElementById('examListAdmin');
@@ -207,11 +190,9 @@ async function loadStudentDetail(studentId) {
             examList.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
         }
 
-        // 2. 질문 내역 조회 (선생님 권한 true 전달)
         const questionRes = await fetch(`/api/getQuestions?studentId=${studentId}&student_id=${studentId}`);
         renderQuestionList(await questionRes.json(), document.getElementById('questionListAdmin'), true);
 
-        // 3. 피드백 내역 조회
         const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${studentId}&student_id=${studentId}`);
         renderFeedbackList(await feedbackRes.json(), document.getElementById('feedbackListAdmin'));
 
@@ -222,7 +203,6 @@ async function loadStudentDetail(studentId) {
 
 async function loadStudentDashboard() {
     try {
-        // 1. 본인 시험 결과 조회
         const examRes = await fetch(`/api/getExams?studentId=${currentUser.id}&student_id=${currentUser.id}`);
         const exams = extractDataArray(await examRes.json());
         const myExamList = document.getElementById('myExamList');
@@ -232,11 +212,9 @@ async function loadStudentDashboard() {
             myExamList.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
         }
 
-        // 2. 본인 질문 내역 조회 (학생 권한 false 전달)
         const questionRes = await fetch(`/api/getQuestions?studentId=${currentUser.id}&student_id=${currentUser.id}`);
         renderQuestionList(await questionRes.json(), document.getElementById('myQuestionList'), false);
 
-        // 3. 선생님 한마디(피드백) 조회
         const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${currentUser.id}&student_id=${currentUser.id}`);
         renderFeedbackList(await feedbackRes.json(), document.getElementById('myFeedbackList'));
 
@@ -246,7 +224,7 @@ async function loadStudentDashboard() {
 }
 
 // ==========================================
-// 💡 로그인 및 인증 세션 관리
+// 💡 로그인 및 세션 관리
 // ==========================================
 
 async function handleLogin() {
@@ -313,7 +291,7 @@ function checkSession() {
 // 💡 관리자(선생님) 전용 API 통신 함수 모음
 // ==========================================
 
-// 1. 학생 대답(댓글) 달기 로직 구현 완료 버전!
+// 💡 [수정 완료] 대소문자 매칭 교정본 (/api/answerquestion)
 async function handleAnswerQuestion(questionId) {
     const textInput = document.getElementById(`ansText_${questionId}`);
     const fileInput = document.getElementById(`ansImg_${questionId}`);
@@ -334,13 +312,13 @@ async function handleAnswerQuestion(questionId) {
             image_base64 = await fileToBase64(fileInput.files[0]);
         }
 
-        // 백엔드 주소인 /api/answerQuestion 호출
-        const res = await fetch('/api/answerQuestion', {
+        // 🚨 여기 주소 소문자로 완벽 맵핑 완료!
+        const res = await fetch('/api/answerquestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 questionId: questionId,
-                id: questionId, // 백엔드 변수명 매칭 방어
+                id: questionId, 
                 answer_text: text,
                 answerText: text,
                 image_base64: image_base64,
@@ -350,7 +328,7 @@ async function handleAnswerQuestion(questionId) {
 
         if (res.ok) {
             alert('✅ 답변이 성공적으로 등록되었습니다!');
-            loadStudentDetail(currentStudentId); // 대시보드 새로고침
+            loadStudentDetail(currentStudentId); 
         } else {
             const err = await res.json().catch(() => ({}));
             alert('답변 등록 실패: ' + (err.error || err.message || '서버 오류'));
@@ -363,7 +341,6 @@ async function handleAnswerQuestion(questionId) {
     }
 }
 
-// 2. 신규 학생 생성
 async function handleCreateStudent() {
     const nameInput = document.getElementById('newStudentName');
     const idInput = document.getElementById('newStudentId');
@@ -383,8 +360,7 @@ async function handleCreateStudent() {
         });
         if (res.ok) {
             alert('✅ 학생 계정 생성 완료! (기본 비밀번호: 123456)');
-            nameInput.value = '';
-            idInput.value = '';
+            nameInput.value = ''; idInput.value = '';
             loadTeacherDashboard();
         } else {
             const err = await res.json().catch(() => ({}));
@@ -394,7 +370,6 @@ async function handleCreateStudent() {
     finally { btn.disabled = false; }
 }
 
-// 3. 쪽지시험 점수 및 사진 업로드
 async function handleUploadExam() {
     if (!currentStudentId) return alert("먼저 학생을 선택해주세요!");
     const titleInput = document.getElementById("examTitle");
@@ -427,7 +402,6 @@ async function handleUploadExam() {
     finally { btn.innerText = "시험지 업로드 및 저장"; btn.disabled = false; }
 }
 
-// 4. 개별 피드백 전송
 async function handleSendFeedback() {
     const titleInput = document.getElementById('feedbackTitleAdmin');
     const textInput = document.getElementById('feedbackTextAdmin');
@@ -450,7 +424,6 @@ async function handleSendFeedback() {
     } catch (error) { console.error('피드백 전송 에러:', error); }
 }
 
-// 5. 학생 계정 완전 삭제
 async function handleDeleteStudent() {
     if (!currentStudentId) return;
     if (!confirm('🚨 정말 이 학생의 모든 데이터를 삭제하시겠습니까? (복구 불가능)')) return;
@@ -474,7 +447,6 @@ async function handleDeleteStudent() {
 // 💡 학생 전용 API 통신 함수 모음
 // ==========================================
 
-// 1. 모르는 문제 질문 올리기 (askQuestion 주소 맵핑 수정 완료)
 async function handleAskQuestion() {
     const textInput = document.getElementById('questionText');
     const fileInput = document.getElementById('questionImage');
@@ -492,7 +464,6 @@ async function handleAskQuestion() {
             image_base64 = await fileToBase64(file);
         }
 
-        // 💡 아까 해결한 올바른 파일 주소 매칭 (/api/askQuestion)
         const res = await fetch('/api/askQuestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -520,7 +491,6 @@ async function handleAskQuestion() {
     finally { btn.innerText = "질문 올리기"; btn.disabled = false; }
 }
 
-// 2. 학생 비밀번호 변경
 async function handleChangePassword() {
     const passwordInput = document.getElementById('newPassword');
     const newPw = passwordInput.value.trim();
