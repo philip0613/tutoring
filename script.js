@@ -30,37 +30,40 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 💡 핵심 렌더링 함수: 피드백 리스트 (아코디언 UI 적용)
+// 💡 핵심 렌더링 함수: 피드백 리스트 (데이터 방어 로직 추가!)
 // ==========================================
 function renderFeedbackList(feedbacks, containerElement) {
     containerElement.innerHTML = ''; // 리스트 싹 비우기
 
-    if (!feedbacks || feedbacks.length === 0) {
+    // 💡 [핵심 방어 코드] 백엔드가 데이터를 { data: [...] } 형태로 보냈을 경우 껍데기 까기!
+    let fbArray = Array.isArray(feedbacks) ? feedbacks : (feedbacks.data || feedbacks.feedbacks || []);
+
+    if (fbArray.length === 0) {
         containerElement.innerHTML = '<li style="text-align:center; color:#888;">아직 등록된 피드백이 없습니다.</li>';
         return;
     }
 
-    feedbacks.forEach(fb => {
+    fbArray.forEach(fb => {
         const li = document.createElement('li');
 
         // 1. 아코디언 제목 버튼 생성
         const titleBtn = document.createElement('button');
         titleBtn.className = 'feedback-title-btn';
         
-        // 기존 옛날 데이터(제목 없는 피드백) 호환성을 위한 처리
         const displayTitle = fb.feedback_title ? fb.feedback_title : '제목 없는 피드백'; 
         titleBtn.innerHTML = `📌 ${displayTitle} <span style="font-size: 0.8em; color: #888; font-weight: normal;">(클릭)</span>`;
 
-        // 2. 피드백 상세 내용 영역 생성 (처음엔 CSS로 숨겨져 있음)
+        // 2. 피드백 상세 내용 영역 생성
         const detailDiv = document.createElement('div');
         detailDiv.className = 'feedback-detail';
-        const dateStr = new Date(fb.created_at).toLocaleDateString();
+        const dateStr = fb.created_at ? new Date(fb.created_at).toLocaleDateString() : '날짜 없음';
+        
         detailDiv.innerHTML = `
-            <p>${fb.feedback_text}</p>
+            <p>${fb.feedback_text || '내용이 없습니다.'}</p>
             <div style="text-align: right; margin-top: 10px; font-size: 0.8em; color: #aaa;">${dateStr}</div>
         `;
 
-        // 3. 클릭 시 내용이 열리고 닫히는 토글 이벤트
+        // 3. 클릭 시 토글 이벤트
         titleBtn.addEventListener('click', () => {
             detailDiv.classList.toggle('show');
         });
@@ -76,7 +79,6 @@ function renderFeedbackList(feedbacks, containerElement) {
 // 💡 선생님 API 액션 함수
 // ==========================================
 
-// 피드백 전송 로직
 async function handleSendFeedback() {
     const titleInput = document.getElementById('feedbackTitleAdmin');
     const textInput = document.getElementById('feedbackTextAdmin');
@@ -116,7 +118,7 @@ async function handleSendFeedback() {
 }
 
 // ==========================================
-// 💡 로그인 및 세션 관리 로직 (권한 누락 완벽 패치!)
+// 💡 로그인 및 세션 관리 로직
 // ==========================================
 
 async function handleLogin() {
@@ -134,13 +136,10 @@ async function handleLogin() {
         const data = await response.json();
 
         if (response.ok) {
-            // 💡 [핵심 해결 마법] Supabase의 user 껍데기 속 데이터와 
-            // 백엔드가 밖으로 빼서 보내준 role, name 데이터를 완벽하게 하나로 병합(Merge)!
             const userData = {
-                ...(data.user || {}), // 기본 id 등 챙기기
-                ...data               // 밖으로 빠져나온 role, name 등 덮어쓰기
+                ...(data.user || {}), 
+                ...data               
             }; 
-            
             localStorage.setItem('session', JSON.stringify(userData));
             checkSession();
         } else {
@@ -164,7 +163,6 @@ function checkSession() {
         document.getElementById('loginSection').classList.add('hidden');
         document.getElementById('userInfo').classList.remove('hidden');
         
-        // currentUser.name이 없으면 ID를 대신 표시하도록 안전장치 추가
         const displayName = currentUser.name || currentUser.id || '사용자';
         document.getElementById('userGreeting').textContent = `${displayName}님 환영합니다!`;
 
@@ -187,10 +185,9 @@ function checkSession() {
 }
 
 // ==========================================
-// 💡 대시보드 데이터 로드 로직
+// 💡 대시보드 데이터 로드 로직 (API 파라미터 방어 적용!)
 // ==========================================
 
-// 선생님 대시보드 로드
 async function loadTeacherDashboard() {
     try {
         const response = await fetch('/api/getStudents');
@@ -217,10 +214,9 @@ async function loadTeacherDashboard() {
     }
 }
 
-// 특정 학생 상세 데이터 로드
 async function loadStudentDetail(studentId) {
     try {
-        const examRes = await fetch(`/api/getExams?studentId=${studentId}`);
+        const examRes = await fetch(`/api/getExams?studentId=${studentId}&student_id=${studentId}`);
         const exams = await examRes.json();
         const examList = document.getElementById('examListAdmin');
         if(exams && exams.length > 0) {
@@ -229,8 +225,12 @@ async function loadStudentDetail(studentId) {
             examList.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
         }
 
-        const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${studentId}`);
+        // 💡 백엔드가 studentId를 요구할지, student_id를 요구할지 몰라서 둘 다 던집니다!
+        const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${studentId}&student_id=${studentId}`);
         const feedbacks = await feedbackRes.json();
+        
+        console.log("🛠️ [관리자] 불러온 피드백 데이터 확인:", feedbacks); // F12 개발자 도구 확인용
+        
         renderFeedbackList(feedbacks, document.getElementById('feedbackListAdmin'));
 
     } catch (error) {
@@ -238,10 +238,9 @@ async function loadStudentDetail(studentId) {
     }
 }
 
-// 학생 대시보드 로드
 async function loadStudentDashboard() {
     try {
-        const examRes = await fetch(`/api/getExams?studentId=${currentUser.id}`);
+        const examRes = await fetch(`/api/getExams?studentId=${currentUser.id}&student_id=${currentUser.id}`);
         const exams = await examRes.json();
         const myExamList = document.getElementById('myExamList');
         if(exams && exams.length > 0) {
@@ -250,8 +249,12 @@ async function loadStudentDashboard() {
             myExamList.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
         }
 
-        const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${currentUser.id}`);
+        // 💡 백엔드가 studentId를 요구할지, student_id를 요구할지 몰라서 둘 다 던집니다!
+        const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${currentUser.id}&student_id=${currentUser.id}`);
         const feedbacks = await feedbackRes.json();
+        
+        console.log("🛠️ [학생] 불러온 피드백 데이터 확인:", feedbacks); // F12 개발자 도구 확인용
+        
         renderFeedbackList(feedbacks, document.getElementById('myFeedbackList'));
 
     } catch (error) {
