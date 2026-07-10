@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderFeedbackList(feedbacks, containerElement) {
     containerElement.innerHTML = ''; // 리스트 싹 비우기
 
-    if (feedbacks.length === 0) {
+    if (!feedbacks || feedbacks.length === 0) {
         containerElement.innerHTML = '<li style="text-align:center; color:#888;">아직 등록된 피드백이 없습니다.</li>';
         return;
     }
@@ -60,7 +60,7 @@ function renderFeedbackList(feedbacks, containerElement) {
             <div style="text-align: right; margin-top: 10px; font-size: 0.8em; color: #aaa;">${dateStr}</div>
         `;
 
-        // 3. 클릭 시 내용이 열리고 닫히는 토글 이벤트!
+        // 3. 클릭 시 내용이 열리고 닫히는 토글 이벤트
         titleBtn.addEventListener('click', () => {
             detailDiv.classList.toggle('show');
         });
@@ -73,13 +73,13 @@ function renderFeedbackList(feedbacks, containerElement) {
 }
 
 // ==========================================
-// 💡 선생님 API 액션 함수들
+// 💡 선생님 API 액션 함수
 // ==========================================
 
 // 피드백 전송 로직
 async function handleSendFeedback() {
-    const titleInput = document.getElementById('feedbackTitleAdmin'); // 새로 만든 제목 칸
-    const textInput = document.getElementById('feedbackTextAdmin');   // 내용 칸
+    const titleInput = document.getElementById('feedbackTitleAdmin');
+    const textInput = document.getElementById('feedbackTextAdmin');
     
     const title = titleInput.value.trim();
     const text = textInput.value.trim();
@@ -96,14 +96,14 @@ async function handleSendFeedback() {
             body: JSON.stringify({
                 action: 'addFeedback',
                 studentId: currentStudentId,
-                feedbackTitle: title, // 👉 DB로 날아가는 새로운 데이터!
+                feedbackTitle: title,
                 feedbackText: text
             })
         });
 
         if (response.ok) {
             alert('피드백이 성공적으로 전송되었습니다!');
-            titleInput.value = ''; // 칸 비우기
+            titleInput.value = '';
             textInput.value = '';
             loadStudentDetail(currentStudentId); // 화면 새로고침
         } else {
@@ -116,7 +116,7 @@ async function handleSendFeedback() {
 }
 
 // ==========================================
-// 나머지 기본 뼈대 로직들 (로그인, 화면 전환, 불러오기 등)
+// 💡 로그인 및 세션 관리 로직 (수정 완료!)
 // ==========================================
 
 async function handleLogin() {
@@ -134,13 +134,17 @@ async function handleLogin() {
         const data = await response.json();
 
         if (response.ok) {
-            localStorage.setItem('session', JSON.stringify(data.user));
+            // 💡 백엔드 응답 형태에 맞게 안전하게 유저 데이터 추출
+            const userData = data.user ? data.user : data; 
+            
+            localStorage.setItem('session', JSON.stringify(userData));
             checkSession();
         } else {
-            alert('로그인 실패: ' + data.message);
+            alert('로그인 실패: ' + (data.message || data.error || '알 수 없는 오류'));
         }
     } catch (error) {
         console.error('로그인 에러:', error);
+        alert('서버와 통신 중 문제가 발생했습니다.');
     }
 }
 
@@ -155,7 +159,10 @@ function checkSession() {
         currentUser = JSON.parse(sessionData);
         document.getElementById('loginSection').classList.add('hidden');
         document.getElementById('userInfo').classList.remove('hidden');
-        document.getElementById('userGreeting').textContent = `${currentUser.name}님 환영합니다!`;
+        
+        // currentUser.name이 없으면 ID를 대신 표시하도록 안전장치 추가
+        const displayName = currentUser.name || currentUser.id || '사용자';
+        document.getElementById('userGreeting').textContent = `${displayName}님 환영합니다!`;
 
         if (currentUser.role === 'admin') {
             document.getElementById('teacherDashboard').classList.remove('hidden');
@@ -175,6 +182,10 @@ function checkSession() {
     }
 }
 
+// ==========================================
+// 💡 대시보드 데이터 로드 로직
+// ==========================================
+
 // 선생님 대시보드 로드
 async function loadTeacherDashboard() {
     try {
@@ -183,33 +194,37 @@ async function loadTeacherDashboard() {
         const list = document.getElementById('studentList');
         list.innerHTML = '';
 
-        students.forEach(student => {
-            const li = document.createElement('li');
-            li.textContent = `${student.name} (${student.login_id})`;
-            li.style.cursor = 'pointer';
-            li.addEventListener('click', () => {
-                currentStudentId = student.id;
-                document.getElementById('manageStudentTitle').textContent = `[${student.name}] 학생 상세 관리`;
-                document.getElementById('studentManagePanel').classList.remove('hidden');
-                loadStudentDetail(currentStudentId);
+        if(students && students.length > 0) {
+            students.forEach(student => {
+                const li = document.createElement('li');
+                li.textContent = `${student.name} (${student.login_id})`;
+                li.style.cursor = 'pointer';
+                li.addEventListener('click', () => {
+                    currentStudentId = student.id;
+                    document.getElementById('manageStudentTitle').textContent = `[${student.name}] 학생 상세 관리`;
+                    document.getElementById('studentManagePanel').classList.remove('hidden');
+                    loadStudentDetail(currentStudentId);
+                });
+                list.appendChild(li);
             });
-            list.appendChild(li);
-        });
+        }
     } catch (error) {
         console.error('학생 목록 로드 에러:', error);
     }
 }
 
-// 특정 학생 상세 데이터 로드 (피드백 리스트 아코디언 포함)
+// 특정 학생 상세 데이터 로드
 async function loadStudentDetail(studentId) {
     try {
-        // 시험 데이터 로드
         const examRes = await fetch(`/api/getExams?studentId=${studentId}`);
         const exams = await examRes.json();
         const examList = document.getElementById('examListAdmin');
-        examList.innerHTML = exams.map(e => `<li>${e.exam_title} : ${e.score}점</li>`).join('');
+        if(exams && exams.length > 0) {
+            examList.innerHTML = exams.map(e => `<li>${e.exam_title} : ${e.score}점</li>`).join('');
+        } else {
+            examList.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
+        }
 
-        // 피드백 데이터 로드 및 렌더링 (아코디언 UI 함수 호출)
         const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${studentId}`);
         const feedbacks = await feedbackRes.json();
         renderFeedbackList(feedbacks, document.getElementById('feedbackListAdmin'));
@@ -219,14 +234,18 @@ async function loadStudentDetail(studentId) {
     }
 }
 
-// 학생 대시보드 로드 (피드백 리스트 아코디언 포함)
+// 학생 대시보드 로드
 async function loadStudentDashboard() {
     try {
         const examRes = await fetch(`/api/getExams?studentId=${currentUser.id}`);
         const exams = await examRes.json();
-        document.getElementById('myExamList').innerHTML = exams.map(e => `<li>${e.exam_title} : ${e.score}점</li>`).join('');
+        const myExamList = document.getElementById('myExamList');
+        if(exams && exams.length > 0) {
+            myExamList.innerHTML = exams.map(e => `<li>${e.exam_title} : ${e.score}점</li>`).join('');
+        } else {
+            myExamList.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
+        }
 
-        // 피드백 데이터 로드 및 렌더링 (아코디언 UI 함수 호출)
         const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${currentUser.id}`);
         const feedbacks = await feedbackRes.json();
         renderFeedbackList(feedbacks, document.getElementById('myFeedbackList'));
@@ -236,7 +255,7 @@ async function loadStudentDashboard() {
     }
 }
 
-// 기타 더미 함수들 (기존 코드 유지)
+// 기타 유지용 함수들
 async function handleCreateStudent() { /* API 호출 로직 */ }
 async function handleUploadExam() { /* API 호출 로직 */ }
 async function handleDeleteStudent() { /* API 호출 로직 */ }
