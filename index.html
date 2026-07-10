@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>스마트 과외 관리 시스템</title>
+    <title>📚 스마트 과외 관리 시스템</title>
     
-    <!-- 현재 사용 중인 이모지 파비콘 📚 -->
+    <!-- 현재 사용 중인 이모지 파비콘 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
     
     <!-- 직접 만든 로고 이미지 파일로 넣기 (나중에 사용할 때 아래 줄의 주석을 해제하세요) -->
@@ -62,22 +62,28 @@
                     </div>
                     <div class="sub-card">
                         <h4>❓ 학생이 올린 질문</h4>
-                        <ul id="questionListAdmin" class="item-list"></ul>
+                        <!-- 디자인 깨짐 방지용 스크롤 클래스 추가 -->
+                        <ul id="questionListAdmin" class="item-list scrollable-list"></ul>
                     </div>
                 </div>
 
                 <div class="sub-card mt-20" style="background: #f0f8ff;">
                     <h4>📊 이 학생의 시험 결과 기록</h4>
-                    <ul id="examListAdmin" class="item-list" style="max-height:150px;"></ul>
+                    <!-- 디자인 깨짐 방지용 스크롤 클래스 추가 -->
+                    <ul id="examListAdmin" class="item-list scrollable-list"></ul>
                 </div>
 
                 <div class="sub-card mt-20" style="background: #fdfaf6;">
                     <h4>✍️ 개별 피드백 남기기</h4>
+                    <!-- 👇 이번 업데이트의 핵심! 피드백 제목 칸 -->
+                    <input type="text" id="feedbackTitleAdmin" placeholder="피드백 제목 (예: 7/11 첫 수업 요약)">
+                    
                     <textarea id="feedbackTextAdmin" placeholder="수업 진도, 숙제 등을 적어주세요." style="width:100%; height:80px; padding:10px; border-radius:6px; border:1px solid #ddd; margin-top:10px; font-family:inherit; resize:none;"></textarea>
                     <button id="sendFeedbackBtn" class="primary-btn">피드백 전송</button>
                     
                     <h5 class="mt-20">이전 피드백 기록</h5>
-                    <ul id="feedbackListAdmin" class="item-list" style="max-height:150px;"></ul>
+                    <!-- 디자인 깨짐 방지용 스크롤 클래스 추가 -->
+                    <ul id="feedbackListAdmin" class="item-list scrollable-list"></ul>
                 </div>
 
                 <div class="mt-20" style="text-align: right;">
@@ -93,7 +99,8 @@
             <div class="grid-container">
                 <div class="card">
                     <h3>📈 내 쪽지시험 결과</h3>
-                    <ul id="myExamList" class="item-list"></ul>
+                    <!-- 디자인 깨짐 방지용 스크롤 클래스 추가 -->
+                    <ul id="myExamList" class="item-list scrollable-list"></ul>
                 </div>
                 <div class="card">
                     <h3>🙋‍♂️ 모르는 문제 질문하기</h3>
@@ -102,12 +109,14 @@
                     <button id="askQuestionBtn" class="primary-btn">질문 올리기</button>
                     
                     <h4 class="mt-20">나의 질문 내역</h4>
-                    <ul id="myQuestionList" class="item-list"></ul>
+                    <!-- 디자인 깨짐 방지용 스크롤 클래스 추가 -->
+                    <ul id="myQuestionList" class="item-list scrollable-list"></ul>
                 </div>
             </div>
             <div class="card mt-20" style="background: #f7f9fc;">
                 <h3>📋 선생님의 한마디 (개별 피드백)</h3>
-                <ul id="myFeedbackList" class="item-list"></ul>
+                <!-- 👇 학생 화면도 넘치지 않도록 방어 코드 추가! -->
+                <ul id="myFeedbackList" class="item-list scrollable-list"></ul>
             </div>
             <div class="password-toggle-container">
                 <button id="togglePasswordBtn" class="text-link-btn">⚙️ 비밀번호 변경하기</button>
