@@ -116,7 +116,7 @@ async function handleSendFeedback() {
 }
 
 // ==========================================
-// 💡 로그인 및 세션 관리 로직 (수정 완료!)
+// 💡 로그인 및 세션 관리 로직 (권한 누락 완벽 패치!)
 // ==========================================
 
 async function handleLogin() {
@@ -134,8 +134,12 @@ async function handleLogin() {
         const data = await response.json();
 
         if (response.ok) {
-            // 💡 백엔드 응답 형태에 맞게 안전하게 유저 데이터 추출
-            const userData = data.user ? data.user : data; 
+            // 💡 [핵심 해결 마법] Supabase의 user 껍데기 속 데이터와 
+            // 백엔드가 밖으로 빼서 보내준 role, name 데이터를 완벽하게 하나로 병합(Merge)!
+            const userData = {
+                ...(data.user || {}), // 기본 id 등 챙기기
+                ...data               // 밖으로 빠져나온 role, name 등 덮어쓰기
+            }; 
             
             localStorage.setItem('session', JSON.stringify(userData));
             checkSession();
@@ -255,7 +259,9 @@ async function loadStudentDashboard() {
     }
 }
 
-// 기타 유지용 함수들
+// ==========================================
+// ⚠️ 기타 유지용 함수들 (기존에 작성해둔 로직이 있다면 덮어쓰지 않게 주의!)
+// ==========================================
 async function handleCreateStudent() { /* API 호출 로직 */ }
 async function handleUploadExam() { /* API 호출 로직 */ }
 async function handleDeleteStudent() { /* API 호출 로직 */ }
