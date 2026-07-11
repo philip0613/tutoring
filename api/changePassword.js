@@ -3,6 +3,7 @@ export default async function handler(req, res) {
 
     const { id, userId, user_id, login_id, newPassword, password } = req.body;
     
+    // 네 사진에 있던 UUID (예: 2773449f-...) 를 정확히 타겟팅!
     const targetId = id || userId || user_id;
     const targetPw = newPassword || password;
 
@@ -11,23 +12,23 @@ export default async function handler(req, res) {
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY;
+    const supabaseKey = process.env.SUPABASE_KEY; 
     const headers = { 'Content-Type': 'application/json', 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` };
 
     try {
-        // 💡 [핵심 해결] 캡처 화면에 맞게 테이블 이름을 'profiles'로 변경!
-        const dbRes = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${targetId}`, {
-            method: 'PATCH',
-            headers: { ...headers, 'Prefer': 'return=minimal' },
+        // 💡 [정답!] 일반 테이블이 아니라 Supabase 'Authentication' 시스템에 있는 유저 비밀번호를 직접 바꿉니다!
+        const authRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${targetId}`, {
+            method: 'PUT',
+            headers: headers,
             body: JSON.stringify({ password: targetPw })
         });
 
-        if (!dbRes.ok) {
-            const errorText = await dbRes.text().catch(() => 'Unknown DB Error');
-            return res.status(400).json({ error: `Supabase 오류: ${errorText}` });
+        if (!authRes.ok) {
+            const errorText = await authRes.text().catch(() => 'Unknown Auth Error');
+            return res.status(400).json({ error: `인증(Auth) 오류: ${errorText}` });
         }
 
-        return res.status(200).json({ message: '비밀번호 변경 성공' });
+        return res.status(200).json({ message: '비밀번호 변경 성공!' });
 
     } catch (error) {
         console.error('changePassword 내부 크래시:', error);
