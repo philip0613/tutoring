@@ -13,9 +13,9 @@ export default async function handler(req, res) {
     try {
         let dbRes;
 
-        // 💡 [핵심 해결] 학생 삭제 시 테이블 이름을 students 에서 users 로 변경!
+        // 💡 [핵심 해결] 학생 삭제 시 테이블 이름을 'profiles'로 변경!
         if (action === 'deleteStudent') {
-            dbRes = await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${targetStudentId}`, { method: 'DELETE', headers });
+            dbRes = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${targetStudentId}`, { method: 'DELETE', headers });
         }
         else if (action === 'deleteExam') {
             dbRes = await fetch(`${supabaseUrl}/rest/v1/exams?id=eq.${targetId}`, { method: 'DELETE', headers });
