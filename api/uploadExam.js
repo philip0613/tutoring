@@ -1,57 +1,64 @@
 export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST만 가능' });
 
-    const { student_id, exam_title, score, image_base64, image_name } = req.body;
+    // 프론트가 보내는 데이터 추출
+    const { student_id, studentId, id, userId, exam_title, examTitle, score, image_base64, image_name } = req.body;
+
+    const targetStudentId = student_id || studentId || id || userId;
+    const targetTitle = exam_title || examTitle;
+
+    if (!targetStudentId || !targetTitle || score === undefined) {
+        return res.status(400).json({ error: '필수 데이터(학생ID, 시험명, 점수)가 누락되었습니다.' });
+    }
+
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_KEY;
+    const headers = { 'Content-Type': 'application/json', 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` };
 
     try {
-        let paper_image_url = null;
+        let uploadedImageUrl = null;
 
-        // 1. 사진 파일이 넘어왔다면 Storage 창고에 먼저 업로드!
+        // 💡 [핵심 패치] 여기서 사진을 진짜 이미지 파일로 변환해서 저장소에 올립니다!
         if (image_base64 && image_name) {
-            // 파일 이름이 겹치지 않게 앞에 현재 시간을 붙여줌
-            const uniqueFileName = `${Date.now()}_${encodeURIComponent(image_name)}`;
-            const buffer = Buffer.from(image_base64, 'base64');
-            const mimeType = image_name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+            const base64Data = image_base64.split(',')[1] || image_base64;
+            const buffer = Buffer.from(base64Data, 'base64');
+            
+            // 파일명 깨짐 방지 무작위 세탁
+            const randomStr = Math.random().toString(36).substring(2, 10);
+            const uniqueFileName = `exam_${Date.now()}_${randomStr}.png`;
 
-            const storageRes = await fetch(`${supabaseUrl}/storage/v1/object/tutor_files/${uniqueFileName}`, {
+            // tutor_files 버킷의 exams 폴더(없으면 자동생성)에 안전하게 저장!
+            const storageUrl = `${supabaseUrl}/storage/v1/object/tutor_files/exams/${uniqueFileName}`;
+
+            const storageRes = await fetch(storageUrl, {
                 method: 'POST',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`,
-                    'Content-Type': mimeType
-                },
+                headers: { ...headers, 'Content-Type': 'image/png' },
                 body: buffer
             });
 
-            if (!storageRes.ok) throw new Error('스토리지 이미지 업로드 실패');
+            if (!storageRes.ok) throw new Error('스토리지에 시험지 사진을 올리는데 실패했습니다.');
             
-            // 성공하면 퍼블릭 링크(URL) 만들기
-            paper_image_url = `${supabaseUrl}/storage/v1/object/public/tutor_files/${uniqueFileName}`;
+            // 사진이 정상적으로 올라갔다면 인터넷 주소를 완성해서 담아두기
+            uploadedImageUrl = `${supabaseUrl}/storage/v1/object/public/tutor_files/exams/${uniqueFileName}`;
         }
 
-        // 2. DB exams 테이블에 데이터 저장 (이미지 URL 포함)
+        // 💡 [DB 저장] 프론트엔드가 찾는 'paper_image_url'이라는 이름으로 URL 주소를 쏙 넣어주기!
         const dbRes = await fetch(`${supabaseUrl}/rest/v1/exams`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': supabaseKey,
-                'Authorization': `Bearer ${supabaseKey}`,
-                'Prefer': 'return=minimal'
-            },
+            headers: { ...headers, 'Prefer': 'return=minimal' },
             body: JSON.stringify({
-                student_id: student_id,
-                exam_title: exam_title,
-                score: score,
-                paper_image_url: paper_image_url // 사진 없으면 null이 저장됨
+                student_id: targetStudentId,
+                exam_title: targetTitle,
+                score: parseInt(score),
+                paper_image_url: uploadedImageUrl  // 드디어 짝이 맞았습니다!
             })
         });
 
-        if (!dbRes.ok) throw new Error('데이터베이스 저장 실패');
+        if (!dbRes.ok) throw new Error('DB 테이블 저장 실패');
+        
+        return res.status(200).json({ message: '시험 점수 및 사진 등록 성공!' });
 
-        return res.status(200).json({ message: '점수 및 사진 저장 완료' });
     } catch (error) {
-        return res.status(400).json({ error: error.message });
+        return res.status(500).json({ error: '업로드 에러', details: error.message });
     }
 }
