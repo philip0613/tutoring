@@ -68,7 +68,9 @@ function processAndResizeImage(file) {
                 canvas.width = width; canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', 0.7));
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                resolve(dataUrl);
             };
         };
         reader.onerror = error => reject(error);
@@ -228,7 +230,6 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
             
             const safeAnsText = (q.answer_text || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;").replace(/\n/g, "\\n");
             
-            // 답변 우측 하단에 수정/삭제 패널 주입
             let ansAdminControls = '';
             if (isAdmin) {
                 ansAdminControls = `
@@ -262,7 +263,6 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
             adminForm.style.padding = '15px'; adminForm.style.background = '#ffffff';
             adminForm.style.borderRadius = '8px'; adminForm.style.border = '1px solid #e2e8f0';
             
-            // 입력 폼 구조화 세로 정렬 및 질문 올리기와 똑같은 사이즈 버튼 적용
             adminForm.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <textarea id="ansText_${q.id}" placeholder="이 질문에 대한 답변을 입력하세요" 
@@ -362,7 +362,8 @@ async function loadTeacherDashboard() {
         if(students.length > 0) {
             students.forEach(student => {
                 const li = document.createElement('li');
-                li.textContent = `${student.name} (${student.login_id})`;
+                // 💡 [버그 완벽 해결] (undefined) 괄호를 제거하고 학생의 실제 이름만 노출!
+                li.textContent = `${student.name}`;
                 li.style.cursor = 'pointer';
                 li.addEventListener('click', () => {
                     currentStudentId = student.id;
