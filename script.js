@@ -163,7 +163,6 @@ function renderFeedbackList(feedbacksRaw, containerElement, isAdmin = false) {
         detailDiv.className = 'feedback-detail';
         const dateStr = fb.created_at ? new Date(fb.created_at).toLocaleDateString() : '날짜 없음';
         
-        // 💡 관리자라면 수정/삭제 버튼 추가
         let adminControls = '';
         if (isAdmin) {
             adminControls = `
@@ -209,7 +208,6 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
             ? `<img src="${q.question_image_url}" alt="질문 이미지" onerror="this.style.display='none';" style="max-width:100%; border-radius:6px; margin-top:10px; display:block; border: 1px solid #e2e8f0;">` 
             : '';
         
-        // 💡 관리자용 질문 삭제 버튼 추가
         const delBtn = isAdmin 
             ? `<button onclick="window.deleteRecord('Question', '${q.id}')" style="position:absolute; top:10px; right:10px; padding:4px 10px; font-size:0.75rem; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer;">질문 삭제</button>` 
             : '';
@@ -253,18 +251,17 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
             adminForm.style.borderRadius = '8px';
             adminForm.style.border = '1px solid #e2e8f0';
             
-            // 💡 [버튼 크기 개선] 넓었던 답변 버튼을 우측에 콤팩트하게 정렬
+            // 💡 [요구사항 반영] 위에서 아래로 스택 구조 유지 (입력칸 -> 파일선택 -> 작은 버튼)
             adminForm.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
                     <textarea id="ansText_${q.id}" placeholder="이 질문에 대한 답변을 입력하세요" 
                               style="width: 100%; min-height: 80px; padding: 12px; border-radius: 6px; border: 1px solid #cbd5e1; resize: vertical; font-size: 0.95rem; font-family: inherit; box-sizing: border-box; outline: none;"></textarea>
                     
-                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-top: 5px;">
-                        <input type="file" id="ansImg_${q.id}" accept="image/*" style="font-size: 0.85rem; color: #475569; max-width: 180px;">
-                        <button id="ansBtn_${q.id}" style="background: #22c55e; color: white; padding: 6px 14px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; max-width: max-content; transition: background 0.2s;">
-                            답변 등록
-                        </button>
-                    </div>
+                    <input type="file" id="ansImg_${q.id}" accept="image/*" style="font-size: 0.85rem; color: #475569; margin-top: 5px;">
+                    
+                    <button id="ansBtn_${q.id}" style="width: max-content; background: #22c55e; color: white; padding: 8px 16px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; margin-top: 5px;">
+                        답변 등록하기
+                    </button>
                 </div>
             `;
             
@@ -292,7 +289,6 @@ function renderAdminExamList(exams, containerElement) {
         const titleBtn = document.createElement('button');
         titleBtn.className = 'feedback-title-btn'; 
         
-        // 💡 관리자용 시험 내역 우측에 수정/삭제 버튼 추가
         titleBtn.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                 <div>📝 ${e.exam_title} : <strong>${e.score}점</strong> <span style="font-size: 0.8em; color: #888; font-weight: normal;">(클릭)</span></div>
@@ -406,7 +402,6 @@ async function loadStudentDetail(studentId) {
 
         const feedbackResponse = await fetch(`/api/getFeedbacks?studentId=${studentId}&student_id=${studentId}`);
         const feedbackRawData = await feedbackResponse.json();
-        // isAdmin=true 플래그 추가하여 수정/삭제 버튼 노출
         renderFeedbackList(feedbackRawData, document.getElementById('feedbackListAdmin'), true);
     } catch (error) { 
         console.error('학생 상세정보 로드 에러:', error); 
@@ -543,7 +538,7 @@ async function handleAnswerQuestion(questionId) {
     } catch (err) {
         alert('에러 발생: ' + err.message);
     } finally {
-        btn.innerText = "답변 등록";
+        btn.innerText = "답변 등록하기";
         btn.disabled = false;
     }
 }
@@ -721,7 +716,6 @@ async function handleChangePassword() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                // 💡 서버 가공 필터 오류 방지! 어떤 이름표를 검사하든 무조건 통과되게 다 보냅니다.
                 id: currentUser.id,
                 userId: currentUser.id,
                 user_id: currentUser.id,
