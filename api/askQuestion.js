@@ -18,9 +18,9 @@ export default async function handler(req, res) {
             const base64Data = image_base64.split(',')[1] || image_base64;
             const buffer = Buffer.from(base64Data, 'base64');
             
-            // 💡 핵심 패치: 한글 파일명 깨짐 방지를 위한 안전한 URL 변환
-            const safeFileName = encodeURIComponent(image_name);
-            const uniqueFileName = `${Date.now()}_${safeFileName}`;
+            // 💡 [핵심 패치] 한글 파일명 무시! 완벽하게 안전한 무작위 영어+숫자 파일명 강제 생성
+            const randomStr = Math.random().toString(36).substring(2, 10);
+            const uniqueFileName = `q_${Date.now()}_${randomStr}.png`;
             
             const storageUrl = `${supabaseUrl}/storage/v1/object/tutor_files/questions/${uniqueFileName}`;
 
