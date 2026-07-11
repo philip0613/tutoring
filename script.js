@@ -1,23 +1,29 @@
 // ==========================================
 // 💡 전역 상태 관리 변수
 // ==========================================
-let currentUser = null; 
-let currentStudentId = null; 
+let currentUser = null; // 현재 로그인한 유저 정보 (role: 'admin' 또는 'student')
+let currentStudentId = null; // 선생님이 현재 관리 중인(클릭한) 학생의 ID
 
 document.addEventListener('DOMContentLoaded', () => {
-    checkSession(); 
+    checkSession(); // 화면이 켜지면 로그인 상태인지 먼저 확인!
 
+    // ==========================================
     // 1. 공통 및 로그인 이벤트
+    // ==========================================
     document.getElementById('loginBtn').addEventListener('click', handleLogin);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 
+    // ==========================================
     // 2. 선생님(Admin) 대시보드 이벤트
+    // ==========================================
     document.getElementById('createStudentBtn').addEventListener('click', handleCreateStudent);
     document.getElementById('uploadExamBtn').addEventListener('click', handleUploadExam);
     document.getElementById('sendFeedbackBtn').addEventListener('click', handleSendFeedback);
     document.getElementById('deleteStudentBtn').addEventListener('click', handleDeleteStudent);
 
+    // ==========================================
     // 3. 학생(Student) 대시보드 이벤트
+    // ==========================================
     document.getElementById('askQuestionBtn').addEventListener('click', handleAskQuestion);
     document.getElementById('togglePasswordBtn').addEventListener('click', () => {
         document.getElementById('passwordFormContainer').classList.toggle('hidden-form');
@@ -26,8 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 💡 유틸리티 함수
+// 💡 유틸리티 및 이미지 압축 함수
 // ==========================================
+
+// 1. 백엔드 데이터 껍데기 까기 (어떤 포장지로 오든 배열 알맹이만 정확히 추출)
 function extractDataArray(responseData) {
     if (!responseData) return [];
     if (Array.isArray(responseData)) return responseData; 
@@ -38,6 +46,61 @@ function extractDataArray(responseData) {
     return []; 
 }
 
+// 2. [카메라 직찍 방어] 초고용량 이미지를 브라우저 캔버스를 이용해 리사이징 및 압축
+function processAndResizeImage(file) {
+    return new Promise((resolve, reject) => {
+        // 이미지 파일이 아니거나 용량이 1.5MB 이하로 작은 경우 변환 없이 바로 Base64 반환
+        if (!file.type.startsWith('image/') || file.size <= 1.5 * 1024 * 1024) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+            return;
+        }
+
+        // 스마트폰 카메라 촬영 등 초고용량 이미지 다이어트 가동
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // 과외 질문용으로 차고 넘치는 최대 해상도 1280px 제한 설정
+                const MAX_WIDTH = 1280;
+                const MAX_HEIGHT = 1280;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // JPEG 포맷, 화질 70% 압축 적용하여 Vercel 문턱(4.5MB) 안전하게 패스
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                resolve(dataUrl);
+            };
+        };
+        reader.onerror = error => reject(error);
+    });
+}
+
+// 3. 일반 파일 바이너리를 Base64 텍스트로 인코딩하는 기본 함수 (시험지 등 압축 미필요 항목용)
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -51,6 +114,7 @@ function fileToBase64(file) {
 // 💡 화면 그리기(렌더링) 함수 모음
 // ==========================================
 
+// 피드백 리스트 그리기 (v1.0.1 아코디언 토글 적용)
 function renderFeedbackList(feedbacksRaw, containerElement) {
     containerElement.innerHTML = ''; 
     const feedbacks = extractDataArray(feedbacksRaw);
@@ -85,6 +149,7 @@ function renderFeedbackList(feedbacksRaw, containerElement) {
     });
 }
 
+// 질문 및 선생님의 코멘트 답변 내역 그리기 (통합 조립 완료)
 function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
     containerElement.innerHTML = '';
     const questions = extractDataArray(questionsRaw);
@@ -120,11 +185,12 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
                 </div>
             `;
         } else {
-            htmlContent += `<p style="font-size:0.9em; color:#999; italic">💡 아직 등록된 답변이 없습니다.</p>`;
+            htmlContent += `<p style="font-size:0.9em; color:#999; font-style: italic;">💡 아직 등록된 답변이 없습니다.</p>`;
         }
 
         li.innerHTML = htmlContent;
 
+        // 선생님 권한이면서 아직 답변이 안 달렸을 경우 입력 상자 동적 바인딩
         if (isAdmin && !q.answer_text) {
             const adminForm = document.createElement('div');
             adminForm.style.marginTop = '10px';
@@ -149,6 +215,7 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
 // 💡 대시보드 데이터 로드 로직
 // ==========================================
 
+// 선생님용 대시보드 로드
 async function loadTeacherDashboard() {
     try {
         const response = await fetch('/api/getStudents');
@@ -179,6 +246,7 @@ async function loadTeacherDashboard() {
     }
 }
 
+// 학생 상세 관리 조회
 async function loadStudentDetail(studentId) {
     try {
         const examRes = await fetch(`/api/getExams?studentId=${studentId}&student_id=${studentId}`);
@@ -201,6 +269,7 @@ async function loadStudentDetail(studentId) {
     }
 }
 
+// 학생용 본인 대시보드 로드
 async function loadStudentDashboard() {
     try {
         const examRes = await fetch(`/api/getExams?studentId=${currentUser.id}&student_id=${currentUser.id}`);
@@ -224,7 +293,7 @@ async function loadStudentDashboard() {
 }
 
 // ==========================================
-// 💡 로그인 및 세션 관리
+// 💡 로그인 및 세션 관리 로직
 // ==========================================
 
 async function handleLogin() {
@@ -291,7 +360,7 @@ function checkSession() {
 // 💡 관리자(선생님) 전용 API 통신 함수 모음
 // ==========================================
 
-// 💡 [수정 완료] 대소문자 매칭 교정본 (/api/answerquestion)
+// 1. 답변 등록하기 (Vercel 대소문자 파일명 완벽 동기화 완료)
 async function handleAnswerQuestion(questionId) {
     const textInput = document.getElementById(`ansText_${questionId}`);
     const fileInput = document.getElementById(`ansImg_${questionId}`);
@@ -309,10 +378,11 @@ async function handleAnswerQuestion(questionId) {
 
         if (fileInput.files && fileInput.files.length > 0) {
             image_name = fileInput.files[0].name;
-            image_base64 = await fileToBase64(fileInput.files[0]);
+            // 답변 사진도 안전하게 해상도 조절 및 압축 처리 적용
+            image_base64 = await processAndResizeImage(fileInput.files[0]);
         }
 
-        // 🚨 여기 주소 대문자로 완벽 맵핑 완료!
+        // 🚨 Vercel 서버 실제 파일 이름인 대문자 Q 매칭 적용
         const res = await fetch('/api/answerQuestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -341,7 +411,7 @@ async function handleAnswerQuestion(questionId) {
     }
 }
 
-// 💡 [수정 완료] 신규 학생 생성 (변수명 융단폭격 방어 적용)
+// 2. 신규 학생 생성 (undefined@tutor.com 버그 이름표 융단 차단 완비)
 async function handleCreateStudent() {
     const nameInput = document.getElementById('newStudentName');
     const idInput = document.getElementById('newStudentId');
@@ -358,7 +428,6 @@ async function handleCreateStudent() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                // 백엔드가 어떤 이름표를 기다릴지 몰라서 종류별로 다 준비했어!
                 name: name, 
                 studentName: name,
                 login_id: loginId,
@@ -376,12 +445,11 @@ async function handleCreateStudent() {
             const err = await res.json().catch(() => ({}));
             alert('학생 생성 실패: ' + (err.error || err.message || '오류'));
         }
-    } catch (err) { 
-        alert('에러 발생: ' + err.message); 
-    } finally { 
-        btn.disabled = false; 
-    }
+    } catch (err) { alert('에러 발생: ' + err.message); } 
+    finally { btn.disabled = false; }
 }
+
+// 3. 쪽지시험 점수 및 사진 업로드
 async function handleUploadExam() {
     if (!currentStudentId) return alert("먼저 학생을 선택해주세요!");
     const titleInput = document.getElementById("examTitle");
@@ -397,8 +465,8 @@ async function handleUploadExam() {
     try {
         let image_base64 = null; let image_name = null;
         if (fileInput.files.length > 0) {
-            image_base64 = await fileToBase64(fileInput.files[0]);
             image_name = fileInput.files[0].name;
+            image_base64 = await processAndResizeImage(fileInput.files[0]);
         }
         const res = await fetch('/api/uploadExam', {
             method: 'POST',
@@ -414,6 +482,7 @@ async function handleUploadExam() {
     finally { btn.innerText = "시험지 업로드 및 저장"; btn.disabled = false; }
 }
 
+// 4. 개별 피드백 전송 (v1.0.1 피드백 제목 필드 장착)
 async function handleSendFeedback() {
     const titleInput = document.getElementById('feedbackTitleAdmin');
     const textInput = document.getElementById('feedbackTextAdmin');
@@ -436,6 +505,7 @@ async function handleSendFeedback() {
     } catch (error) { console.error('피드백 전송 에러:', error); }
 }
 
+// 5. 학생 계정 및 유관 데이터 완전 제거
 async function handleDeleteStudent() {
     if (!currentStudentId) return;
     if (!confirm('🚨 정말 이 학생의 모든 데이터를 삭제하시겠습니까? (복구 불가능)')) return;
@@ -459,6 +529,7 @@ async function handleDeleteStudent() {
 // 💡 학생 전용 API 통신 함수 모음
 // ==========================================
 
+// 1. 모르는 문제 질문 올리기 (카메라 실시간 촬영 초고용량 자동 리사이즈 패치 완료)
 async function handleAskQuestion() {
     const textInput = document.getElementById('questionText');
     const fileInput = document.getElementById('questionImage');
@@ -466,24 +537,30 @@ async function handleAskQuestion() {
     
     if (!text) return alert('질문 내용을 입력해주세요.');
     const btn = document.getElementById('askQuestionBtn');
-    btn.innerText = "업로드 중... ⏳"; btn.disabled = true;
+    btn.innerText = "이미지 압축 및 업로드 중... ⏳"; btn.disabled = true;
 
     try {
-        let image_base64 = null; let image_name = null;
+        let image_base64 = null; 
+        let image_name = "captured_image.jpg"; 
+        
         if (fileInput.files && fileInput.files.length > 0) {
             const file = fileInput.files[0];
-            image_name = file.name;
-            image_base64 = await fileToBase64(file);
+            if (file.name) image_name = file.name;
+            
+            // 💡 processAndResizeImage 내부에서 캔버스 크기 제어 후 최적의 용량으로 가공
+            image_base64 = await processAndResizeImage(file);
         }
+
+        const userId = currentUser.id || currentUser.student_id || currentUser.login_id;
 
         const res = await fetch('/api/askQuestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                student_id: currentUser.id || currentUser.login_id,
-                studentId: currentUser.id,
-                id: currentUser.id,
-                userId: currentUser.id,
+                student_id: userId,
+                studentId: userId,
+                id: userId,
+                userId: userId,
                 question_text: text,
                 questionText: text,
                 image_base64: image_base64,
@@ -497,12 +574,13 @@ async function handleAskQuestion() {
             loadStudentDashboard(); 
         } else {
             const errData = await res.json().catch(() => ({}));
-            alert('질문 등록 실패: ' + (errData.error || errData.message || '서버 에러'));
+            alert('질문 등록 실패: ' + (errData.error || errData.message || '서버 용량 한계 초과 또는 오류'));
         }
-    } catch (err) { alert('에러 발생: ' + err.message); } 
+    } catch (err) { alert('브라우저 하드웨어 제어 에러: ' + err.message); } 
     finally { btn.innerText = "질문 올리기"; btn.disabled = false; }
 }
 
+// 2. 학생 비밀번호 변경 로직
 async function handleChangePassword() {
     const passwordInput = document.getElementById('newPassword');
     const newPw = passwordInput.value.trim();
