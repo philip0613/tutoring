@@ -13,15 +13,13 @@ export default async function handler(req, res) {
     try {
         let dbRes;
 
-        // 1. 학생 계정 삭제
+        // 💡 [핵심 해결] 학생 삭제 시 테이블 이름을 students 에서 users 로 변경!
         if (action === 'deleteStudent') {
-            dbRes = await fetch(`${supabaseUrl}/rest/v1/students?id=eq.${targetStudentId}`, { method: 'DELETE', headers });
+            dbRes = await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${targetStudentId}`, { method: 'DELETE', headers });
         }
-        // 2. 쪽지시험 삭제
         else if (action === 'deleteExam') {
             dbRes = await fetch(`${supabaseUrl}/rest/v1/exams?id=eq.${targetId}`, { method: 'DELETE', headers });
         }
-        // 3. 쪽지시험 점수 및 제목 수정
         else if (action === 'editExam') {
             dbRes = await fetch(`${supabaseUrl}/rest/v1/exams?id=eq.${targetId}`, {
                 method: 'PATCH', 
@@ -29,7 +27,6 @@ export default async function handler(req, res) {
                 body: JSON.stringify({ exam_title: exam_title, score: parseInt(score) })
             });
         }
-        // 4. 피드백 신규 등록
         else if (action === 'addFeedback') {
             dbRes = await fetch(`${supabaseUrl}/rest/v1/feedbacks`, {
                 method: 'POST', 
@@ -37,11 +34,9 @@ export default async function handler(req, res) {
                 body: JSON.stringify({ student_id: targetStudentId, feedback_title: feedbackTitle, feedback_text: feedbackText })
             });
         }
-        // 5. 피드백 삭제
         else if (action === 'deleteFeedback') {
             dbRes = await fetch(`${supabaseUrl}/rest/v1/feedbacks?id=eq.${targetId}`, { method: 'DELETE', headers });
         }
-        // 6. 피드백 수정
         else if (action === 'editFeedback') {
             dbRes = await fetch(`${supabaseUrl}/rest/v1/feedbacks?id=eq.${targetId}`, {
                 method: 'PATCH', 
@@ -49,11 +44,9 @@ export default async function handler(req, res) {
                 body: JSON.stringify({ feedback_title: feedbackTitle, feedback_text: feedbackText })
             });
         }
-        // 7. 질문 삭제
         else if (action === 'deleteQuestion') {
             dbRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}`, { method: 'DELETE', headers });
         }
-        // 8. 선생님 답변 삭제 (내용물만 초기화)
         else if (action === 'deleteAnswer') {
             dbRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}`, {
                 method: 'PATCH', 
@@ -61,7 +54,6 @@ export default async function handler(req, res) {
                 body: JSON.stringify({ answer_text: null, answer_image_url: null })
             });
         }
-        // 9. 선생님 답변 내용 수정
         else if (action === 'editAnswer') {
             dbRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}`, {
                 method: 'PATCH', 
@@ -73,7 +65,6 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: '올바르지 않은 명령 유형입니다.' });
         }
 
-        // 💡 Supabase 에러 원문을 그대로 프론트엔드로 전달하는 핵심 로직
         if (!dbRes.ok) {
             const errorText = await dbRes.text().catch(() => 'Unknown DB Error');
             return res.status(400).json({ error: `Supabase 오류: ${errorText}` });
