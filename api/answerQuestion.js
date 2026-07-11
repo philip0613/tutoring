@@ -1,11 +1,11 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST만 가능' });
 
-    const { student_id, studentId, id, userId, question_text, questionText, image_base64, image_name } = req.body;
-    const targetStudentId = student_id || studentId || id || userId;
-    const targetText = question_text || questionText;
+    const { questionId, id, answer_text, answerText, image_base64, image_name } = req.body;
+    const targetId = questionId || id;
+    const targetText = answer_text || answerText;
 
-    if (!targetStudentId || !targetText) return res.status(400).json({ error: 'ID 또는 질문 내용 누락' });
+    if (!targetId || !targetText) return res.status(400).json({ error: '질문 ID 또는 답변 내용 누락' });
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_KEY; 
@@ -18,9 +18,9 @@ export default async function handler(req, res) {
             const base64Data = image_base64.split(',')[1] || image_base64;
             const buffer = Buffer.from(base64Data, 'base64');
             
-            // 💡 핵심 패치: 한글 파일명 깨짐 방지를 위한 안전한 URL 변환
+            // 💡 핵심 패치: 한글 파일명 깨짐 방지
             const safeFileName = encodeURIComponent(image_name);
-            const uniqueFileName = `${Date.now()}_${safeFileName}`;
+            const uniqueFileName = `${Date.now()}_ans_${safeFileName}`;
             
             const storageUrl = `${supabaseUrl}/storage/v1/object/tutor_files/questions/${uniqueFileName}`;
 
@@ -30,22 +30,24 @@ export default async function handler(req, res) {
                 body: buffer
             });
 
-            if (!storageRes.ok) throw new Error('스토리지 업로드 실패');
+            if (!storageRes.ok) throw new Error('답변 이미지 업로드 실패');
             uploadedImageUrl = `${supabaseUrl}/storage/v1/object/public/tutor_files/questions/${uniqueFileName}`;
         }
 
-        const dbRes = await fetch(`${supabaseUrl}/rest/v1/questions`, {
-            method: 'POST',
+        const dbRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}`, {
+            method: 'PATCH', 
             headers: { ...headers, 'Prefer': 'return=minimal' },
             body: JSON.stringify({
-                student_id: targetStudentId,
-                question_text: targetText,
-                question_image_url: uploadedImageUrl 
+                answer_text: targetText,
+                ...(uploadedImageUrl && { answer_image_url: uploadedImageUrl }) 
             })
         });
 
-        if (!dbRes.ok) throw new Error('데이터베이스 저장 실패');
-        return res.status(200).json({ message: '질문 등록 성공' });
+        if (!dbRes.ok) {
+            const err = await dbRes.json().catch(()=>({}));
+            throw new Error(`DB 업데이트 실패: ${JSON.stringify(err)}`);
+        }
+        return res.status(200).json({ message: '답변 등록 성공!' });
 
     } catch (error) {
         return res.status(500).json({ error: '백엔드 내부 연동 실패', details: error.message });
