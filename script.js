@@ -1,29 +1,23 @@
 // ==========================================
 // 💡 전역 상태 관리 변수
 // ==========================================
-let currentUser = null; // 현재 로그인한 유저 정보 (role: 'admin' 또는 'student')
-let currentStudentId = null; // 선생님이 현재 관리 중인(클릭한) 학생의 ID
+let currentUser = null; 
+let currentStudentId = null; 
 
 document.addEventListener('DOMContentLoaded', () => {
-    checkSession(); // 화면이 켜지면 로그인 상태인지 먼저 확인!
+    checkSession(); 
 
-    // ==========================================
     // 1. 공통 및 로그인 이벤트
-    // ==========================================
     document.getElementById('loginBtn').addEventListener('click', handleLogin);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 
-    // ==========================================
     // 2. 선생님(Admin) 대시보드 이벤트
-    // ==========================================
     document.getElementById('createStudentBtn').addEventListener('click', handleCreateStudent);
     document.getElementById('uploadExamBtn').addEventListener('click', handleUploadExam);
     document.getElementById('sendFeedbackBtn').addEventListener('click', handleSendFeedback);
     document.getElementById('deleteStudentBtn').addEventListener('click', handleDeleteStudent);
 
-    // ==========================================
     // 3. 학생(Student) 대시보드 이벤트
-    // ==========================================
     document.getElementById('askQuestionBtn').addEventListener('click', handleAskQuestion);
     document.getElementById('togglePasswordBtn').addEventListener('click', () => {
         document.getElementById('passwordFormContainer').classList.toggle('hidden-form');
@@ -156,7 +150,11 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
         li.style.marginBottom = '15px';
         
         const dateStr = q.created_at ? new Date(q.created_at).toLocaleDateString() : '날짜 없음';
-        let imgTag = q.question_image_url ? `<img src="${q.question_image_url}" alt="질문 이미지" style="max-width:100%; border-radius:4px; margin-top:10px; display:block;">` : '';
+        
+        // 이미지 엑스박스 방어 로직 추가
+        let imgTag = q.question_image_url && q.question_image_url !== 'null' 
+            ? `<img src="${q.question_image_url}" alt="질문 이미지" onerror="this.style.display='none';" style="max-width:100%; border-radius:4px; margin-top:10px; display:block;">` 
+            : '';
         
         let htmlContent = `
             <div class="question-box">
@@ -168,7 +166,9 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
         `;
 
         if (q.answer_text) {
-            let ansImgTag = q.answer_image_url ? `<img src="${q.answer_image_url}" alt="답변 이미지" style="max-width:100%; border-radius:4px; margin-top:10px; display:block;">` : '';
+            let ansImgTag = q.answer_image_url && q.answer_image_url !== 'null' 
+                ? `<img src="${q.answer_image_url}" alt="답변 이미지" onerror="this.style.display='none';" style="max-width:100%; border-radius:4px; margin-top:10px; display:block;">` 
+                : '';
             htmlContent += `
                 <div class="answer-box" style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 10px; border-radius: 4px; margin-top: 5px;">
                     <p><strong>👨‍🏫 선생님 답변:</strong> ${q.answer_text}</p>
@@ -201,64 +201,104 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
     });
 }
 
-// 💡 [UI 업그레이드] 관리자용 쪽지시험 리스트 (누르면 아래에 바로 토글되도록 변경)
+// 💡 [초호화 UI 업그레이드] 관리자용 쪽지시험 리스트 (카드 디자인 + 깨진 이미지 방어)
 function renderAdminExamList(exams, containerElement) {
     containerElement.innerHTML = '';
     if (exams.length === 0) {
-        containerElement.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
+        containerElement.innerHTML = '<li style="text-align:center; color:#888; padding: 15px 0;">아직 등록된 시험 결과가 없습니다.</li>';
         return;
     }
     
     exams.forEach(e => {
         const li = document.createElement('li');
-        li.style.marginBottom = '10px';
+        li.style.listStyle = 'none';
+        li.style.marginBottom = '12px';
         
-        // 클릭 가능한 타이틀 버턴 구조
+        // DB에 사진이 정말 존재하는지 안전하게 체크
+        const hasImg = e.paper_image_url && e.paper_image_url !== 'null' && e.paper_image_url.trim() !== '';
+        
         li.innerHTML = `
-            <div style="cursor:pointer; padding:5px 0;" class="exam-title-row">
-                📝 ${e.exam_title} : <strong style="color:#0284c7; text-decoration:underline;">${e.score}점</strong> 
-                <span style="font-size:0.8em; color:#888;"> (누르면 시험지 토글)</span>
-            </div>
-            <div class="exam-paper-container" style="display:none; margin-top:8px;">
-                ${e.paper_image_url ? `<img src="${e.paper_image_url}" alt="시험지 원본" style="max-width:100%; border-radius:4px; border:1px solid #ddd;">` : '<p style="font-size:0.85em; color:#999; margin:5px 0;">이 시험은 등록된 시험지 사진이 없습니다.</p>'}
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;">
+                <div class="exam-title-row" style="padding: 14px 18px; background: #f8fafc; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2em;">📝</span>
+                        <span style="font-weight: 600; color: #334155; font-size: 1.05em;">${e.exam_title}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <strong style="color: #0284c7; font-size: 1.15em;">${e.score}점</strong>
+                        <span class="toggle-icon" style="color: #94a3b8; font-size: 0.9em; transition: transform 0.3s;">▼</span>
+                    </div>
+                </div>
+                <div class="exam-paper-container" style="display: none; padding: 20px; border-top: 1px solid #e2e8f0; background: #fafafa; text-align: center;">
+                    ${hasImg 
+                        ? `<img src="${e.paper_image_url}" alt="시험지" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="max-width: 100%; max-height: 500px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); object-fit: contain;">
+                           <p style="display:none; color:#ef4444; font-size:0.9em; margin:0;">⚠️ 이미지를 불러올 수 없습니다. (삭제되었거나 파일 오류)</p>` 
+                        : `<p style="color:#64748b; margin:0; font-size:0.95em;">이 시험은 등록된 시험지 사진이 없습니다.</p>`}
+                </div>
             </div>
         `;
 
-        // 행 클릭 시 아래 이미지 뷰어 박스 토글 연동
-        li.querySelector('.exam-title-row').addEventListener('click', () => {
-            const container = li.querySelector('.exam-paper-container');
-            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        // 카드 클릭 시 화살표 회전 및 내용 토글 애니메이션
+        const titleRow = li.querySelector('.exam-title-row');
+        const container = li.querySelector('.exam-paper-container');
+        const icon = li.querySelector('.toggle-icon');
+        
+        titleRow.addEventListener('click', () => {
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'block' : 'none';
+            icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            titleRow.style.background = isHidden ? '#eff6ff' : '#f8fafc'; // 열렸을 때 살짝 파란빛 하이라이트
         });
 
         containerElement.appendChild(li);
     });
 }
 
-// 💡 [UI 업그레이드] 학생용 쪽지시험 리스트 (누르면 아래에 바로 토글되도록 변경)
+// 💡 [초호화 UI 업그레이드] 학생용 쪽지시험 리스트 (녹색 테마 카드 디자인)
 function renderStudentExamList(exams, containerElement) {
     containerElement.innerHTML = '';
     if (exams.length === 0) {
-        containerElement.innerHTML = '<li>아직 등록된 시험 결과가 없습니다.</li>';
+        containerElement.innerHTML = '<li style="text-align:center; color:#888; padding: 15px 0;">아직 등록된 시험 결과가 없습니다.</li>';
         return;
     }
     
     exams.forEach(e => {
         const li = document.createElement('li');
-        li.style.marginBottom = '10px';
+        li.style.listStyle = 'none';
+        li.style.marginBottom = '12px';
+        
+        const hasImg = e.paper_image_url && e.paper_image_url !== 'null' && e.paper_image_url.trim() !== '';
         
         li.innerHTML = `
-            <div style="cursor:pointer; padding:5px 0;" class="exam-title-row">
-                📈 ${e.exam_title} : <strong style="color:#22c55e; text-decoration:underline;">${e.score}점</strong> 
-                <span style="font-size:0.8em; color:#888;"> (누르면 시험지 토글)</span>
-            </div>
-            <div class="exam-paper-container" style="display:none; margin-top:8px;">
-                ${e.paper_image_url ? `<img src="${e.paper_image_url}" alt="시험지 원본" style="max-width:100%; border-radius:4px; border:1px solid #ddd;">` : '<p style="font-size:0.85em; color:#999; margin:5px 0;">이 시험은 등록된 시험지 사진이 없습니다.</p>'}
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;">
+                <div class="exam-title-row" style="padding: 14px 18px; background: #f8fafc; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2em;">📈</span>
+                        <span style="font-weight: 600; color: #334155; font-size: 1.05em;">${e.exam_title}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <strong style="color: #22c55e; font-size: 1.15em;">${e.score}점</strong>
+                        <span class="toggle-icon" style="color: #94a3b8; font-size: 0.9em; transition: transform 0.3s;">▼</span>
+                    </div>
+                </div>
+                <div class="exam-paper-container" style="display: none; padding: 20px; border-top: 1px solid #e2e8f0; background: #fafafa; text-align: center;">
+                    ${hasImg 
+                        ? `<img src="${e.paper_image_url}" alt="시험지" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="max-width: 100%; max-height: 500px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); object-fit: contain;">
+                           <p style="display:none; color:#ef4444; font-size:0.9em; margin:0;">⚠️ 이미지를 불러올 수 없습니다. (삭제되었거나 파일 오류)</p>` 
+                        : `<p style="color:#64748b; margin:0; font-size:0.95em;">이 시험은 등록된 시험지 사진이 없습니다.</p>`}
+                </div>
             </div>
         `;
 
-        li.querySelector('.exam-title-row').addEventListener('click', () => {
-            const container = li.querySelector('.exam-paper-container');
-            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        const titleRow = li.querySelector('.exam-title-row');
+        const container = li.querySelector('.exam-paper-container');
+        const icon = li.querySelector('.toggle-icon');
+        
+        titleRow.addEventListener('click', () => {
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'block' : 'none';
+            icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            titleRow.style.background = isHidden ? '#f0fdf4' : '#f8fafc'; // 열렸을 때 살짝 녹색빛 하이라이트
         });
 
         containerElement.appendChild(li);
