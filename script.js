@@ -63,20 +63,12 @@ function processAndResizeImage(file) {
                 const MAX_HEIGHT = 1280;
 
                 if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                 } else {
-                    if (height > MAX_HEIGHT) {
-                        width *= MAX_HEIGHT / height;
-                        height = MAX_HEIGHT;
-                    }
+                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
                 }
 
-                canvas.width = width;
-                canvas.height = height;
-
+                canvas.width = width; canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
@@ -98,10 +90,59 @@ function fileToBase64(file) {
 }
 
 // ==========================================
+// 💡 [핵심 복구] 공용 레코드 수정/삭제 핸들러
+// ==========================================
+window.deleteRecord = async function(type, id) {
+    if (!confirm(`정말 이 항목(${type})을 삭제하시겠습니까? (복구 불가)`)) return;
+    try {
+        const res = await fetch('/api/adminAction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete' + type, id: id, recordId: id, studentId: currentStudentId })
+        });
+        if (res.ok) {
+            alert('✅ 삭제 완료!');
+            loadStudentDetail(currentStudentId);
+        } else { alert('삭제 실패: 서버 오류'); }
+    } catch (e) { alert('통신 에러: ' + e.message); }
+};
+
+window.editRecord = async function(type, id, oldVal1, oldVal2) {
+    let payload = { action: 'edit' + type, id: id, recordId: id, studentId: currentStudentId };
+    
+    if (type === 'Exam') {
+        const newTitle = prompt('새 시험명을 입력하세요:', oldVal1);
+        if (newTitle === null) return;
+        const newScore = prompt('새 점수를 입력하세요:', oldVal2);
+        if (newScore === null) return;
+        payload.exam_title = newTitle; payload.score = parseInt(newScore);
+    } 
+    else if (type === 'Feedback') {
+        const newTitle = prompt('새 피드백 제목을 입력하세요:', oldVal1);
+        if (newTitle === null) return;
+        const newText = prompt('새 피드백 내용을 입력하세요:', oldVal2);
+        if (newText === null) return;
+        payload.feedbackTitle = newTitle; payload.feedbackText = newText;
+    }
+    
+    try {
+        const res = await fetch('/api/adminAction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            alert('✅ 수정 완료!');
+            loadStudentDetail(currentStudentId);
+        } else { alert('수정 실패: 서버 오류'); }
+    } catch (e) { alert('통신 에러: ' + e.message); }
+};
+
+// ==========================================
 // 💡 화면 그리기(렌더링) 함수 모음
 // ==========================================
 
-function renderFeedbackList(feedbacksRaw, containerElement) {
+function renderFeedbackList(feedbacksRaw, containerElement, isAdmin = false) {
     containerElement.innerHTML = ''; 
     const feedbacks = extractDataArray(feedbacksRaw);
 
@@ -122,9 +163,21 @@ function renderFeedbackList(feedbacksRaw, containerElement) {
         detailDiv.className = 'feedback-detail';
         const dateStr = fb.created_at ? new Date(fb.created_at).toLocaleDateString() : '날짜 없음';
         
+        // 💡 관리자라면 수정/삭제 버튼 추가
+        let adminControls = '';
+        if (isAdmin) {
+            adminControls = `
+                <div style="margin-top:15px; display:flex; justify-content:flex-end; gap:8px;">
+                    <button onclick="window.editRecord('Feedback', '${fb.id}', '${fb.feedback_title || ''}', '${fb.feedback_text || ''}')" style="padding:4px 10px; font-size:0.8rem; background:#3b82f6; color:white; border:none; border-radius:4px; cursor:pointer;">수정</button>
+                    <button onclick="window.deleteRecord('Feedback', '${fb.id}')" style="padding:4px 10px; font-size:0.8rem; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer;">삭제</button>
+                </div>
+            `;
+        }
+        
         detailDiv.innerHTML = `
             <p>${fb.feedback_text || '내용이 없습니다.'}</p>
             <div style="text-align: right; margin-top: 10px; font-size: 0.8em; color: #aaa;">${dateStr}</div>
+            ${adminControls}
         `;
 
         titleBtn.addEventListener('click', () => detailDiv.classList.toggle('show'));
@@ -135,7 +188,6 @@ function renderFeedbackList(feedbacksRaw, containerElement) {
     });
 }
 
-// 💡 [UI 개선 핵심] 질문 리스트 렌더러 (선생님 답변 입력 폼 완전 개편)
 function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
     containerElement.innerHTML = '';
     const questions = extractDataArray(questionsRaw);
@@ -148,19 +200,24 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
     questions.forEach(q => {
         const li = document.createElement('li');
         li.style.position = 'relative';
-        li.style.marginBottom = '20px'; // 여백 확장
+        li.style.marginBottom = '20px';
         li.style.listStyle = 'none';
         
         const dateStr = q.created_at ? new Date(q.created_at).toLocaleDateString() : '날짜 없음';
         
-        // 이미지 엑스박스 방어 로직
         let imgTag = q.question_image_url && q.question_image_url !== 'null' && q.question_image_url.trim() !== ''
             ? `<img src="${q.question_image_url}" alt="질문 이미지" onerror="this.style.display='none';" style="max-width:100%; border-radius:6px; margin-top:10px; display:block; border: 1px solid #e2e8f0;">` 
             : '';
         
+        // 💡 관리자용 질문 삭제 버튼 추가
+        const delBtn = isAdmin 
+            ? `<button onclick="window.deleteRecord('Question', '${q.id}')" style="position:absolute; top:10px; right:10px; padding:4px 10px; font-size:0.75rem; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer;">질문 삭제</button>` 
+            : '';
+
         let htmlContent = `
-            <div class="question-box" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px;">
-                <p style="margin: 0; color: #1e293b;"><strong>🙋‍♂️ 질문:</strong> ${q.question_text || '내용 없음'}</p>
+            <div class="question-box" style="position:relative; background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px;">
+                ${delBtn}
+                <p style="margin: 0; padding-right: 60px; color: #1e293b;"><strong>🙋‍♂️ 질문:</strong> ${q.question_text || '내용 없음'}</p>
                 ${imgTag}
                 <div style="text-align: right; font-size: 0.8em; color: #94a3b8; margin-top: 8px;">${dateStr}</div>
             </div>
@@ -187,7 +244,6 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
 
         li.innerHTML = htmlContent;
 
-        // 💡 [여기가 중요!] 선생님 계정 접속 시, 답변 안 달린 질문에 나타나는 입력 폼 UI 대폭 개선
         if (isAdmin && !q.answer_text) {
             const adminForm = document.createElement('div');
             adminForm.style.marginTop = '15px';
@@ -196,25 +252,17 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
             adminForm.style.background = '#ffffff';
             adminForm.style.borderRadius = '8px';
             adminForm.style.border = '1px solid #e2e8f0';
-            adminForm.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
             
-            // 입력 상자(textarea)를 넓게 배치하고, 하단 컨트롤 패널을 Flex로 깔끔하게 정리
+            // 💡 [버튼 크기 개선] 넓었던 답변 버튼을 우측에 콤팩트하게 정렬
             adminForm.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <textarea id="ansText_${q.id}" placeholder="여기에 답변 및 풀이 내용을 편하게 입력하세요..." 
-                              style="width: 100%; min-height: 80px; padding: 12px; border-radius: 6px; border: 1px solid #cbd5e1; resize: vertical; font-size: 0.95rem; font-family: inherit; box-sizing: border-box; outline: none;" 
-                              onfocus="this.style.borderColor='#22c55e'; this.style.boxShadow='0 0 0 2px rgba(34, 197, 94, 0.2)';" 
-                              onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';"></textarea>
+                    <textarea id="ansText_${q.id}" placeholder="이 질문에 대한 답변을 입력하세요" 
+                              style="width: 100%; min-height: 80px; padding: 12px; border-radius: 6px; border: 1px solid #cbd5e1; resize: vertical; font-size: 0.95rem; font-family: inherit; box-sizing: border-box; outline: none;"></textarea>
                     
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <input type="file" id="ansImg_${q.id}" accept="image/*" 
-                               style="font-size: 0.85rem; color: #475569; max-width: 200px; padding: 4px 0;">
-                        
-                        <button id="ansBtn_${q.id}" 
-                                style="background: #22c55e; color: white; padding: 10px 20px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 0.95rem; transition: background 0.2s;"
-                                onmouseover="this.style.background='#16a34a'"
-                                onmouseout="this.style.background='#22c55e'">
-                            답변 등록하기
+                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-top: 5px;">
+                        <input type="file" id="ansImg_${q.id}" accept="image/*" style="font-size: 0.85rem; color: #475569; max-width: 180px;">
+                        <button id="ansBtn_${q.id}" style="background: #22c55e; color: white; padding: 6px 14px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; max-width: max-content; transition: background 0.2s;">
+                            답변 등록
                         </button>
                     </div>
                 </div>
@@ -231,7 +279,6 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
     });
 }
 
-// 💡 [요청 사항 반영] 둥근 회색 아코디언 테두리 형식을 살린 시험 목록
 function renderAdminExamList(exams, containerElement) {
     containerElement.innerHTML = '';
     if (exams.length === 0) {
@@ -244,7 +291,17 @@ function renderAdminExamList(exams, containerElement) {
         
         const titleBtn = document.createElement('button');
         titleBtn.className = 'feedback-title-btn'; 
-        titleBtn.innerHTML = `📝 ${e.exam_title} : <strong>${e.score}점</strong> <span style="font-size: 0.8em; color: #888; font-weight: normal;">(클릭)</span>`;
+        
+        // 💡 관리자용 시험 내역 우측에 수정/삭제 버튼 추가
+        titleBtn.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                <div>📝 ${e.exam_title} : <strong>${e.score}점</strong> <span style="font-size: 0.8em; color: #888; font-weight: normal;">(클릭)</span></div>
+                <div style="display:flex; gap:6px;">
+                    <span onclick="event.stopPropagation(); window.editRecord('Exam', '${e.id}', '${e.exam_title}', '${e.score}')" style="padding:4px 8px; font-size:0.75rem; background:#3b82f6; color:white; border-radius:4px; cursor:pointer;">수정</span>
+                    <span onclick="event.stopPropagation(); window.deleteRecord('Exam', '${e.id}')" style="padding:4px 8px; font-size:0.75rem; background:#ef4444; color:white; border-radius:4px; cursor:pointer;">삭제</span>
+                </div>
+            </div>
+        `;
 
         const detailDiv = document.createElement('div');
         detailDiv.className = 'feedback-detail'; 
@@ -255,7 +312,7 @@ function renderAdminExamList(exams, containerElement) {
         detailDiv.innerHTML = hasImg 
             ? `<div style="text-align: center; padding: 10px 0;">
                    <img src="${imgUrl}" alt="시험지 원본" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="max-width:100%; border-radius:4px; margin-top:10px; display:block; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                   <p style="display:none; color:#ef4444; font-size:0.9em; margin-top:10px;">⚠️ 이미지를 불러올 수 없습니다. (삭제되었거나 파일 오류)</p>
+                   <p style="display:none; color:#ef4444; font-size:0.9em; margin-top:10px;">⚠️ 이미지를 불러올 수 없습니다.</p>
                </div>`
             : `<p style="font-size:0.9em; color:#999; margin-top:10px;">등록된 시험지 사진이 없습니다.</p>`;
 
@@ -290,7 +347,7 @@ function renderStudentExamList(exams, containerElement) {
         detailDiv.innerHTML = hasImg 
             ? `<div style="text-align: center; padding: 10px 0;">
                    <img src="${imgUrl}" alt="시험지 원본" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="max-width:100%; border-radius:4px; margin-top:10px; display:block; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                   <p style="display:none; color:#ef4444; font-size:0.9em; margin-top:10px;">⚠️ 이미지를 불러올 수 없습니다. (삭제되었거나 파일 오류)</p>
+                   <p style="display:none; color:#ef4444; font-size:0.9em; margin-top:10px;">⚠️ 이미지를 불러올 수 없습니다.</p>
                </div>`
             : `<p style="font-size:0.9em; color:#999; margin-top:10px;">등록된 시험지 사진이 없습니다.</p>`;
 
@@ -349,7 +406,8 @@ async function loadStudentDetail(studentId) {
 
         const feedbackResponse = await fetch(`/api/getFeedbacks?studentId=${studentId}&student_id=${studentId}`);
         const feedbackRawData = await feedbackResponse.json();
-        renderFeedbackList(feedbackRawData, document.getElementById('feedbackListAdmin'));
+        // isAdmin=true 플래그 추가하여 수정/삭제 버튼 노출
+        renderFeedbackList(feedbackRawData, document.getElementById('feedbackListAdmin'), true);
     } catch (error) { 
         console.error('학생 상세정보 로드 에러:', error); 
     }
@@ -368,7 +426,7 @@ async function loadStudentDashboard() {
 
         const feedbackResponse = await fetch(`/api/getFeedbacks?studentId=${currentUser.id}&student_id=${currentUser.id}`);
         const feedbackRawData = await feedbackResponse.json();
-        renderFeedbackList(feedbackRawData, document.getElementById('myFeedbackList'));
+        renderFeedbackList(feedbackRawData, document.getElementById('myFeedbackList'), false);
     } catch (error) { 
         console.error('학생 대시보드 로드 에러:', error); 
     }
@@ -485,7 +543,7 @@ async function handleAnswerQuestion(questionId) {
     } catch (err) {
         alert('에러 발생: ' + err.message);
     } finally {
-        btn.innerText = "답변 등록하기";
+        btn.innerText = "답변 등록";
         btn.disabled = false;
     }
 }
@@ -652,6 +710,7 @@ async function handleAskQuestion() {
     finally { btn.innerText = "질문 올리기"; btn.disabled = false; }
 }
 
+// 💡 [에러 완벽 방어] 비밀번호 변경 (융단폭격 매개변수 적용)
 async function handleChangePassword() {
     const passwordInput = document.getElementById('newPassword');
     const newPw = passwordInput.value.trim();
@@ -661,12 +720,25 @@ async function handleChangePassword() {
         const res = await fetch('/api/changePassword', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: currentUser.id, newPassword: newPw })
+            body: JSON.stringify({ 
+                // 💡 서버 가공 필터 오류 방지! 어떤 이름표를 검사하든 무조건 통과되게 다 보냅니다.
+                id: currentUser.id,
+                userId: currentUser.id,
+                user_id: currentUser.id,
+                login_id: currentUser.login_id,
+                newPassword: newPw, 
+                password: newPw,
+                new_password: newPw
+            })
         });
+        
         if (res.ok) {
-            alert('✅ 비밀번호가 변경되었습니다. 새 비밀번호로 다시 로그인해주세요!');
+            alert('✅ 비밀번호가 성공적으로 변경되었습니다! 보안을 위해 새 비밀번호로 다시 로그인해주세요.');
             passwordInput.value = '';
             handleLogout(); 
-        } else { alert('비밀번호 변경 처리 실패'); }
+        } else { 
+            const err = await res.json().catch(()=>({}));
+            alert('비밀번호 변경 실패: ' + (err.error || err.message || '기존 암호 규칙 충돌 또는 서버 가공 필터 오류')); 
+        }
     } catch (err) { alert('에러 발생: ' + err.message); }
 }
