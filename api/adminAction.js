@@ -10,12 +10,26 @@ export default async function handler(req, res) {
     const supabaseKey = process.env.SUPABASE_KEY;
     const headers = { 'Content-Type': 'application/json', 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` };
 
+    // 💡 [핵심 기능] 스토리지 사진들을 배열로 묶어서 한 번에 날려버리는 공식 삭제 엔진
+    const deleteStorageFiles = async (urls) => {
+        const prefixes = urls.filter(url => url && url !== 'null').map(url => {
+            const parts = url.split('/tutor_files/');
+            return parts.length > 1 ? parts[1].split('?')[0] : null;
+        }).filter(Boolean);
+
+        if (prefixes.length > 0) {
+            await fetch(`${supabaseUrl}/storage/v1/object/tutor_files`, {
+                method: 'DELETE',
+                headers: headers,
+                body: JSON.stringify({ prefixes }) // 파일 경로들을 배열로 던져서 일괄 삭제!
+            }).catch(err => console.error('스토리지 삭제 에러:', err));
+        }
+    };
+
     try {
         let dbRes;
 
-        // 🚨 1. 학생 완전 삭제 (Storage 사진 -> DB 기록 -> Authentication 계정 순서로 싹쓸이)
         if (action === 'deleteStudent') {
-            // [1단계] 학생이 올린 시험지/질문/답변 사진 URL들 Storage에서 싹 다 지우기 위해 조회
             const [examsRes, qsRes] = await Promise.all([
                 fetch(`${supabaseUrl}/rest/v1/exams?student_id=eq.${targetStudentId}&select=paper_image_url`, { headers }),
                 fetch(`${supabaseUrl}/rest/v1/questions?student_id=eq.${targetStudentId}&select=question_image_url,answer_image_url`, { headers })
@@ -24,39 +38,29 @@ export default async function handler(req, res) {
             const qs = await qsRes.json().catch(()=>[]);
 
             const filesToDelete = [];
-            if (Array.isArray(exams)) exams.forEach(e => e.paper_image_url && filesToDelete.push(e.paper_image_url));
+            if (Array.isArray(exams)) exams.forEach(e => filesToDelete.push(e.paper_image_url));
             if (Array.isArray(qs)) qs.forEach(q => {
-                if (q.question_image_url) filesToDelete.push(q.question_image_url);
-                if (q.answer_image_url) filesToDelete.push(q.answer_image_url);
+                filesToDelete.push(q.question_image_url);
+                filesToDelete.push(q.answer_image_url);
             });
 
-            // Storage 실제 삭제 통신
-            for (const url of filesToDelete) {
-                if (!url || url === 'null') continue;
-                const parts = url.split('/tutor_files/');
-                if (parts.length > 1) {
-                    await fetch(`${supabaseUrl}/storage/v1/object/tutor_files/${parts[1]}`, { method: 'DELETE', headers });
-                }
-            }
+            // 1. 스토리지(사진) 싹쓸이 먼저 실행
+            await deleteStorageFiles(filesToDelete);
 
-            // [2단계] DB 테이블 관련 데이터 싹 다 지우기
+            // 2. DB 기록 싹쓸이
             await fetch(`${supabaseUrl}/rest/v1/exams?student_id=eq.${targetStudentId}`, { method: 'DELETE', headers });
             await fetch(`${supabaseUrl}/rest/v1/questions?student_id=eq.${targetStudentId}`, { method: 'DELETE', headers });
             await fetch(`${supabaseUrl}/rest/v1/feedbacks?student_id=eq.${targetStudentId}`, { method: 'DELETE', headers });
-            await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${targetStudentId}`, { method: 'DELETE', headers });
-
-            // [3단계] Supabase Authentication (진짜 계정) 완전 삭제! -> 이거 해야 같은 아이디 또 생성 가능
-            dbRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${targetStudentId}`, { method: 'DELETE', headers });
+            
+            // 3. 학생 계정 완전 소멸
+            dbRes = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${targetStudentId}`, { method: 'DELETE', headers });
+            await fetch(`${supabaseUrl}/auth/v1/admin/users/${targetStudentId}`, { method: 'DELETE', headers });
         }
-        
-        // 🚨 2. 개별 시험지 삭제 (사진 Storage 삭제 포함)
         else if (action === 'deleteExam') {
             const exRes = await fetch(`${supabaseUrl}/rest/v1/exams?id=eq.${targetId}&select=paper_image_url`, { headers });
             const exData = await exRes.json().catch(()=>[]);
-            if(Array.isArray(exData) && exData[0] && exData[0].paper_image_url) {
-                const parts = exData[0].paper_image_url.split('/tutor_files/');
-                if (parts.length > 1) await fetch(`${supabaseUrl}/storage/v1/object/tutor_files/${parts[1]}`, { method: 'DELETE', headers });
-            }
+            if(Array.isArray(exData) && exData[0]) await deleteStorageFiles([exData[0].paper_image_url]);
+            
             dbRes = await fetch(`${supabaseUrl}/rest/v1/exams?id=eq.${targetId}`, { method: 'DELETE', headers });
         }
         else if (action === 'editExam') {
@@ -83,32 +87,18 @@ export default async function handler(req, res) {
                 body: JSON.stringify({ feedback_title: feedbackTitle, feedback_text: feedbackText })
             });
         }
-        
-        // 🚨 3. 개별 질문 삭제 (질문 사진 및 답변 사진 Storage 삭제 포함)
         else if (action === 'deleteQuestion') {
             const qRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}&select=question_image_url,answer_image_url`, { headers });
             const qData = await qRes.json().catch(()=>[]);
-            if(Array.isArray(qData) && qData[0]) {
-                if (qData[0].question_image_url) {
-                    const parts = qData[0].question_image_url.split('/tutor_files/');
-                    if (parts.length > 1) await fetch(`${supabaseUrl}/storage/v1/object/tutor_files/${parts[1]}`, { method: 'DELETE', headers });
-                }
-                if (qData[0].answer_image_url) {
-                    const parts = qData[0].answer_image_url.split('/tutor_files/');
-                    if (parts.length > 1) await fetch(`${supabaseUrl}/storage/v1/object/tutor_files/${parts[1]}`, { method: 'DELETE', headers });
-                }
-            }
+            if(Array.isArray(qData) && qData[0]) await deleteStorageFiles([qData[0].question_image_url, qData[0].answer_image_url]);
+
             dbRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}`, { method: 'DELETE', headers });
         }
-        
-        // 🚨 4. 선생님 답변만 삭제 (답변 사진 Storage 삭제 포함 후 빈칸 처리)
         else if (action === 'deleteAnswer') {
             const qRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}&select=answer_image_url`, { headers });
             const qData = await qRes.json().catch(()=>[]);
-            if(Array.isArray(qData) && qData[0] && qData[0].answer_image_url) {
-                const parts = qData[0].answer_image_url.split('/tutor_files/');
-                if (parts.length > 1) await fetch(`${supabaseUrl}/storage/v1/object/tutor_files/${parts[1]}`, { method: 'DELETE', headers });
-            }
+            if(Array.isArray(qData) && qData[0]) await deleteStorageFiles([qData[0].answer_image_url]);
+
             dbRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}`, {
                 method: 'PATCH', 
                 headers: { ...headers, 'Prefer': 'return=minimal' },
@@ -126,7 +116,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: '올바르지 않은 명령 유형입니다.' });
         }
 
-        if (!dbRes.ok) {
+        if (dbRes && !dbRes.ok) {
             const errorText = await dbRes.text().catch(() => 'Unknown DB Error');
             return res.status(400).json({ error: `Supabase 오류: ${errorText}` });
         }
