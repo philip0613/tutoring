@@ -1,131 +1,81 @@
 export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST만 가능' });
 
-    // 💡 프론트에서 넘어오는 데이터에 피드백 관련 변수(feedbackTitle, feedbackText, studentId) 추가 추출
-    const { action, table, id, updateData, student_id, studentId, feedbackTitle, feedbackText } = req.body;
+    // 프론트엔드가 보내는 모든 액션과 데이터를 받습니다.
+    const { action, id, recordId, studentId, student_id, exam_title, score, feedbackTitle, feedbackText, answerText } = req.body;
+    
+    // 이름표 충돌 방지용 (융단폭격 방어)
+    const targetId = id || recordId;
+    const targetStudentId = studentId || student_id;
+
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY; 
-
-    const headers = {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`
-    };
-
-    // URL에서 파일 이름만 정확하게 추출하는 함수
-    const extractFilename = (url) => {
-        if (!url) return null;
-        const parts = url.split('/tutor_files/');
-        return parts.length > 1 ? parts[1] : null;
-    };
+    const supabaseKey = process.env.SUPABASE_KEY;
+    const headers = { 'Content-Type': 'application/json', 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` };
 
     try {
-        if (action === 'update') {
-            const response = await fetch(`${supabaseUrl}/rest/v1/${table}?id=eq.${id}`, {
-                method: 'PATCH',
-                headers: { ...headers, 'Prefer': 'return=minimal' },
-                body: JSON.stringify(updateData)
+        // 🚨 1. 학생 삭제
+        if (action === 'deleteStudent') {
+            const dbRes = await fetch(`${supabaseUrl}/rest/v1/students?id=eq.${targetStudentId}`, { method: 'DELETE', headers });
+            if (!dbRes.ok) throw new Error('학생 삭제 실패');
+        }
+        // 🚨 2. 시험 점수 관련 삭제 / 수정
+        else if (action === 'deleteExam') {
+            const dbRes = await fetch(`${supabaseUrl}/rest/v1/exams?id=eq.${targetId}`, { method: 'DELETE', headers });
+            if (!dbRes.ok) throw new Error('시험 삭제 실패');
+        }
+        else if (action === 'editExam') {
+            const dbRes = await fetch(`${supabaseUrl}/rest/v1/exams?id=eq.${targetId}`, {
+                method: 'PATCH', headers: { ...headers, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ exam_title: exam_title, score: parseInt(score) })
             });
-            if (!response.ok) throw new Error('DB 데이터 수정 실패');
-        } 
-        else if (action === 'delete') {
-            // [개별 삭제] 질문이나 시험 점수를 하나씩 지울 때도 사진 같이 삭제
-            if (table === 'questions' || table === 'exams') {
-                const getRes = await fetch(`${supabaseUrl}/rest/v1/${table}?id=eq.${id}`, { headers });
-                const getData = await getRes.json();
-                if (getData && getData.length > 0) {
-                    const item = getData[0];
-                    const files = [
-                        extractFilename(item.question_image_url), 
-                        extractFilename(item.answer_image_url), 
-                        extractFilename(item.paper_image_url)
-                    ].filter(Boolean);
-                    
-                    // Supabase 공식 대량 삭제 API 규격 부합화 (body에 파일명 배열 전송)
-                    if (files.length > 0) {
-                        await fetch(`${supabaseUrl}/storage/v1/object/tutor_files`, {
-                            method: 'DELETE',
-                            headers: headers,
-                            body: JSON.stringify({ prefixes: files })
-                        });
-                    }
-                }
-            }
-
-            const response = await fetch(`${supabaseUrl}/rest/v1/${table}?id=eq.${id}`, {
-                method: 'DELETE', headers: headers
-            });
-            if (!response.ok) throw new Error('DB 데이터 삭제 실패');
-        } 
-        else if (action === 'deleteStudent') {
-            // [학생 전체 삭제] 1. 이 학생과 관련된 모든 사진 파일명 명단 수집
-            const examsRes = await fetch(`${supabaseUrl}/rest/v1/exams?student_id=eq.${student_id}`, { headers });
-            const exams = await examsRes.json();
-            
-            const questionsRes = await fetch(`${supabaseUrl}/rest/v1/questions?student_id=eq.${student_id}`, { headers });
-            const questions = await questionsRes.json();
-
-            let filesToDelete = [];
-            if (exams && exams.length > 0) {
-                exams.forEach(ex => filesToDelete.push(extractFilename(ex.paper_image_url)));
-            }
-            if (questions && questions.length > 0) {
-                questions.forEach(q => {
-                    filesToDelete.push(extractFilename(q.question_image_url));
-                    filesToDelete.push(extractFilename(q.answer_image_url)); // 선생님 답변 사진 포함
-                });
-            }
-            filesToDelete = filesToDelete.filter(Boolean); 
-
-            // 2. 수집된 명단이 있다면 Supabase 공식 API를 이용해 창고(Storage)에서 한방에 완전 폭파!
-            if (filesToDelete.length > 0) {
-                await fetch(`${supabaseUrl}/storage/v1/object/tutor_files`, { 
-                    method: 'DELETE', 
-                    headers: headers,
-                    body: JSON.stringify({ prefixes: filesToDelete }) // 규격 매칭
-                });
-            }
-
-            // 3. 데이터베이스 글자 데이터(DB) 삭제
-            await fetch(`${supabaseUrl}/rest/v1/exams?student_id=eq.${student_id}`, { method: 'DELETE', headers });
-            await fetch(`${supabaseUrl}/rest/v1/questions?student_id=eq.${student_id}`, { method: 'DELETE', headers });
-            await fetch(`${supabaseUrl}/rest/v1/feedbacks?student_id=eq.${student_id}`, { method: 'DELETE', headers });
-            await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${student_id}`, { method: 'DELETE', headers });
-
-            // 4. Auth 유저 로그인 계정 폭파
-            await fetch(`${supabaseUrl}/auth/v1/admin/users/${student_id}`, {
-                method: 'DELETE',
-                headers: headers
-            });
-        } 
-        // ==========================================
-        // 💡 [신규 추가] 피드백 저장 액션
-        // ==========================================
+            if (!dbRes.ok) throw new Error('시험 수정 실패');
+        }
+        // 🚨 3. 피드백 관련 등록 / 삭제 / 수정
         else if (action === 'addFeedback') {
-            // 프론트엔드에서 보낸 studentId 변수명 대응 (혹시 모를 에러 방지)
-            const targetStudentId = student_id || studentId; 
-            
-            const response = await fetch(`${supabaseUrl}/rest/v1/feedbacks`, {
-                method: 'POST',
-                headers: { ...headers, 'Prefer': 'return=minimal' },
-                body: JSON.stringify({
-                    student_id: targetStudentId,
-                    feedback_title: feedbackTitle, // 👉 프론트에서 온 제목
-                    feedback_text: feedbackText    // 👉 프론트에서 온 내용
-                })
+            const dbRes = await fetch(`${supabaseUrl}/rest/v1/feedbacks`, {
+                method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ student_id: targetStudentId, feedback_title: feedbackTitle, feedback_text: feedbackText })
             });
-            
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(`피드백 저장 실패: ${JSON.stringify(errData)}`);
-            }
+            if (!dbRes.ok) throw new Error('피드백 등록 실패');
+        }
+        else if (action === 'deleteFeedback') {
+            const dbRes = await fetch(`${supabaseUrl}/rest/v1/feedbacks?id=eq.${targetId}`, { method: 'DELETE', headers });
+            if (!dbRes.ok) throw new Error('피드백 삭제 실패');
+        }
+        else if (action === 'editFeedback') {
+            const dbRes = await fetch(`${supabaseUrl}/rest/v1/feedbacks?id=eq.${targetId}`, {
+                method: 'PATCH', headers: { ...headers, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ feedback_title: feedbackTitle, feedback_text: feedbackText })
+            });
+            if (!dbRes.ok) throw new Error('피드백 수정 실패');
+        }
+        // 🚨 4. 질문 및 답변 관련 삭제 / 수정
+        else if (action === 'deleteQuestion') {
+            const dbRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}`, { method: 'DELETE', headers });
+            if (!dbRes.ok) throw new Error('질문 삭제 실패');
+        }
+        else if (action === 'deleteAnswer') {
+            // 답변 삭제는 질문 게시글을 지우는게 아니라, 선생님 답변 칸만 빈칸(null)으로 되돌리는 겁니다.
+            const dbRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}`, {
+                method: 'PATCH', headers: { ...headers, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ answer_text: null, answer_image_url: null })
+            });
+            if (!dbRes.ok) throw new Error('답변 내용 지우기 실패');
+        }
+        else if (action === 'editAnswer') {
+            const dbRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${targetId}`, {
+                method: 'PATCH', headers: { ...headers, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ answer_text: answerText })
+            });
+            if (!dbRes.ok) throw new Error('답변 수정 실패');
         }
         else {
-            throw new Error('알 수 없는 명령입니다.');
+            throw new Error('서버가 알 수 없는 명령(action)입니다: ' + action);
         }
 
-        return res.status(200).json({ message: '성공' });
+        return res.status(200).json({ message: '요청 성공' });
     } catch (error) {
-        return res.status(400).json({ error: error.message });
+        console.error('adminAction 통신 에러:', error);
+        return res.status(500).json({ error: error.message });
     }
 }
