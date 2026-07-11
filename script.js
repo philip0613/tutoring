@@ -7,14 +7,18 @@ let currentStudentId = null;
 document.addEventListener('DOMContentLoaded', () => {
     checkSession(); 
 
+    // 1. 공통 및 로그인 이벤트
     document.getElementById('loginBtn').addEventListener('click', handleLogin);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+    // 2. 선생님(Admin) 대시보드 이벤트
     document.getElementById('createStudentBtn').addEventListener('click', handleCreateStudent);
     document.getElementById('uploadExamBtn').addEventListener('click', handleUploadExam);
     document.getElementById('sendFeedbackBtn').addEventListener('click', handleSendFeedback);
     document.getElementById('deleteStudentBtn').addEventListener('click', handleDeleteStudent);
+
+    // 3. 학생(Student) 대시보드 이벤트
     document.getElementById('askQuestionBtn').addEventListener('click', handleAskQuestion);
-    
     document.getElementById('togglePasswordBtn').addEventListener('click', () => {
         document.getElementById('passwordFormContainer').classList.toggle('hidden-form');
     });
@@ -81,10 +85,10 @@ function fileToBase64(file) {
 }
 
 // ==========================================
-// 💡 [핵심 복구] 공용 레코드 수정/삭제 핸들러
+// 💡 공용 레코드 수정/삭제 핸들러 (에러 상세 표기)
 // ==========================================
 window.deleteRecord = async function(type, id) {
-    if (!confirm(`정말 이 항목을 삭제하시겠습니까? (복구 불가)`)) return;
+    if (!confirm('정말 이 항목을 삭제하시겠습니까? (복구 불가)')) return;
     try {
         const res = await fetch('/api/adminAction', {
             method: 'POST',
@@ -92,13 +96,13 @@ window.deleteRecord = async function(type, id) {
             body: JSON.stringify({ action: 'delete' + type, id: id, recordId: id, studentId: currentStudentId })
         });
         if (res.ok) {
-            alert('✅ 삭제 완료!');
+            alert('✅ 성공적으로 삭제되었습니다.');
             loadStudentDetail(currentStudentId);
         } else { 
-            const err = await res.json().catch(()=>({}));
-            alert('삭제 실패: ' + (err.error || '서버 에러')); 
+            const err = await res.json().catch(() => ({}));
+            alert('❌ 삭제 실패 사유:\n' + (err.error || '알 수 없는 서버 오류')); 
         }
-    } catch (e) { alert('통신 에러: ' + e.message); }
+    } catch (e) { alert('네트워크 연결 실패: ' + e.message); }
 };
 
 window.editRecord = async function(type, id, oldVal1, oldVal2) {
@@ -119,7 +123,7 @@ window.editRecord = async function(type, id, oldVal1, oldVal2) {
         payload.feedbackTitle = newTitle; payload.feedbackText = newText;
     }
     else if (type === 'Answer') {
-        const newText = prompt('새로운 답변/풀이 내용을 입력하세요:', oldVal1);
+        const newText = prompt('새로운 답변 해설 내용을 입력하세요:', oldVal1);
         if (newText === null) return;
         payload.answerText = newText;
     }
@@ -131,13 +135,13 @@ window.editRecord = async function(type, id, oldVal1, oldVal2) {
             body: JSON.stringify(payload)
         });
         if (res.ok) {
-            alert('✅ 수정 완료!');
+            alert('✅ 성공적으로 수정되었습니다.');
             loadStudentDetail(currentStudentId);
         } else { 
-            const err = await res.json().catch(()=>({}));
-            alert('수정 실패: ' + (err.error || '서버 오류')); 
+            const err = await res.json().catch(() => ({}));
+            alert('❌ 수정 실패 원인 사유:\n' + (err.error || '알 수 없는 서버 오류')); 
         }
-    } catch (e) { alert('통신 에러: ' + e.message); }
+    } catch (e) { alert('네트워크 연결 실패: ' + e.message); }
 };
 
 // ==========================================
@@ -155,7 +159,6 @@ function renderFeedbackList(feedbacksRaw, containerElement, isAdmin = false) {
 
     feedbacks.forEach(fb => {
         const li = document.createElement('li');
-        
         const titleBtn = document.createElement('button');
         titleBtn.className = 'feedback-title-btn';
         const displayTitle = fb.feedback_title ? fb.feedback_title : '제목 없는 피드백'; 
@@ -165,7 +168,6 @@ function renderFeedbackList(feedbacksRaw, containerElement, isAdmin = false) {
         detailDiv.className = 'feedback-detail';
         const dateStr = fb.created_at ? new Date(fb.created_at).toLocaleDateString() : '날짜 없음';
         
-        // 데이터 정제 (따옴표 및 줄바꿈으로 인한 HTML 파괴 방지)
         const safeTitle = (fb.feedback_title || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;");
         const safeText = (fb.feedback_text || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;").replace(/\n/g, "\\n");
 
@@ -186,9 +188,7 @@ function renderFeedbackList(feedbacksRaw, containerElement, isAdmin = false) {
         `;
 
         titleBtn.addEventListener('click', () => detailDiv.classList.toggle('show'));
-        li.appendChild(titleBtn);
-        li.appendChild(detailDiv);
-        containerElement.appendChild(li);
+        li.appendChild(titleBtn); li.appendChild(detailDiv); containerElement.appendChild(li);
     });
 }
 
@@ -203,10 +203,7 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
 
     questions.forEach(q => {
         const li = document.createElement('li');
-        li.style.position = 'relative';
-        li.style.marginBottom = '20px';
-        li.style.listStyle = 'none';
-        
+        li.style.position = 'relative'; li.style.marginBottom = '20px'; li.style.listStyle = 'none';
         const dateStr = q.created_at ? new Date(q.created_at).toLocaleDateString() : '날짜 없음';
         
         let imgTag = q.question_image_url && q.question_image_url !== 'null' && q.question_image_url.trim() !== ''
@@ -225,13 +222,13 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
             <div style="height: 10px;"></div>
         `;
 
-        // 💡 [요구사항 반영] 선생님 답변에 수정/삭제 기능 부활
         if (q.answer_text) {
             let ansImgTag = q.answer_image_url && q.answer_image_url !== 'null' && q.answer_image_url.trim() !== ''
                 ? `<img src="${q.answer_image_url}" alt="답변 이미지" onerror="this.style.display='none';" style="max-width:100%; border-radius:6px; margin-top:10px; display:block; border: 1px solid #cbd5e1;">` : '';
             
             const safeAnsText = (q.answer_text || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;").replace(/\n/g, "\\n");
             
+            // 답변 우측 하단에 수정/삭제 패널 주입
             let ansAdminControls = '';
             if (isAdmin) {
                 ansAdminControls = `
@@ -265,10 +262,11 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
             adminForm.style.padding = '15px'; adminForm.style.background = '#ffffff';
             adminForm.style.borderRadius = '8px'; adminForm.style.border = '1px solid #e2e8f0';
             
+            // 입력 폼 구조화 세로 정렬 및 질문 올리기와 똑같은 사이즈 버튼 적용
             adminForm.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <textarea id="ansText_${q.id}" placeholder="이 질문에 대한 답변을 입력하세요" 
-                              style="width: 100%; min-height: 80px; padding: 12px; border-radius: 6px; border: 1px solid #cbd5e1; resize: vertical; font-size: 0.95rem; font-family: inherit; outline: none;"></textarea>
+                              style="width: 100%; min-height: 80px; padding: 12px; border-radius: 6px; border: 1px solid #cbd5e1; resize: vertical; font-size: 0.95rem; font-family: inherit; box-sizing: border-box; outline: none;"></textarea>
                     <input type="file" id="ansImg_${q.id}" accept="image/*" style="font-size: 0.85rem; color: #475569; margin-top: 5px;">
                     <button id="ansBtn_${q.id}" style="width: max-content; background: #22c55e; color: white; padding: 8px 16px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; margin-top: 5px;">
                         답변 등록하기
@@ -294,7 +292,6 @@ function renderAdminExamList(exams, containerElement) {
         const li = document.createElement('li');
         const titleBtn = document.createElement('button');
         titleBtn.className = 'feedback-title-btn'; 
-        
         const safeTitle = (e.exam_title || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;");
 
         titleBtn.innerHTML = `
@@ -484,7 +481,7 @@ async function handleAnswerQuestion(questionId) {
             loadStudentDetail(currentStudentId); 
         } else {
             const err = await res.json().catch(() => ({}));
-            alert('답변 등록 실패: ' + (err.error || err.message || '서버 오류'));
+            alert('답변 등록 실패 사유:\n' + (err.error || '서버 오류'));
         }
     } catch (err) { alert('에러 발생: ' + err.message); } 
     finally { btn.innerText = "답변 등록하기"; btn.disabled = false; }
@@ -630,8 +627,8 @@ async function handleChangePassword() {
             alert('✅ 비밀번호가 성공적으로 변경되었습니다! 보안을 위해 새 비밀번호로 다시 로그인해주세요.');
             passwordInput.value = ''; handleLogout(); 
         } else { 
-            const err = await res.json().catch(()=>({}));
-            alert('비밀번호 변경 실패: ' + (err.error || err.message || '서버 오류')); 
+            const err = await res.json().catch(() => ({}));
+            alert('❌ 비밀번호 변경 실패 사유:\n' + (err.error || '알 수 없는 서버 오류')); 
         }
     } catch (err) { alert('에러 발생: ' + err.message); }
 }
