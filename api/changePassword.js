@@ -15,8 +15,8 @@ export default async function handler(req, res) {
     const headers = { 'Content-Type': 'application/json', 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` };
 
     try {
-        // 💡 [핵심 해결] 테이블 이름을 students 에서 users 로 변경!
-        const dbRes = await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${targetId}`, {
+        // 💡 [핵심 해결] 캡처 화면에 맞게 테이블 이름을 'profiles'로 변경!
+        const dbRes = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${targetId}`, {
             method: 'PATCH',
             headers: { ...headers, 'Prefer': 'return=minimal' },
             body: JSON.stringify({ password: targetPw })
