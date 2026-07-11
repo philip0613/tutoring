@@ -15,14 +15,13 @@ export default async function handler(req, res) {
     const headers = { 'Content-Type': 'application/json', 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` };
 
     try {
-        // students 테이블의 해당 학생 id 레코드 비밀번호 자장
-        const dbRes = await fetch(`${supabaseUrl}/rest/v1/students?id=eq.${targetId}`, {
+        // 💡 [핵심 해결] 테이블 이름을 students 에서 users 로 변경!
+        const dbRes = await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${targetId}`, {
             method: 'PATCH',
             headers: { ...headers, 'Prefer': 'return=minimal' },
             body: JSON.stringify({ password: targetPw })
         });
 
-        // 💡 에러 원인을 명확하게 바인딩하여 프론트엔드로 전달
         if (!dbRes.ok) {
             const errorText = await dbRes.text().catch(() => 'Unknown DB Error');
             return res.status(400).json({ error: `Supabase 오류: ${errorText}` });
