@@ -341,6 +341,7 @@ async function handleAnswerQuestion(questionId) {
     }
 }
 
+// 💡 [수정 완료] 신규 학생 생성 (변수명 융단폭격 방어 적용)
 async function handleCreateStudent() {
     const nameInput = document.getElementById('newStudentName');
     const idInput = document.getElementById('newStudentId');
@@ -356,20 +357,31 @@ async function handleCreateStudent() {
         const res = await fetch('/api/createStudent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, login_id: loginId })
+            body: JSON.stringify({ 
+                // 백엔드가 어떤 이름표를 기다릴지 몰라서 종류별로 다 준비했어!
+                name: name, 
+                studentName: name,
+                login_id: loginId,
+                loginId: loginId,
+                id: loginId,
+                userId: loginId
+            })
         });
         if (res.ok) {
             alert('✅ 학생 계정 생성 완료! (기본 비밀번호: 123456)');
-            nameInput.value = ''; idInput.value = '';
+            nameInput.value = ''; 
+            idInput.value = '';
             loadTeacherDashboard();
         } else {
             const err = await res.json().catch(() => ({}));
             alert('학생 생성 실패: ' + (err.error || err.message || '오류'));
         }
-    } catch (err) { alert('에러 발생: ' + err.message); } 
-    finally { btn.disabled = false; }
+    } catch (err) { 
+        alert('에러 발생: ' + err.message); 
+    } finally { 
+        btn.disabled = false; 
+    }
 }
-
 async function handleUploadExam() {
     if (!currentStudentId) return alert("먼저 학생을 선택해주세요!");
     const titleInput = document.getElementById("examTitle");
