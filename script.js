@@ -103,30 +103,6 @@ function fileToBase64(file) {
     });
 }
 
-// 💡 [신규 추가] 시험지 이미지를 새 창/탭으로 안전하게 띄워주는 함수
-function openExamPaper(imageUrl) {
-    if (!imageUrl) {
-        alert("이 시험은 등록된 시험지 이미지가 없습니다.");
-        return;
-    }
-    // 새 탭에서 이미지 오픈
-    const newWindow = window.open();
-    newWindow.document.write(`
-        <html lang="ko">
-        <head>
-            <title>시험지 보기</title>
-            <style>
-                body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-                img { max-width: 100%; height: auto; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
-            </style>
-        </head>
-        <body>
-            <img src="${imageUrl}" alt="시험지 원본">
-        </body>
-        </html>
-    `);
-}
-
 // ==========================================
 // 💡 화면 그리기(렌더링) 함수 모음
 // ==========================================
@@ -225,7 +201,7 @@ function renderQuestionList(questionsRaw, containerElement, isAdmin = false) {
     });
 }
 
-// 💡 [완벽 복구] 관리자용 쪽지시험 내역 그리기 (클릭 시 이미지 오픈 연결)
+// 💡 [UI 업그레이드] 관리자용 쪽지시험 리스트 (누르면 아래에 바로 토글되도록 변경)
 function renderAdminExamList(exams, containerElement) {
     containerElement.innerHTML = '';
     if (exams.length === 0) {
@@ -235,14 +211,30 @@ function renderAdminExamList(exams, containerElement) {
     
     exams.forEach(e => {
         const li = document.createElement('li');
-        li.innerHTML = `📝 ${e.exam_title} : <strong style="color:#0284c7; cursor:pointer; text-decoration:underline;">${e.score}점</strong> <span style="font-size:0.8em; color:#888;">(클릭 시 시험지 보기)</span>`;
-        // 점수 클릭 시 등록된 이미지 오픈
-        li.querySelector('strong').addEventListener('click', () => openExamPaper(e.paper_image_url));
+        li.style.marginBottom = '10px';
+        
+        // 클릭 가능한 타이틀 버턴 구조
+        li.innerHTML = `
+            <div style="cursor:pointer; padding:5px 0;" class="exam-title-row">
+                📝 ${e.exam_title} : <strong style="color:#0284c7; text-decoration:underline;">${e.score}점</strong> 
+                <span style="font-size:0.8em; color:#888;"> (누르면 시험지 토글)</span>
+            </div>
+            <div class="exam-paper-container" style="display:none; margin-top:8px;">
+                ${e.paper_image_url ? `<img src="${e.paper_image_url}" alt="시험지 원본" style="max-width:100%; border-radius:4px; border:1px solid #ddd;">` : '<p style="font-size:0.85em; color:#999; margin:5px 0;">이 시험은 등록된 시험지 사진이 없습니다.</p>'}
+            </div>
+        `;
+
+        // 행 클릭 시 아래 이미지 뷰어 박스 토글 연동
+        li.querySelector('.exam-title-row').addEventListener('click', () => {
+            const container = li.querySelector('.exam-paper-container');
+            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        });
+
         containerElement.appendChild(li);
     });
 }
 
-// 💡 [완벽 복구] 학생용 본인 쪽지시험 내역 그리기 (클릭 시 이미지 오픈 연결)
+// 💡 [UI 업그레이드] 학생용 쪽지시험 리스트 (누르면 아래에 바로 토글되도록 변경)
 function renderStudentExamList(exams, containerElement) {
     containerElement.innerHTML = '';
     if (exams.length === 0) {
@@ -252,9 +244,23 @@ function renderStudentExamList(exams, containerElement) {
     
     exams.forEach(e => {
         const li = document.createElement('li');
-        li.innerHTML = `📈 ${e.exam_title} : <strong style="color:#22c55e; cursor:pointer; text-decoration:underline;">${e.score}점</strong> <span style="font-size:0.8em; color:#888;">(클릭 시 시험지 보기)</span>`;
-        // 점수 클릭 시 등록된 이미지 오픈
-        li.querySelector('strong').addEventListener('click', () => openExamPaper(e.paper_image_url));
+        li.style.marginBottom = '10px';
+        
+        li.innerHTML = `
+            <div style="cursor:pointer; padding:5px 0;" class="exam-title-row">
+                📈 ${e.exam_title} : <strong style="color:#22c55e; text-decoration:underline;">${e.score}점</strong> 
+                <span style="font-size:0.8em; color:#888;"> (누르면 시험지 토글)</span>
+            </div>
+            <div class="exam-paper-container" style="display:none; margin-top:8px;">
+                ${e.paper_image_url ? `<img src="${e.paper_image_url}" alt="시험지 원본" style="max-width:100%; border-radius:4px; border:1px solid #ddd;">` : '<p style="font-size:0.85em; color:#999; margin:5px 0;">이 시험은 등록된 시험지 사진이 없습니다.</p>'}
+            </div>
+        `;
+
+        li.querySelector('.exam-title-row').addEventListener('click', () => {
+            const container = li.querySelector('.exam-paper-container');
+            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        });
+
         containerElement.appendChild(li);
     });
 }
@@ -295,16 +301,13 @@ async function loadTeacherDashboard() {
 
 async function loadStudentDetail(studentId) {
     try {
-        // 1. 쪽지시험 리스트 조회 및 렌더링 함수 적용
         const examRes = await fetch(`/api/getExams?studentId=${studentId}&student_id=${studentId}`);
         const exams = extractDataArray(await examRes.json());
         renderAdminExamList(exams, document.getElementById('examListAdmin'));
 
-        // 2. 질문 내역 조회
         const questionRes = await fetch(`/api/getQuestions?studentId=${studentId}&student_id=${studentId}`);
         renderQuestionList(await questionRes.json(), document.getElementById('questionListAdmin'), true);
 
-        // 3. 피드백 내역 조회
         const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${studentId}&student_id=${studentId}`);
         renderFeedbackList(await feedbackRes.json(), document.getElementById('feedbackListAdmin'));
 
@@ -315,16 +318,13 @@ async function loadStudentDetail(studentId) {
 
 async function loadStudentDashboard() {
     try {
-        // 1. 본인 시험 결과 조회 및 렌더링 함수 적용
         const examRes = await fetch(`/api/getExams?studentId=${currentUser.id}&student_id=${currentUser.id}`);
         const exams = extractDataArray(await examRes.json());
         renderStudentExamList(exams, document.getElementById('myExamList'));
 
-        // 2. 본인 질문 내역 조회
         const questionRes = await fetch(`/api/getQuestions?studentId=${currentUser.id}&student_id=${currentUser.id}`);
         renderQuestionList(await questionRes.json(), document.getElementById('myQuestionList'), false);
 
-        // 3. 선생님 한마디(피드백) 조회
         const feedbackRes = await fetch(`/api/getFeedbacks?studentId=${currentUser.id}&student_id=${currentUser.id}`);
         renderFeedbackList(await feedbackRes.json(), document.getElementById('myFeedbackList'));
 
