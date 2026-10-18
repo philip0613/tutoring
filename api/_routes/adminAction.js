@@ -129,7 +129,7 @@ export default async function handler(req, res) {
             await supabaseAdminFetch(`/rest/v1/questions?id=eq.${targetId}`, {
                 method: 'PATCH',
                 headers: { 'Prefer': 'return=minimal' },
-                body: JSON.stringify({ answer_text: answerText })
+                body: JSON.stringify({ answer_text: answerText, is_answered: true })
             });
             return res.status(200).json({ message: '답변이 수정되었습니다.' });
         }

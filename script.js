@@ -789,8 +789,9 @@ async function loadAdminQuestions(studentId) {
         }
 
         list.innerHTML = questions.map(q => {
+            const hasAnswer = Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''));
             const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}20; color:${q.subjects.color}; border: 1px solid ${q.subjects.color}40;">📚 ${escapeHtml(q.subjects.name)}</span>` : '';
-            const statusBadge = q.is_answered
+            const statusBadge = hasAnswer
                 ? '<span class="badge badge-answered">✅ 답변완료</span>'
                 : '<span class="badge badge-waiting">⏳ 답변대기</span>';
 
@@ -817,7 +818,7 @@ async function loadAdminQuestions(studentId) {
                     ` : ''}
 
                     <div class="answer-box">
-                        ${q.is_answered ? `
+                        ${hasAnswer ? `
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <strong style="color:var(--primary); font-size:0.9rem;">💡 선생님의 해설</strong>
                                 <div>
@@ -825,7 +826,7 @@ async function loadAdminQuestions(studentId) {
                                     <button class="danger-link-btn" onclick="deleteRecord('Answer', ${q.id})">답변취소</button>
                                 </div>
                             </div>
-                            <p style="margin-top: 6px; font-size:0.95rem; white-space: pre-wrap;">${escapeHtml(q.answer_text)}</p>
+                            <p style="margin-top: 6px; font-size:0.95rem; white-space: pre-wrap;">${escapeHtml(q.answer_text || '')}</p>
                             ${q.answer_image_url ? `
                                 <div class="image-preview-wrapper" style="margin-top:8px;" onclick="window.open('${q.answer_image_url}')">
                                     <img src="${q.answer_image_url}" alt="풀이 사진">
@@ -1255,8 +1256,9 @@ async function loadMyQuestions() {
         }
 
         list.innerHTML = questions.map(q => {
+            const hasAnswer = Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''));
             const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}20; color:${q.subjects.color};">📚 ${escapeHtml(q.subjects.name)}</span>` : '';
-            const statusBadge = q.is_answered
+            const statusBadge = hasAnswer
                 ? '<span class="badge badge-answered">✅ 답변완료</span>'
                 : '<span class="badge badge-waiting">⏳ 풀이중</span>';
 
@@ -1280,9 +1282,9 @@ async function loadMyQuestions() {
                     ` : ''}
 
                     <div class="answer-box">
-                        ${q.is_answered ? `
+                        ${hasAnswer ? `
                             <strong style="color:var(--primary); font-size:0.9rem;">💡 선생님의 해설:</strong>
-                            <p style="margin-top:4px; font-size:0.95rem; white-space: pre-wrap;">${escapeHtml(q.answer_text)}</p>
+                            <p style="margin-top:4px; font-size:0.95rem; white-space: pre-wrap;">${escapeHtml(q.answer_text || '')}</p>
                             ${q.answer_image_url ? `
                                 <div class="image-preview-wrapper" style="margin-top:8px;" onclick="window.open('${q.answer_image_url}')">
                                     <img src="${q.answer_image_url}" alt="풀이 사진">
