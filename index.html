@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>스마트 과외 관리 시스템 v2.0</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
@@ -10,149 +10,170 @@
 </head>
 <body>
     <header>
-        <h1>📚 스마트 과외 v2.0</h1>
-        <div id="userInfo" class="header-actions hidden">
-            <!-- 웹 푸시 알림 신청 버튼 -->
-            <button id="enablePushBtn" class="small-btn" title="웹 푸시 알림 활성화">🔔 알림 켜기</button>
-            
-            <!-- 알림 벨 및 드롭다운 -->
-            <div style="position: relative;">
-                <button id="notificationBellBtn" class="notification-bell-btn" title="알림 센터">
-                    🔔<span id="notificationBadge" class="notification-badge hidden">0</span>
-                </button>
-                <div id="notificationDropdown" class="notification-dropdown hidden">
-                    <div class="notification-dropdown-header">
-                        <span>📢 최근 알림</span>
-                        <button id="markAllReadBtn" class="text-link-btn" style="font-size: 0.78rem;">모두 읽음</button>
-                    </div>
-                    <div id="notificationList">
-                        <div style="text-align: center; color: #94a3b8; padding: 20px 0; font-size: 0.85rem;">새로운 알림이 없습니다.</div>
-                    </div>
-                </div>
+        <div class="header-inner">
+            <div class="header-brand">
+                <h1>📚 스마트 과외</h1>
             </div>
 
-            <span id="userGreeting" style="font-weight: 600;"></span>
-            <button id="logoutBtn" class="small-btn" style="background:#e2e8f0; color:#334155;">로그아웃</button>
+            <div id="userInfo" class="header-actions hidden">
+                <button id="enablePushBtn" class="small-btn" title="웹 푸시 알림 켜기">🔔 알림켜기</button>
+                
+                <div style="position: relative;">
+                    <button id="notificationBellBtn" class="notification-bell-btn" title="알림 센터">
+                        🔔<span id="notificationBadge" class="notification-badge hidden">0</span>
+                    </button>
+                    <div id="notificationDropdown" class="notification-dropdown hidden">
+                        <div class="notification-dropdown-header">
+                            <span>📢 최근 알림</span>
+                            <button id="markAllReadBtn" class="text-link-btn" style="font-size: 0.78rem;">모두 읽음</button>
+                        </div>
+                        <div id="notificationList">
+                            <div style="text-align: center; color: var(--text-muted); padding: 20px 0; font-size: 0.85rem;">새로운 알림이 없습니다.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <span id="userGreeting" style="font-weight: 700; font-size: 0.9rem; color: var(--text-secondary);"></span>
+                <button id="logoutBtn" class="small-btn">로그아웃</button>
+            </div>
         </div>
     </header>
 
     <main class="container">
         <!-- 1. 로그인 섹션 -->
-        <section id="loginSection" class="card">
-            <h2>로그인</h2>
-            <p style="color: #64748b; margin-top: 4px;">아이디와 비밀번호를 입력해 주세요.</p>
-            <input type="text" id="idInput" placeholder="아이디 (예: admin 또는 학생 아이디)">
-            <input type="password" id="passwordInput" placeholder="비밀번호">
-            <button id="loginBtn" class="primary-btn">로그인</button>
+        <section id="loginSection" class="card" style="max-width: 420px; margin: 40px auto;">
+            <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-primary);">로그인</h2>
+            <p style="color: var(--text-secondary); margin-top: 4px; font-size: 0.9rem;">아이디와 비밀번호를 입력해 주세요.</p>
+            
+            <div style="margin-top: 18px;">
+                <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">아이디</label>
+                <input type="text" id="idInput" placeholder="아이디 입력 (예: admin 또는 학생용 ID)">
+            </div>
+            
+            <div style="margin-top: 12px;">
+                <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">비밀번호</label>
+                <input type="password" id="passwordInput" placeholder="비밀번호 입력">
+            </div>
+
+            <button id="loginBtn" class="primary-btn mt-20">로그인하기</button>
         </section>
 
         <!-- 2. 선생님 대시보드 -->
         <section id="teacherDashboard" class="hidden">
-            <div class="dashboard-header admin-bg" style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>👨‍🏫 선생님 대시보드</h2>
-                <span style="font-size: 0.85rem; font-weight: bold; background: white; padding: 4px 10px; border-radius: 20px; color: #1565c0;">멀티 교사 모드</span>
+            <div class="dashboard-header admin-bg">
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800;">👨‍🏫 선생님 대시보드</h2>
+                    <p style="font-size: 0.85rem; opacity: 0.85; margin-top: 2px;">수강생, 과목, 시험 및 수업 일정을 통합 관리합니다.</p>
+                </div>
             </div>
 
-            <!-- 상단 탭 네비게이션 -->
+            <!-- 상단 네비게이션 탭 -->
             <div class="tab-bar">
                 <button class="tab-btn active" data-target="teacherClassTab">📚 과목 & 학생 관리</button>
                 <button class="tab-btn" data-target="teacherCalendarTab">📅 수업 캘린더</button>
             </div>
 
-            <!-- [탭 1] 과목 & 학생 관리 화면 -->
+            <!-- [선생님 탭 1] 과목 & 학생 관리 화면 -->
             <div id="teacherClassTab">
-                <!-- 과목(Subject) 관리 바 -->
+                <!-- 나의 개설 과목 바 -->
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3>📖 나의 개설 과목</h3>
-                        <button id="openAddSubjectModalBtn" class="small-btn" style="background:#3b82f6;">+ 과목 추가</button>
+                        <h3 style="font-size: 1.05rem; font-weight: 700;">📖 개설 과목 필터</h3>
+                        <button id="openAddSubjectModalBtn" class="small-btn" style="background: var(--primary-light); color: var(--primary); font-weight: 700;">+ 새 과목 개설</button>
                     </div>
-                    <div id="teacherSubjectChips" class="subject-chip-list">
-                        <!-- 동적으로 과목 칩 추가됨 -->
-                    </div>
+                    <div id="teacherSubjectChips" class="subject-chip-list"></div>
                 </div>
 
+                <!-- 학생 등록 및 목록 (2열 그리드) -->
                 <div class="grid-container">
                     <div class="card">
-                        <h3>👥 신규 학생 계정 생성</h3>
+                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 12px;">👥 신규 학생 생성</h3>
                         <input type="text" id="newStudentName" placeholder="학생 이름 (예: 김철수)">
                         <input type="text" id="newStudentId" placeholder="학생 로그인 아이디 부여">
                         <select id="newStudentSubjectSelect">
                             <option value="">배정할 과목 선택 (선택 사항)</option>
                         </select>
-                        <button id="createStudentBtn" class="primary-btn">학생 계정 생성 (기본비번: 123456)</button>
+                        <button id="createStudentBtn" class="primary-btn mt-12">학생 계정 생성 (초기비번: 123456)</button>
                     </div>
 
                     <div class="card">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h3>📋 담당 학생 목록</h3>
-                            <button id="enrollExistingStudentBtn" class="small-btn" style="background:#10b981;">+ 과목에 학생 등록</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="font-size: 1.05rem; font-weight: 700;">📋 담당 학생 목록</h3>
+                            <button id="enrollExistingStudentBtn" class="small-btn" style="background: var(--success-light); color: var(--success); font-weight: 700;">+ 과목 배정</button>
                         </div>
-                        <ul id="studentList" class="item-list scrollable-list"></ul>
+                        <ul id="studentList" class="item-list scrollable-list" style="max-height: 230px;"></ul>
                     </div>
                 </div>
 
-                <!-- 학생 상세 관리 패널 -->
-                <div id="studentManagePanel" class="card hidden mt-20">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3 id="manageStudentTitle">학생 상세 관리</h3>
-                        <span id="currentSubjectBadge" style="font-size: 0.82rem; font-weight: bold; color: #64748b;"></span>
+                <!-- 🌟 학생 상세 관리 패널 (선택 시 등장) -->
+                <div id="studentManagePanel" class="card hidden mt-20" style="border: 2px solid #c7d2fe; background: #ffffff;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 14px;">
+                        <div>
+                            <h3 id="manageStudentTitle" style="font-size: 1.2rem; font-weight: 800; color: var(--primary);">👤 학생 상세 관리</h3>
+                            <span id="currentSubjectBadge" style="font-size: 0.82rem; color: var(--text-muted);"></span>
+                        </div>
+                        <button id="deleteStudentBtn" class="danger-link-btn" style="font-size: 0.85rem; font-weight: 700;">🚨 학생 계정 영구 삭제</button>
                     </div>
-                    
-                    <div class="grid-container mt-20">
-                        <!-- 쪽지시험 점수 입력 -->
-                        <div class="sub-card">
-                            <h4>📝 쪽지시험 점수 입력</h4>
-                            <select id="examSubjectSelect">
+
+                    <!-- 학생 상세 서브 탭 (모바일/PC 모두 쾌적한 탭 분리) -->
+                    <div class="sub-tab-bar">
+                        <button class="sub-tab-btn active" data-subtarget="studentQuestionsTab">❓ 질문 관리 (<span id="adminQuestionCount">0</span>)</button>
+                        <button class="sub-tab-btn" data-subtarget="studentExamsTab">📊 시험 & 성적 (<span id="adminExamCount">0</span>)</button>
+                        <button class="sub-tab-btn" data-subtarget="studentFeedbacksTab">✍️ 과외 일지 & 피드백 (<span id="adminFeedbackCount">0</span>)</button>
+                    </div>
+
+                    <!-- 서브 1: 질문 관리 탭 -->
+                    <div id="studentQuestionsTab">
+                        <div id="questionListAdmin" class="item-list"></div>
+                    </div>
+
+                    <!-- 서브 2: 시험 성적 탭 -->
+                    <div id="studentExamsTab" class="hidden">
+                        <!-- 시험 등록 폼 카드 -->
+                        <div class="sub-card" style="background: #f8fafc; margin-bottom: 16px;">
+                            <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px;">📝 새 시험 점수 등록</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <select id="examSubjectSelect">
+                                    <option value="">관련 과목 선택</option>
+                                </select>
+                                <input type="number" id="examScore" placeholder="점수 (예: 95)">
+                            </div>
+                            <input type="text" id="examTitle" placeholder="시험명 (예: 3월 모의고사)">
+                            <input type="file" id="examImage" accept="image/*">
+                            <button id="uploadExamBtn" class="secondary-btn mt-12">시험지 사진 및 점수 저장</button>
+                        </div>
+
+                        <!-- 시험 목록 -->
+                        <div id="examListAdmin" class="item-list"></div>
+                    </div>
+
+                    <!-- 서브 3: 피드백 탭 -->
+                    <div id="studentFeedbacksTab" class="hidden">
+                        <!-- 피드백 작성 카드 -->
+                        <div class="sub-card" style="background: #fdfaf6; margin-bottom: 16px;">
+                            <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px;">✍️ 과외 일지 작성</h4>
+                            <select id="feedbackSubjectSelect" style="margin-bottom: 8px;">
                                 <option value="">관련 과목 선택</option>
                             </select>
-                            <input type="text" id="examTitle" placeholder="시험명 (예: 3월 모의고사)">
-                            <input type="number" id="examScore" placeholder="점수 (예: 95)">
-                            <input type="file" id="examImage" accept="image/*">
-                            <button id="uploadExamBtn" class="secondary-btn">시험지 업로드 및 저장</button>
+                            <input type="text" id="feedbackTitleAdmin" placeholder="피드백 제목 (예: 7/11 진도 요약 및 과제)">
+                            <textarea id="feedbackTextAdmin" placeholder="오늘 수업에서 잘한 점, 보완할 점, 숙제를 자세히 적어주세요."></textarea>
+                            <button id="sendFeedbackBtn" class="primary-btn mt-12">피드백 전송하기</button>
                         </div>
 
-                        <!-- 학생이 올린 질문 -->
-                        <div class="sub-card">
-                            <h4>❓ 학생이 올린 질문</h4>
-                            <ul id="questionListAdmin" class="item-list scrollable-list"></ul>
-                        </div>
-                    </div>
-
-                    <!-- 이 학생의 시험 결과 기록 -->
-                    <div class="sub-card mt-20" style="background: #f0f8ff;">
-                        <h4>📊 이 학생의 시험 결과 기록</h4>
-                        <ul id="examListAdmin" class="item-list scrollable-list"></ul>
-                    </div>
-
-                    <!-- 개별 피드백 남기기 -->
-                    <div class="sub-card mt-20" style="background: #fdfaf6;">
-                        <h4>✍️ 개별 피드백 (과외 일지)</h4>
-                        <select id="feedbackSubjectSelect" style="margin-bottom: 8px;">
-                            <option value="">관련 과목 선택</option>
-                        </select>
-                        <input type="text" id="feedbackTitleAdmin" placeholder="피드백 제목 (예: 7/11 수업 진도 및 과제)">
-                        <textarea id="feedbackTextAdmin" placeholder="수업 진도, 숙제, 보완할 점을 적어주세요."></textarea>
-                        <button id="sendFeedbackBtn" class="primary-btn">피드백 전송</button>
-                        
-                        <h5 class="mt-20">이전 피드백 기록</h5>
-                        <ul id="feedbackListAdmin" class="item-list scrollable-list"></ul>
-                    </div>
-
-                    <div class="mt-20" style="text-align: right;">
-                        <button id="deleteStudentBtn" style="background-color: #ef4444; color: white; padding: 10px 18px; font-size: 14px;">🚨 이 학생 계정 완전 삭제</button>
+                        <!-- 피드백 목록 -->
+                        <div id="feedbackListAdmin" class="item-list"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- [탭 2] 수업 캘린더 화면 -->
+            <!-- [선생님 탭 2] 수업 캘린더 화면 -->
             <div id="teacherCalendarTab" class="hidden">
                 <div class="calendar-card">
                     <div class="calendar-nav">
                         <button id="prevMonthBtn" class="small-btn">&lt; 이전달</button>
                         <h3 id="calendarCurrentMonthTitle">2026년 10월</h3>
-                        <div>
-                            <button id="openAddScheduleModalBtn" class="small-btn" style="background: #3b82f6;">+ 수업 일정 등록</button>
+                        <div style="display: flex; gap: 6px;">
+                            <button id="openAddScheduleModalBtn" class="small-btn" style="background: var(--primary); color: white; font-weight: 700;">+ 수업 일정 등록</button>
                             <button id="nextMonthBtn" class="small-btn">다음달 &gt;</button>
                         </div>
                     </div>
@@ -166,14 +187,12 @@
                         <div class="calendar-header-day">금</div>
                         <div class="calendar-header-day">토</div>
                     </div>
-                    <div id="calendarGridDays" class="calendar-grid" style="margin-top: 4px;">
-                        <!-- 날짜 셀들이 동적 생성됨 -->
-                    </div>
+                    <div id="calendarGridDays" class="calendar-grid" style="margin-top: 4px;"></div>
                 </div>
 
                 <!-- 선택 날짜 수업 상세 목록 -->
                 <div id="selectedDateScheduleCard" class="card mt-20 hidden">
-                    <h3 id="selectedDateTitle">선택한 날짜의 수업</h3>
+                    <h3 id="selectedDateTitle" style="font-size: 1.1rem; font-weight: 800; margin-bottom: 12px;">선택한 날짜의 수업</h3>
                     <ul id="selectedDateScheduleList" class="item-list"></ul>
                 </div>
             </div>
@@ -181,12 +200,13 @@
 
         <!-- 3. 학생 대시보드 -->
         <section id="studentDashboard" class="hidden">
-            <div class="dashboard-header student-bg" style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>🎓 학생 대시보드</h2>
-                <span id="studentGreetingSub" style="font-size: 0.85rem; font-weight: bold; background: white; padding: 4px 10px; border-radius: 20px; color: #2e7d32;">학습 관리</span>
+            <div class="dashboard-header student-bg">
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800;">🎓 학생 대시보드</h2>
+                    <p style="font-size: 0.85rem; opacity: 0.85; margin-top: 2px;">내 질문과 성적표, 과외 일지를 편리하게 확인하세요.</p>
+                </div>
             </div>
 
-            <!-- 상단 탭 네비게이션 -->
             <div class="tab-bar">
                 <button class="tab-btn active" data-target="studentStudyTab">📖 내 학습 & 과목</button>
                 <button class="tab-btn" data-target="studentCalendarTab">📅 내 수업 캘린더</button>
@@ -194,48 +214,49 @@
 
             <!-- [학생 탭 1] 학습 & 과목 -->
             <div id="studentStudyTab">
-                <!-- 내가 수강 중인 과목 칩 -->
                 <div class="card">
-                    <h3>📚 수강 중인 과목</h3>
-                    <div id="studentSubjectChips" class="subject-chip-list">
-                        <!-- 동적으로 수강 과목 칩 생성됨 -->
-                    </div>
+                    <h3 style="font-size: 1.05rem; font-weight: 700;">📚 수강 과목</h3>
+                    <div id="studentSubjectChips" class="subject-chip-list"></div>
                 </div>
 
                 <div class="grid-container">
-                    <!-- 내 시험 성적 -->
-                    <div class="card">
-                        <h3>📈 내 쪽지시험 결과</h3>
-                        <ul id="myExamList" class="item-list scrollable-list"></ul>
-                    </div>
-
                     <!-- 질문 올리기 -->
                     <div class="card">
-                        <h3>🙋‍♂️ 모르는 문제 질문하기</h3>
-                        <select id="askQuestionSubjectSelect">
+                        <h3 style="font-size: 1.05rem; font-weight: 700;">🙋‍♂️ 모르는 문제 질문하기</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">사진을 찍어 올리면 선생님이 풀이를 남겨줍니다.</p>
+                        <select id="askQuestionSubjectSelect" style="margin-top: 10px;">
                             <option value="">질문할 과목 선택</option>
                         </select>
-                        <input type="text" id="questionText" placeholder="어떤 부분이 이해 안 가시나요?">
+                        <input type="text" id="questionText" placeholder="어떤 부분이 궁금한가요?">
                         <input type="file" id="questionImage" accept="image/*">
-                        <button id="askQuestionBtn" class="primary-btn">질문 올리기</button>
-                        
-                        <h4 class="mt-20">나의 질문 내역</h4>
-                        <ul id="myQuestionList" class="item-list scrollable-list"></ul>
+                        <button id="askQuestionBtn" class="primary-btn mt-12">질문 올리기</button>
+                    </div>
+
+                    <!-- 내 성적표 -->
+                    <div class="card">
+                        <h3 style="font-size: 1.05rem; font-weight: 700;">📈 나의 시험 결과</h3>
+                        <div id="myExamList" class="item-list scrollable-list" style="max-height: 260px;"></div>
                     </div>
                 </div>
 
-                <!-- 피드백 -->
-                <div class="card mt-20" style="background: #f7f9fc;">
-                    <h3>📋 선생님의 한마디 (개별 피드백)</h3>
-                    <ul id="myFeedbackList" class="item-list scrollable-list"></ul>
+                <!-- 질문 내역 -->
+                <div class="card mt-20">
+                    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 12px;">💬 나의 질문 내역</h3>
+                    <div id="myQuestionList" class="item-list"></div>
+                </div>
+
+                <!-- 과외 일지 -->
+                <div class="card mt-20" style="background: #fdfaf6;">
+                    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 12px;">📋 선생님의 한마디 (과외 일지)</h3>
+                    <div id="myFeedbackList" class="item-list"></div>
                 </div>
 
                 <!-- 비밀번호 변경 -->
-                <div class="password-toggle-container" style="text-align: center; margin: 20px 0;">
-                    <button id="togglePasswordBtn" class="text-link-btn">⚙️ 비밀번호 변경하기</button>
-                    <div id="passwordFormContainer" class="hidden-form">
-                        <input type="password" id="newPassword" placeholder="새 비밀번호 (6자리 이상)" style="max-width: 250px; display: inline-block;">
-                        <button id="changePasswordBtn" class="small-btn">변경</button>
+                <div style="text-align: center; margin: 30px 0;">
+                    <button id="togglePasswordBtn" class="text-link-btn" style="font-size: 0.9rem;">⚙️ 비밀번호 변경하기</button>
+                    <div id="passwordFormContainer" class="hidden-form" style="margin-top: 12px;">
+                        <input type="password" id="newPassword" placeholder="새 비밀번호 (6자리 이상)" style="max-width: 260px; display: inline-block;">
+                        <button id="changePasswordBtn" class="small-btn" style="margin-left: 6px;">변경</button>
                     </div>
                 </div>
             </div>
@@ -258,13 +279,11 @@
                         <div class="calendar-header-day">금</div>
                         <div class="calendar-header-day">토</div>
                     </div>
-                    <div id="studentCalendarGridDays" class="calendar-grid" style="margin-top: 4px;">
-                        <!-- 날짜 셀들이 동적 생성됨 -->
-                    </div>
+                    <div id="studentCalendarGridDays" class="calendar-grid" style="margin-top: 4px;"></div>
                 </div>
 
                 <div id="studentSelectedDateCard" class="card mt-20 hidden">
-                    <h3 id="studentSelectedDateTitle">이날의 수업 일정</h3>
+                    <h3 id="studentSelectedDateTitle" style="font-size: 1.1rem; font-weight: 800; margin-bottom: 12px;">이날의 수업 일정</h3>
                     <ul id="studentSelectedDateList" class="item-list"></ul>
                 </div>
             </div>
@@ -275,13 +294,18 @@
     <div id="addSubjectModal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>📖 새 과목 개설</h3>
+                <h3 style="font-size: 1.15rem; font-weight: 800;">📖 새 과목 개설</h3>
                 <button class="modal-close-btn">&times;</button>
             </div>
-            <input type="text" id="modalSubjectName" placeholder="과목명 (예: 중3 수학 심화반, 고1 영어)">
-            <input type="text" id="modalSubjectDesc" placeholder="과목 설명 (선택)">
-            <label style="display: block; margin-top: 10px; font-weight: 600; font-size: 0.9rem;">대표 색상 선택:</label>
-            <input type="color" id="modalSubjectColor" value="#3b82f6" style="width: 100%; height: 40px; padding: 2px; border: none; cursor: pointer;">
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">과목명</label>
+            <input type="text" id="modalSubjectName" placeholder="예: 중3 수학 심화반, 고1 공통수학">
+            
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-top: 10px; display: block;">설명 (선택)</label>
+            <input type="text" id="modalSubjectDesc" placeholder="과목에 대한 간단한 메모">
+            
+            <label style="display: block; margin-top: 10px; font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">대표 색상</label>
+            <input type="color" id="modalSubjectColor" value="#4f46e5" style="width: 100%; height: 42px; padding: 2px; border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer;">
+            
             <button id="saveSubjectBtn" class="primary-btn mt-20">과목 개설 완료</button>
         </div>
     </div>
@@ -290,13 +314,15 @@
     <div id="enrollStudentModal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>👥 과목에 학생 배정</h3>
+                <h3 style="font-size: 1.15rem; font-weight: 800;">👥 과목에 학생 배정</h3>
                 <button class="modal-close-btn">&times;</button>
             </div>
-            <label style="font-weight: 600; font-size: 0.9rem;">대상 과목:</label>
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">대상 과목</label>
             <select id="enrollTargetSubjectSelect"></select>
-            <label style="display: block; margin-top: 10px; font-weight: 600; font-size: 0.9rem;">등록할 학생:</label>
+            
+            <label style="display: block; margin-top: 10px; font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">등록할 학생</label>
             <select id="enrollTargetStudentSelect"></select>
+            
             <button id="saveEnrollmentBtn" class="primary-btn mt-20">과목에 학생 등록하기</button>
         </div>
     </div>
@@ -305,32 +331,33 @@
     <div id="addScheduleModal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>📅 수업 일정 등록</h3>
+                <h3 style="font-size: 1.15rem; font-weight: 800;">📅 수업 일정 등록</h3>
                 <button class="modal-close-btn">&times;</button>
             </div>
-            <label style="font-weight: 600; font-size: 0.9rem;">과목 선택:</label>
+            
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">과목 선택</label>
             <select id="scheduleSubjectSelect"></select>
 
-            <label style="display: block; margin-top: 10px; font-weight: 600; font-size: 0.9rem;">대상 학생 (선택):</label>
+            <label style="display: block; margin-top: 10px; font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">대상 학생 (선택)</label>
             <select id="scheduleStudentSelect">
                 <option value="">과목 전체 공통 수업</option>
             </select>
 
-            <label style="display: block; margin-top: 10px; font-weight: 600; font-size: 0.9rem;">수업 제목:</label>
-            <input type="text" id="scheduleTitle" placeholder="예: 3단원 진도 및 기출 풀이">
+            <label style="display: block; margin-top: 10px; font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">수업 제목</label>
+            <input type="text" id="scheduleTitle" placeholder="예: 삼각함수 기출 풀이">
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                 <div>
-                    <label style="font-weight: 600; font-size: 0.85rem;">시작 시간:</label>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">시작 시간</label>
                     <input type="datetime-local" id="scheduleStartTime">
                 </div>
                 <div>
-                    <label style="font-weight: 600; font-size: 0.85rem;">종료 시간:</label>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">종료 시간</label>
                     <input type="datetime-local" id="scheduleEndTime">
                 </div>
             </div>
 
-            <label style="display: block; margin-top: 10px; font-weight: 600; font-size: 0.9rem;">수업 메모 / 숙제:</label>
+            <label style="display: block; margin-top: 10px; font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">수업 메모 / 숙제</label>
             <textarea id="scheduleNotes" placeholder="준비물이나 과제를 적어주세요."></textarea>
 
             <button id="saveScheduleBtn" class="primary-btn mt-20">일정 저장하기</button>
