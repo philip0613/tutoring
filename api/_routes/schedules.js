@@ -141,23 +141,6 @@ export default async function handler(req, res) {
                 body: JSON.stringify(updatePayload)
             });
 
-            // 수업 상태가 변경된 경우(예: 수업 완료) 학생에게 알림
-            if (status && status === 'completed') {
-                const targetStudentId = existing[0]?.student_id;
-                if (targetStudentId) {
-                    await supabaseAdminFetch('/rest/v1/notifications', {
-                        method: 'POST',
-                        headers: { 'Prefer': 'return=minimal' },
-                        body: JSON.stringify({
-                            user_id: targetStudentId,
-                            title: `✅ 오늘 수업이 완료 처리되었습니다.`,
-                            body: `수고하셨습니다! 피드백과 과제를 확인해 보세요.`,
-                            link: '#studentCalendarTab'
-                        })
-                    }).catch(() => {});
-                }
-            }
-
             return res.status(200).json(updated[0]);
         }
 

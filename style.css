@@ -659,6 +659,46 @@ input[type="file"] {
     border-color: #c7d2fe;
 }
 
+/* 10-1. 실시간 토스트 알림 배너 */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    max-width: calc(100vw - 32px);
+}
+
+.toast-notification {
+    background: #1e293b;
+    color: #ffffff;
+    padding: 14px 18px;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+    font-size: 0.92rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    pointer-events: auto;
+    animation: toast-slide-anim 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    max-width: 380px;
+    border-left: 4px solid var(--primary);
+}
+
+@keyframes toast-slide-anim {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 /* 11. 수업 캘린더 */
 .calendar-card {
     background: var(--bg-surface);

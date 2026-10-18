@@ -201,6 +201,41 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
+let knownUnreadIds = new Set();
+let notificationPollTimer = null;
+let isFirstNotificationLoad = true;
+
+function showToast(title, body) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = `
+        <div style="font-size: 1.25rem;">🔔</div>
+        <div style="flex: 1;">
+            <div style="font-weight: 800; font-size: 0.92rem; margin-bottom: 2px;">${escapeHtml(title)}</div>
+            <div style="font-size: 0.84rem; color: #cbd5e1; line-height: 1.4;">${escapeHtml(body)}</div>
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4500);
+}
+
+function startNotificationPolling() {
+    if (notificationPollTimer) clearInterval(notificationPollTimer);
+    notificationPollTimer = setInterval(() => {
+        if (currentUser) loadNotifications();
+    }, 10000); // 10초마다 실시간 체크
+}
+
 async function loadNotifications() {
     if (!currentUser) return;
     try {
@@ -212,7 +247,27 @@ async function loadNotifications() {
         const container = document.getElementById('notificationList');
         if (!container) return;
 
-        const unreadCount = list.filter(n => !n.is_read).length;
+        const unreadList = list.filter(n => !n.is_read);
+        const unreadCount = unreadList.length;
+
+        // 새 알림 감지 시 토스트 알림 띄우기
+        if (!isFirstNotificationLoad) {
+            unreadList.forEach(item => {
+                if (!knownUnreadIds.has(item.id)) {
+                    showToast(item.title, item.body);
+                }
+            });
+        }
+        isFirstNotificationLoad = false;
+        knownUnreadIds = new Set(unreadList.map(n => n.id));
+
+        // 탭 타이틀 갱신
+        if (unreadCount > 0) {
+            document.title = `(${unreadCount}) 📚 스마트 과외 v2.0`;
+        } else {
+            document.title = '📚 스마트 과외 v2.0';
+        }
+
         if (badge) {
             if (unreadCount > 0) {
                 badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
@@ -228,6 +283,16 @@ async function loadNotifications() {
         }
 
         container.innerHTML = list.map(item => `
+            <div class="notification-item ${item.is_read ? '' : 'unread'}" onclick="handleNotificationClick(${item.id})">
+                <div style="font-weight: 700; color: var(--text-primary);">${escapeHtml(item.title)}</div>
+                <div style="color: var(--text-secondary); margin-top: 2px;">${escapeHtml(item.body)}</div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">${new Date(item.created_at).toLocaleString()}</div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('알림 로드 실패:', err);
+    }
+}
             <div class="notification-item ${item.is_read ? '' : 'unread'}" onclick="handleNotificationClick(${item.id})">
                 <div style="font-weight: 700; color: var(--text-primary);">${escapeHtml(item.title)}</div>
                 <div style="color: var(--text-secondary); margin-top: 2px;">${escapeHtml(item.body)}</div>
@@ -377,6 +442,9 @@ function handleLogout() {
     currentUser = null;
     currentStudentId = null;
     currentSubjectFilter = null;
+    if (notificationPollTimer) clearInterval(notificationPollTimer);
+    knownUnreadIds.clear();
+    isFirstNotificationLoad = true;
     localStorage.removeItem('tutoring_user_v2');
     sessionStorage.removeItem('tutoring_user_v2');
 
@@ -406,6 +474,7 @@ function updateUIForLoggedInUser() {
     }
 
     loadNotifications();
+    startNotificationPolling();
 }
 
 // ==========================================
