@@ -142,7 +142,20 @@ header {
     color: var(--primary);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+}
+
+.version-tag {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #4f46e5;
+    background: #e0e7ff;
+    border: 1px solid #c7d2fe;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: center;
 }
 
 .header-actions {
