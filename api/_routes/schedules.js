@@ -1,5 +1,5 @@
-// api/schedules.js
-// 수업 캘린더 (일정 등록, 조회, 수정, 삭제) API
+// api/_routes/schedules.js
+// 수업 캘린더 (일정 등록, 조회, 수정, 삭제) API 및 학생 알림 발송
 import { authenticate, supabaseAdminFetch } from './_auth.js';
 
 export default async function handler(req, res) {
@@ -24,8 +24,6 @@ export default async function handler(req, res) {
                     return res.status(200).json([]);
                 }
 
-                // 본인 과목 중 (공통 수업이거나 본인 1:1 수업)
-                // in.(id1,id2,...)
                 query += `&subject_id=in.(${subjectIds.join(',')})&or=(student_id.is.null,student_id.eq.${auth.userId})`;
             }
 
@@ -43,7 +41,7 @@ export default async function handler(req, res) {
             return res.status(200).json(schedules);
         }
 
-        // 2. 수업 일정 등록 (POST) - 선생님 전용
+        // 2. 수업 일정 등록 (POST) - 선생님 전용 + 학생 대상 알림 자동 발송
         if (req.method === 'POST') {
             if (!auth.isTeacher) {
                 return res.status(403).json({ error: '선생님 계정만 수업 일정을 등록할 수 있습니다.' });
@@ -55,7 +53,7 @@ export default async function handler(req, res) {
             }
 
             // 본인 과목인지 검증
-            const subject = await supabaseAdminFetch(`/rest/v1/subjects?id=eq.${subject_id}&teacher_id=eq.${auth.userId}&select=id`);
+            const subject = await supabaseAdminFetch(`/rest/v1/subjects?id=eq.${subject_id}&teacher_id=eq.${auth.userId}&select=id,name`);
             if (!subject || subject.length === 0) {
                 return res.status(403).json({ error: '해당 과목에 대한 권한이 없습니다.' });
             }
@@ -75,6 +73,41 @@ export default async function handler(req, res) {
                 })
             });
 
+            // 🔔 학생에게 수업 일정 등록 알림 발송
+            try {
+                const notifyStudentIds = [];
+                if (student_id) {
+                    notifyStudentIds.push(student_id);
+                } else {
+                    // 과목 전체 공통 수업인 경우, 해당 과목의 모든 수강생에게 알림
+                    const enrollments = await supabaseAdminFetch(`/rest/v1/enrollments?subject_id=eq.${subject_id}&select=student_id`).catch(() => []);
+                    enrollments.forEach(e => {
+                        if (e.student_id && !notifyStudentIds.includes(e.student_id)) {
+                            notifyStudentIds.push(e.student_id);
+                        }
+                    });
+                }
+
+                const subjectName = subject[0]?.name || '수업';
+                const dateObj = new Date(start_time);
+                const dateText = `${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일 ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+                for (const sId of notifyStudentIds) {
+                    await supabaseAdminFetch('/rest/v1/notifications', {
+                        method: 'POST',
+                        headers: { 'Prefer': 'return=minimal' },
+                        body: JSON.stringify({
+                            user_id: sId,
+                            title: `📅 새로운 수업 일정이 등록되었습니다!`,
+                            body: `[${subjectName}] ${title.trim()} (${dateText})`,
+                            link: '#studentCalendarTab'
+                        })
+                    }).catch(() => {});
+                }
+            } catch (notifyErr) {
+                console.error('일정 등록 알림 발송 에러:', notifyErr);
+            }
+
             return res.status(201).json(newSchedule[0]);
         }
 
@@ -88,7 +121,7 @@ export default async function handler(req, res) {
             if (!id) return res.status(400).json({ error: '일정 ID가 필요합니다.' });
 
             // 본인 일정인지 검증
-            const existing = await supabaseAdminFetch(`/rest/v1/schedules?id=eq.${id}&teacher_id=eq.${auth.userId}&select=id`);
+            const existing = await supabaseAdminFetch(`/rest/v1/schedules?id=eq.${id}&teacher_id=eq.${auth.userId}&select=id,student_id,subject_id`);
             if (!existing || existing.length === 0) {
                 return res.status(403).json({ error: '해당 수업 일정에 대한 수정 권한이 없습니다.' });
             }
@@ -107,6 +140,23 @@ export default async function handler(req, res) {
                 headers: { 'Prefer': 'return=representation' },
                 body: JSON.stringify(updatePayload)
             });
+
+            // 수업 상태가 변경된 경우(예: 수업 완료) 학생에게 알림
+            if (status && status === 'completed') {
+                const targetStudentId = existing[0]?.student_id;
+                if (targetStudentId) {
+                    await supabaseAdminFetch('/rest/v1/notifications', {
+                        method: 'POST',
+                        headers: { 'Prefer': 'return=minimal' },
+                        body: JSON.stringify({
+                            user_id: targetStudentId,
+                            title: `✅ 오늘 수업이 완료 처리되었습니다.`,
+                            body: `수고하셨습니다! 피드백과 과제를 확인해 보세요.`,
+                            link: '#studentCalendarTab'
+                        })
+                    }).catch(() => {});
+                }
+            }
 
             return res.status(200).json(updated[0]);
         }

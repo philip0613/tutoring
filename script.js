@@ -59,6 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('changePasswordBtn')?.addEventListener('click', handleChangePassword);
 
+    // 창 포커스 시 최신 알림 자동 갱신
+    window.addEventListener('focus', () => {
+        if (currentUser) loadNotifications();
+    });
+
     // 모달 닫기
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
         btn.addEventListener('click', () => {
