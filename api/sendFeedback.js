@@ -1,29 +1,47 @@
+// api/sendFeedback.js
+// 선생님 과외 일지/피드백 등록 API (JWT 인증, 과목 연결, 학생 알림 발송)
+import { authenticate, supabaseAdminFetch } from './_auth.js';
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
 
-    const { student_id, feedback_text } = req.body;
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY;
-
     try {
-        const response = await fetch(`${supabaseUrl}/rest/v1/feedbacks`, {
+        const auth = await authenticate(req);
+        if (!auth.isTeacher) {
+            return res.status(403).json({ error: '선생님 계정만 피드백을 등록할 수 있습니다.' });
+        }
+
+        const { student_id, feedback_text, subject_id } = req.body;
+        if (!student_id || !feedback_text) {
+            return res.status(400).json({ error: '학생 ID와 피드백 내용을 입력해 주세요.' });
+        }
+
+        const payload = {
+            student_id,
+            feedback_text,
+            subject_id: subject_id || null
+        };
+
+        const result = await supabaseAdminFetch('/rest/v1/feedbacks', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': supabaseKey,
-                'Authorization': `Bearer ${supabaseKey}`,
-                'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({
-                student_id: student_id,
-                feedback_text: feedback_text
-            })
+            headers: { 'Prefer': 'return=representation' },
+            body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error('피드backs 저장 실패');
+        // 학생에게 알림 발송
+        await supabaseAdminFetch('/rest/v1/notifications', {
+            method: 'POST',
+            headers: { 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+                user_id: student_id,
+                title: '오늘의 과외 일지(피드백)가 도착했습니다 📝',
+                body: feedback_text.length > 40 ? feedback_text.substring(0, 40) + '...' : feedback_text,
+                link: '#feedback'
+            })
+        }).catch(() => {});
 
-        return res.status(200).json({ message: '피드백이 성공적으로 등록되었습니다.' });
+        return res.status(200).json({ message: '피드백이 성공적으로 등록되었습니다.', data: result[0] });
     } catch (error) {
-        return res.status(400).json({ error: error.message });
+        return res.status(error.status || 500).json({ error: error.message || '피드백 등록 실패' });
     }
 }

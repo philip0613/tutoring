@@ -1,149 +1,86 @@
-# 📚 스마트 과외 관리 시스템 (Smart Tutoring Management System)
+# 📚 스마트 과외 관리 시스템 v2.0 (Smart Tutoring Management System v2.0)
 
-> 선생님과 학생을 연결하는 가장 가볍고 직관적인 1:1 학습 관리 플랫폼 <br>
-> "모바일 환경에서도 답답함 없이, 문제 사진부터 성적표까지 한눈에 관리할 수 없을까?"라는 고민에서 출발한 프로젝트입니다.
-
-<br>
-
-## 🎯 1. 프로젝트 기획 배경 및 용도 (Why & What)
-
-개인 과외나 소규모 그룹 수업을 진행하다 보면, 카카오톡이나 문자 메시지로 숙제 검사와 질문을 주고받게 됩니다. 하지만 이 방식은 시간이 지나면 **질문한 사진을 찾기 어렵고, 학생의 성적 변화나 피드백 기록이 파편화된다는 단점**이 있었습니다.
-
-'스마트 과외 관리 시스템'은 이러한 불편함을 해결하기 위해 제작되었습니다.
-* **선생님(Admin)의 용도:** 학생별 성적을 기록하고, 학생이 모르는 문제를 사진으로 올리면 그 밑에 풀이 사진과 텍스트로 답장을 달아줍니다. 매 수업이 끝난 후에는 '오늘의 과외 일지(피드백)'를 남겨 학생의 학습 방향을 잡아줍니다.
-* **학생(Student)의 용도:** 복잡한 로그인 과정 없이 가볍게 접속하여 내 성적의 흐름을 확인하고, 모르는 문제를 스마트폰으로 찍어 바로 질문할 수 있습니다. 
+> 선생님과 학생을 연결하는 가장 가볍고 직관적인 1:1 및 소그룹 학습 관리 플랫폼 <br>
+> **v2.0 대규모 업데이트**: 다중 선생님 체제(멀티 테넌트), 과목별 분리 관리, 수업 캘린더, 웹 푸시 알림, JWT 보안 강화
 
 <br>
 
-## 🏗️ 2. 시스템 아키텍처 및 구조 (Architecture)
+## 🎯 1. 프로젝트 개요 및 v2.0 신규 기능
 
-본 프로젝트는 비용 효율성과 빠른 응답 속도를 위해 **서버리스(Serverless) 아키텍처**를 채택했습니다. 
+'스마트 과외 관리 시스템 v2.0'은 단순한 1:1 문답을 넘어, 여러 명의 선생님이 각자의 과목을 개설하고 학생과 일정을 체계적으로 관리할 수 있는 **멀티 테넌트 SaaS형 교육 관리 플랫폼**입니다.
 
-* **Frontend:** 순수 HTML, CSS, Vanilla JavaScript로 구현하여 불필요한 패키지 의존성을 없애고 렌더링 속도를 극대화했습니다.
-* **Backend:** Vercel Serverless Functions (Node.js)를 사용하여 프론트엔드와 데이터베이스 사이의 안전한 API 브릿지 역할을 수행합니다.
-* **Database & Storage:** Supabase를 도입하여 회원 인증(Auth), 관계형 데이터베이스(PostgreSQL), 그리고 이미지 창고(Storage)를 완벽하게 통합했습니다.
+### ✨ v2.0 핵심 변경점
 
-### 💡 [핵심 구조] 단일 라우터(Router) 패턴을 통한 Vercel 제한 극복
-Vercel의 무료(Hobby) 플랜은 프로젝트당 최대 12개의 서버리스 함수만 허용합니다. 기능이 확장됨에 따라 이 제한에 부딪히는 문제를 해결하기 위해, 백엔드 파일(`adminAction.js`) 하나가 **라우터(Router)** 역할을 하도록 구조를 뜯어고쳤습니다.
-프론트엔드에서 `action: 'update'`, `action: 'deleteStudent'` 등 목적을 담은 신호를 보내면, 백엔드에서 이를 분기 처리하여 하나의 API 파일로 수십 개의 기능을 무한히 확장할 수 있는 견고한 구조를 완성했습니다.
+1. **👥 다중 선생님 체제 (멀티 테넌트 & 데이터 격리)**
+   - 여러 명의 선생님이 각각 가입하여 본인만의 과목과 학생을 독립적으로 관리합니다.
+   - 타 교사의 학생 및 과목 데이터와 철저하게 분리됩니다.
 
-<br>
+2. **📖 과목별 관리 (Subjects & Course System)**
+   - 학생을 바로 관리하는 대신, 선생님이 과목(예: 중3 수학, 고1 영어)을 개설하고 학생을 수강생으로 배정합니다.
+   - 질문, 시험 성적, 피드백이 과목별로 묶여 관리되어 한 학생이 여러 과목을 수강해도 혼선이 없습니다.
 
-## ✨ 3. 주요 기능 및 개발 주안점 (Key Features)
+3. **📅 수업 캘린더 (Class Schedule & Calendar)**
+   - 월별 달력 UI를 통해 수업 일정(일시, 과목, 학생, 수업 메모)을 등록하고 출결/수업 완료 상태를 체크할 수 있습니다.
+   - 학생 대시보드에서도 본인의 수업 일정을 달력으로 실시간 확인합니다.
 
-### 📱 1) 세로모드(Mobile-First) 최적화 UI
-이 시스템의 실제 사용자는 태블릿이나 스마트폰을 세로로 들고 사용하는 학생들입니다. 
-* 화면 너비에 따라 레이아웃이 자연스럽게 변경되도록 설계했습니다.
-* 이미지가 화면을 뚫고 나가는 것을 방지하고, 리스트 클릭 시 사진이 열리고 닫히는 **토글(Toggle) 애니메이션**을 적용하여 작은 화면에서도 텍스트 가독성을 잃지 않도록 구성했습니다.
+4. **🔔 웹 푸시 알림 및 알림 센터 (Web Push & Notification Center)**
+   - Service Worker 기반 브라우저 푸시 알림을 지원합니다.
+   - 학생이 질문을 올리면 담당 선생님에게 즉시 알림, 선생님이 답변이나 피드백을 등록하면 학생에게 즉시 알림이 발송됩니다.
+   - 인앱 알림 벨(🔔)을 통해 최근 알림 히스토리를 확인하고 읽음 처리할 수 있습니다.
 
-### 🔄 2) 완벽한 양방향 CRUD & 이미지 동기화
-* 선생님과 학생 모두 자신이 올린 텍스트(질문, 답변, 피드백 등)를 팝업창을 통해 실시간으로 수정 및 삭제할 수 있습니다.
-* **디테일한 예외 처리:** 선생님이 '답변'을 삭제하면 학생의 '질문'은 그대로 둔 채, 상태만 다시 [답변 대기]로 안전하게 롤백(Rollback) 되도록 비즈니스 로직을 구현했습니다.
-
-### 💣 3) 연쇄 삭제 (Cascading Clean Destroy) 로직
-웹 개발 시 가장 흔히 발생하는 '고아 데이터(쓰레기 데이터)' 문제를 백엔드에서 원천 차단했습니다.
-학생 계정을 삭제할 경우, 단순히 데이터베이스의 글자만 지우는 것이 아니라 아래의 프로세스가 순차적으로 실행됩니다.
-1. 학생이 남긴 질문 및 시험지의 **이미지 URL을 수집**
-2. Supabase Storage API를 호출하여 **물리적인 사진 파일 완전 폐기** (대량 삭제 API 적용)
-3. 데이터베이스(PostgreSQL)의 연관 텍스트 데이터 모두 삭제
-4. 가장 깊은 계층인 **Supabase Auth(인증) 내의 회원가입 계정 자체를 영구 삭제**
+5. **🔐 보안 강화 (JWT 토큰 기반 인증 및 인가)**
+   - 모든 백엔드 API 호출 시 클라이언트의 JWT Access Token을 헤더(`Authorization: Bearer <token>`)로 검증합니다.
+   - 학생은 타인의 데이터에 접근할 수 없으며, 선생님은 본인 담당 과목의 데이터만 제어할 수 있도록 강력하게 인가(Authorization)를 적용했습니다.
 
 <br>
 
-## 🛠 4. 기술 스택 (Tech Stack)
+## 🏗️ 2. 시스템 아키텍처
 
-| Category | Technologies |
-| --- | --- |
-| **Frontend** | HTML5, CSS3, Vanilla JavaScript (ES6+) |
-| **Backend** | Vercel Serverless Functions (Node.js) |
-| **Database** | Supabase (PostgreSQL) |
-| **Authentication** | Supabase Auth |
-| **File Storage** | Supabase Storage |
-| **Deployment** | Vercel |
+* **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES6+), Service Worker (`sw.js`)
+* **Backend:** Vercel Serverless Functions (Node.js)
+* **Database & Storage:** Supabase (PostgreSQL, Supabase Auth, Supabase Storage `tutor_files`)
+* **Deployment:** Vercel
 
 <br>
 
-## 📂 5. 디렉토리 구조 (Directory Structure)
+## 📂 3. 디렉토리 구조
 
 ```bash
 📦 tutoring-management-system
- ┣ 📂 api                   # Vercel Serverless Functions API 폴더
- ┃ ┣ 📜 adminAction.js      # [핵심] 수정/삭제/사진폐기를 통합 관리하는 라우터 API
- ┃ ┣ 📜 answerQuestion.js   # 선생님 답변 및 풀이 사진 업로드
- ┃ ┣ 📜 askQuestion.js      # 학생 질문 및 문제 사진 업로드
- ┃ ┣ 📜 getExams.js         # 시험 점수 데이터 Read
- ┃ ┣ 📜 getQuestions.js     # 질의응답 데이터 Read
- ┃ ┣ 📜 getFeedbacks.js     # 과외 일지 데이터 Read
- ┃ ┣ 📜 createStudent.js    # 학생 계정(Auth) 생성 API
- ┃ ┣ 📜 login.js            # 통합 로그인 세션 관리
- ┃ ┗ 📜 ... 
- ┣ 📜 index.html            # SPA(Single Page Application) 메인 마크업
- ┣ 📜 style.css             # 모바일 최적화 및 토글 애니메이션 스타일시트
- ┗ 📜 script.js             # 비즈니스 로직, 상태 관리 및 API 통신 (Fetch)
-
+ ┣ 📂 api                      # Vercel Serverless 백엔드 API
+ ┃ ┣ 📜 _auth.js               # [보안] 공통 JWT 토큰 인증 및 Supabase 통신 헬퍼
+ ┃ ┣ 📜 subjects.js            # [v2] 과목(Subject) CRUD API
+ ┃ ┣ 📜 enrollments.js         # [v2] 학생 과목 수강 배정 API
+ ┃ ┣ 📜 schedules.js           # [v2] 수업 캘린더 일정 관리 API
+ ┃ ┣ 📜 push.js                # [v2] 웹 푸시 구독 및 알림 센터 API
+ ┃ ┣ 📜 login.js               # 통합 로그인 및 JWT 세션 발급
+ ┃ ┣ 📜 adminAction.js         # 데이터 수정, 캐스케이딩 사진 폐기 및 삭제
+ ┃ ┣ 📜 askQuestion.js         # 학생 질문 등록 (과목 연계 및 교사 알림)
+ ┃ ┣ 📜 answerQuestion.js      # 교사 풀이 답변 (학생 알림)
+ ┃ ┣ 📜 sendFeedback.js        # 교사 과외 일지 (과목 연계 및 학생 알림)
+ ┃ ┣ 📜 uploadExam.js          # 쪽지시험 및 시험지 사진 업로드
+ ┃ ┣ 📜 getStudents.js         # 교사별/과목별 담당 학생 조회
+ ┃ ┣ 📜 getQuestions.js        # 질문 목록 조회 (과목/학생 필터)
+ ┃ ┣ 📜 getExams.js            # 시험 결과 조회
+ ┃ ┣ 📜 getFeedbacks.js        # 피드백 목록 조회
+ ┃ ┣ 📜 createStudent.js       # 학생 계정 생성 및 과목 배정
+ ┃ ┗ 📜 changePassword.js      # 비밀번호 변경
+ ┣ 📜 index.html               # SPA 메인 마크업 (탭, 캘린더, 과목, 알림 UI)
+ ┣ 📜 style.css                # 모바일 반응형 스타일시트 및 캘린더 디자인
+ ┣ 📜 script.js                # v2 프론트엔드 비즈니스 로직
+ ┣ 📜 sw.js                    # 웹 푸시 Service Worker
+ ┗ 📜 supabase_v2_migration.sql # v2 데이터베이스 마이그레이션 SQL
 ```
 
-## ⚙️ 6. 설치 및 환경 세팅 (Installation)
+<br>
 
-이 프로젝트를 로컬에서 실행하거나 배포하려면 다음의 환경 변수 및 데이터베이스 세팅이 필요합니다.
+## ⚙️ 4. v2.0 Supabase DB 세팅 가이드
 
-### 1) Vercel 환경 변수 세팅 (Environment Variables)
+기존 v1.0 데이터베이스를 v2.0으로 확장하려면:
 
-강제 삭제 및 Auth 관리를 위해 `service_role` 키 사용이 필요합니다. Vercel 설정에서 아래 변수를 등록해주세요.
-
-```env
-SUPABASE_URL=https://[YOUR_PROJECT_REF].supabase.co
-SUPABASE_KEY=[YOUR_SERVICE_ROLE_KEY]
-
-```
-
-### 2) Supabase Storage 세팅
-
-* 버킷 이름: `tutor_files` (반드시 소문자로 생성)
-* 설정: **Public Bucket** 활성화 및 RLS 정책(Policy) **'모두 허용(Allow All)'** 설정
-
-### 3) Supabase SQL 초기 세팅
-
-Supabase 대시보드의 **SQL Editor**에 아래 코드를 그대로 복사하여 실행(`Run`)하면 모든 테이블과 설정이 한 번에 완료됩니다.
-
-```sql
--- 1. 시험 결과 테이블 (exams)
-CREATE TABLE exams (
-    id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    student_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
-    exam_title text NOT NULL,
-    score integer NOT NULL,
-    paper_image_url text,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 2. 질문 및 답변 테이블 (questions)
-CREATE TABLE questions (
-    id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    student_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
-    question_text text NOT NULL,
-    question_image_url text,
-    answer_text text,
-    answer_image_url text,
-    is_answered boolean DEFAULT false,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 3. 개별 피드백/알림장 테이블 (feedbacks)
-CREATE TABLE feedbacks (
-    id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    student_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
-    feedback_text text NOT NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 4. 보안망(RLS) 일괄 해제 (Vercel 백엔드 튜닝을 위한 비활성화)
-ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE exams DISABLE ROW LEVEL SECURITY;
-ALTER TABLE questions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;
-
-```
+1. **Supabase 대시보드** 접속 ➡️ 좌측 메뉴 **SQL Editor** 클릭
+2. 본 프로젝트의 [`supabase_v2_migration.sql`](./supabase_v2_migration.sql) 파일 내용을 복사하여 붙여넣기
+3. **[Run]** 버튼을 눌러 실행합니다. (기존 데이터는 안전하게 보존되며 필요한 테이블과 컬럼만 추가됩니다.)
 
 ---
 
