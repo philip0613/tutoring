@@ -68,6 +68,47 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
+// ✨ 로딩 UI & 스켈레톤 유틸리티
+// ==========================================
+function showSkeleton(containerId, count = 2) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        html += `
+            <div class="skeleton-card">
+                <div class="skeleton-line" style="width: 35%; height: 18px; margin-bottom: 12px;"></div>
+                <div class="skeleton-line" style="width: 85%;"></div>
+                <div class="skeleton-line" style="width: 60%;"></div>
+            </div>
+        `;
+    }
+    el.innerHTML = html;
+}
+
+function showLoading(containerId, message = '데이터를 불러오는 중입니다...') {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = `
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <span style="font-size:0.88rem; font-weight:600; color:var(--text-secondary);">${escapeHtml(message)}</span>
+        </div>
+    `;
+}
+
+function setButtonLoading(btn, isLoading, loadingText = '처리 중...') {
+    if (!btn) return;
+    btn.disabled = isLoading;
+    if (isLoading) {
+        btn.dataset.origText = btn.innerHTML;
+        btn.innerHTML = `<span class="spinner" style="width:15px; height:15px; border-width:2px; vertical-align:middle; margin-right:6px;"></span> ${loadingText}`;
+    } else {
+        btn.innerHTML = btn.dataset.origText || btn.innerHTML;
+    }
+}
+
+// ==========================================
 // 🔐 JWT 인증 래퍼 Fetch
 // ==========================================
 async function authFetch(url, options = {}) {
@@ -294,11 +335,14 @@ function checkSession() {
 async function handleLogin() {
     const id = document.getElementById('idInput').value.trim();
     const password = document.getElementById('passwordInput').value.trim();
+    const btn = document.getElementById('loginBtn');
 
     if (!id || !password) {
         alert('아이디와 비밀번호를 모두 입력해 주세요.');
         return;
     }
+
+    setButtonLoading(btn, true, '로그인 확인 중...');
 
     try {
         const res = await fetch('/api/login', {
@@ -319,6 +363,8 @@ async function handleLogin() {
         updateUIForLoggedInUser();
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
     }
 }
 
@@ -473,11 +519,14 @@ async function handleCreateSubject() {
     const name = document.getElementById('modalSubjectName').value.trim();
     const desc = document.getElementById('modalSubjectDesc').value.trim();
     const color = document.getElementById('modalSubjectColor').value;
+    const btn = document.getElementById('saveSubjectBtn');
 
     if (!name) {
         alert('과목명을 입력해 주세요.');
         return;
     }
+
+    setButtonLoading(btn, true, '과목 생성 중...');
 
     try {
         const res = await authFetch('/api/subjects', {
@@ -494,11 +543,13 @@ async function handleCreateSubject() {
         await loadSubjects();
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
     }
 }
 
 // ==========================================
-// 👥 학생 관리 로직
+// 👥 학생 관리 로직 (로딩 UI 적용)
 // ==========================================
 async function initTeacherView() {
     await loadSubjects();
@@ -507,9 +558,13 @@ async function initTeacherView() {
 }
 
 async function loadStudents() {
+    showLoading('studentList', '학생 목록을 불러오는 중...');
+
     try {
         let url = '/api/getStudents';
-        if (currentSubjectFilter) url += `?subject_id=${currentSubjectFilter}`;
+        if (currentSubjectFilter) {
+            url += `?subject_id=${currentSubjectFilter}`;
+        }
 
         const res = await authFetch(url);
         if (!res.ok) throw new Error('학생 목록 로드 실패');
@@ -539,6 +594,8 @@ async function loadStudents() {
         }
     } catch (err) {
         console.error('학생 로드 에러:', err);
+        const list = document.getElementById('studentList');
+        if (list) list.innerHTML = '<li style="text-align:center; color:var(--danger); padding:20px 0;">학생 목록을 불러오지 못했습니다.</li>';
     }
 }
 
@@ -550,7 +607,6 @@ window.selectStudent = function(studentId, studentName) {
     loadStudents();
     loadStudentDetail(studentId);
 
-    // 모바일 배려: 학생 선택 시 상세 관리 패널로 부드럽게 스크롤 이동
     document.getElementById('studentManagePanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
@@ -558,11 +614,14 @@ async function handleCreateStudent() {
     const name = document.getElementById('newStudentName').value.trim();
     const id = document.getElementById('newStudentId').value.trim();
     const subjectId = document.getElementById('newStudentSubjectSelect').value;
+    const btn = document.getElementById('createStudentBtn');
 
     if (!name || !id) {
         alert('학생 이름과 부여할 아이디를 입력해 주세요.');
         return;
     }
+
+    setButtonLoading(btn, true, '계정 생성 중...');
 
     try {
         const res = await authFetch('/api/createStudent', {
@@ -579,6 +638,8 @@ async function handleCreateStudent() {
         await loadStudents();
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
     }
 }
 
@@ -601,11 +662,14 @@ function openEnrollModal() {
 async function handleSaveEnrollment() {
     const subjectId = document.getElementById('enrollTargetSubjectSelect').value;
     const studentId = document.getElementById('enrollTargetStudentSelect').value;
+    const btn = document.getElementById('saveEnrollmentBtn');
 
     if (!subjectId || !studentId) {
         alert('과목과 학생을 모두 선택해 주세요.');
         return;
     }
+
+    setButtonLoading(btn, true, '과목에 등록 중...');
 
     try {
         const res = await authFetch('/api/enrollments', {
@@ -621,11 +685,13 @@ async function handleSaveEnrollment() {
         await loadStudents();
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
     }
 }
 
 // ==========================================
-// 🔍 학생 상세 피드 렌더링 (디자인 대폭 개선)
+// 🔍 학생 상세 피드 (스켈레톤 및 로딩 UI 적용)
 // ==========================================
 async function loadStudentDetail(studentId) {
     loadAdminQuestions(studentId);
@@ -637,6 +703,8 @@ async function loadStudentDetail(studentId) {
 async function loadAdminQuestions(studentId) {
     const list = document.getElementById('questionListAdmin');
     if (!list) return;
+
+    showSkeleton('questionListAdmin', 2);
 
     let url = `/api/getQuestions?student_id=${studentId}`;
     if (currentSubjectFilter) url += `&subject_id=${currentSubjectFilter}`;
@@ -681,7 +749,6 @@ async function loadAdminQuestions(studentId) {
                         </div>
                     ` : ''}
 
-                    <!-- 선생님 풀이 답변 섹션 -->
                     <div class="answer-box">
                         ${q.is_answered ? `
                             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -701,7 +768,7 @@ async function loadAdminQuestions(studentId) {
                             <div style="font-weight:700; font-size:0.88rem; color:var(--warning); margin-bottom: 6px;">✍️ 풀이 답변 작성하기</div>
                             <input type="text" id="ansText-${q.id}" placeholder="상세 풀이 설명을 적어주세요">
                             <input type="file" id="ansImg-${q.id}" accept="image/*">
-                            <button class="primary-btn mt-12" style="padding: 8px 12px; font-size: 0.9rem;" onclick="submitAnswer(${q.id})">답변 등록 완료</button>
+                            <button class="primary-btn mt-12" style="padding: 8px 12px; font-size: 0.9rem;" onclick="submitAnswer(${q.id}, this)">답변 등록 완료</button>
                         `}
                     </div>
                 </div>
@@ -709,6 +776,7 @@ async function loadAdminQuestions(studentId) {
         }).join('');
     } catch (err) {
         console.error('질문 로드 실패:', err);
+        list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:30px 0;">질문 목록을 불러오지 못했습니다.</div>';
     }
 }
 
@@ -716,6 +784,8 @@ async function loadAdminQuestions(studentId) {
 async function loadAdminExams(studentId) {
     const list = document.getElementById('examListAdmin');
     if (!list) return;
+
+    showSkeleton('examListAdmin', 2);
 
     let url = `/api/getExams?student_id=${studentId}`;
     if (currentSubjectFilter) url += `&subject_id=${currentSubjectFilter}`;
@@ -760,6 +830,7 @@ async function loadAdminExams(studentId) {
         }).join('');
     } catch (err) {
         console.error('시험 로드 실패:', err);
+        list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:30px 0;">시험 목록을 불러오지 못했습니다.</div>';
     }
 }
 
@@ -767,6 +838,8 @@ async function loadAdminExams(studentId) {
 async function loadAdminFeedbacks(studentId) {
     const list = document.getElementById('feedbackListAdmin');
     if (!list) return;
+
+    showSkeleton('feedbackListAdmin', 2);
 
     let url = `/api/getFeedbacks?student_id=${studentId}`;
     if (currentSubjectFilter) url += `&subject_id=${currentSubjectFilter}`;
@@ -807,6 +880,7 @@ async function loadAdminFeedbacks(studentId) {
         }).join('');
     } catch (err) {
         console.error('피드백 로드 실패:', err);
+        list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:30px 0;">피드백을 불러오지 못했습니다.</div>';
     }
 }
 
@@ -823,11 +897,14 @@ async function handleUploadExam() {
     const score = document.getElementById('examScore').value.trim();
     const subjectId = document.getElementById('examSubjectSelect').value;
     const file = document.getElementById('examImage').files[0];
+    const btn = document.getElementById('uploadExamBtn');
 
     if (!title || score === '') {
         alert('시험명과 점수를 입력해 주세요.');
         return;
     }
+
+    setButtonLoading(btn, true, '시험지 저장 및 분석 중...');
 
     try {
         let imageBase64 = null;
@@ -859,6 +936,8 @@ async function handleUploadExam() {
         loadAdminExams(currentStudentId);
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
     }
 }
 
@@ -871,11 +950,14 @@ async function handleSendFeedback() {
     const title = document.getElementById('feedbackTitleAdmin').value.trim();
     const text = document.getElementById('feedbackTextAdmin').value.trim();
     const subjectId = document.getElementById('feedbackSubjectSelect').value;
+    const btn = document.getElementById('sendFeedbackBtn');
 
     if (!text) {
         alert('피드백 내용을 입력해 주세요.');
         return;
     }
+
+    setButtonLoading(btn, true, '피드백 발송 중...');
 
     try {
         const res = await authFetch('/api/sendFeedback', {
@@ -897,10 +979,12 @@ async function handleSendFeedback() {
         loadAdminFeedbacks(currentStudentId);
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
     }
 }
 
-window.submitAnswer = async function(questionId) {
+window.submitAnswer = async function(questionId, triggerBtn) {
     const text = document.getElementById(`ansText-${questionId}`)?.value.trim();
     const file = document.getElementById(`ansImg-${questionId}`)?.files[0];
 
@@ -908,6 +992,8 @@ window.submitAnswer = async function(questionId) {
         alert('답변 내용을 작성해 주세요.');
         return;
     }
+
+    setButtonLoading(triggerBtn, true, '답변 등록 중...');
 
     try {
         let imageBase64 = null;
@@ -934,6 +1020,8 @@ window.submitAnswer = async function(questionId) {
         loadAdminQuestions(currentStudentId);
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(triggerBtn, false);
     }
 };
 
@@ -1024,7 +1112,7 @@ async function handleDeleteStudent() {
 }
 
 // ==========================================
-// 🎓 학생(Student) 대시보드 로직
+// 🎓 학생(Student) 대시보드 로직 (로딩 UI 적용)
 // ==========================================
 async function initStudentView() {
     await loadSubjects();
@@ -1041,6 +1129,8 @@ async function loadStudentData() {
 async function loadMyExams() {
     const list = document.getElementById('myExamList');
     if (!list) return;
+
+    showSkeleton('myExamList', 2);
 
     let url = `/api/getExams?student_id=${currentUser.userId}`;
     if (currentSubjectFilter) url += `&subject_id=${currentSubjectFilter}`;
@@ -1075,12 +1165,15 @@ async function loadMyExams() {
         }).join('');
     } catch (err) {
         console.error('내 시험 로드 실패:', err);
+        list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:20px 0;">시험 기록을 불러오지 못했습니다.</div>';
     }
 }
 
 async function loadMyQuestions() {
     const list = document.getElementById('myQuestionList');
     if (!list) return;
+
+    showSkeleton('myQuestionList', 2);
 
     let url = `/api/getQuestions?student_id=${currentUser.userId}`;
     if (currentSubjectFilter) url += `&subject_id=${currentSubjectFilter}`;
@@ -1137,12 +1230,15 @@ async function loadMyQuestions() {
         }).join('');
     } catch (err) {
         console.error('내 질문 로드 실패:', err);
+        list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:30px 0;">질문 목록을 불러오지 못했습니다.</div>';
     }
 }
 
 async function loadMyFeedbacks() {
     const list = document.getElementById('myFeedbackList');
     if (!list) return;
+
+    showSkeleton('myFeedbackList', 2);
 
     let url = `/api/getFeedbacks?student_id=${currentUser.userId}`;
     if (currentSubjectFilter) url += `&subject_id=${currentSubjectFilter}`;
@@ -1173,6 +1269,7 @@ async function loadMyFeedbacks() {
         }).join('');
     } catch (err) {
         console.error('내 피드백 로드 실패:', err);
+        list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:30px 0;">피드백을 불러오지 못했습니다.</div>';
     }
 }
 
@@ -1180,11 +1277,14 @@ async function handleAskQuestion() {
     const text = document.getElementById('questionText').value.trim();
     const subjectId = document.getElementById('askQuestionSubjectSelect').value;
     const file = document.getElementById('questionImage').files[0];
+    const btn = document.getElementById('askQuestionBtn');
 
     if (!text) {
         alert('질문 내용을 적어주세요.');
         return;
     }
+
+    setButtonLoading(btn, true, '질문 등록 중...');
 
     try {
         let imageBase64 = null;
@@ -1213,15 +1313,21 @@ async function handleAskQuestion() {
         loadMyQuestions();
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
     }
 }
 
 async function handleChangePassword() {
     const newPassword = document.getElementById('newPassword').value.trim();
+    const btn = document.getElementById('changePasswordBtn');
+
     if (!newPassword || newPassword.length < 6) {
         alert('비밀번호는 6자리 이상 입력해 주세요.');
         return;
     }
+
+    setButtonLoading(btn, true, '변경 중...');
 
     try {
         const res = await authFetch('/api/changePassword', {
@@ -1236,11 +1342,13 @@ async function handleChangePassword() {
         document.getElementById('passwordFormContainer').classList.add('hidden-form');
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
     }
 }
 
 // ==========================================
-// 📅 수업 캘린더 로직
+// 📅 수업 캘린더 로직 (로딩 UI 적용)
 // ==========================================
 function changeCalendarMonth(offset) {
     calendarMonth += offset;
@@ -1428,11 +1536,14 @@ async function handleSaveSchedule() {
     const startTime = document.getElementById('scheduleStartTime').value;
     const endTime = document.getElementById('scheduleEndTime').value;
     const notes = document.getElementById('scheduleNotes').value.trim();
+    const btn = document.getElementById('saveScheduleBtn');
 
     if (!subjectId || !title || !startTime || !endTime) {
         alert('과목, 수업 제목, 시작 및 종료 시간을 모두 입력해 주세요.');
         return;
     }
+
+    setButtonLoading(btn, true, '일정 저장 중...');
 
     try {
         const res = await authFetch('/api/schedules', {
@@ -1457,6 +1568,8 @@ async function handleSaveSchedule() {
         renderCalendar();
     } catch (err) {
         alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
     }
 }
 
