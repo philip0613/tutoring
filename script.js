@@ -283,20 +283,13 @@ async function loadNotifications() {
         }
 
         container.innerHTML = list.map(item => `
-            <div class="notification-item ${item.is_read ? '' : 'unread'}" onclick="handleNotificationClick(${item.id})">
-                <div style="font-weight: 700; color: var(--text-primary);">${escapeHtml(item.title)}</div>
-                <div style="color: var(--text-secondary); margin-top: 2px;">${escapeHtml(item.body)}</div>
-                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">${new Date(item.created_at).toLocaleString()}</div>
-            </div>
-        `).join('');
-    } catch (err) {
-        console.error('알림 로드 실패:', err);
-    }
-}
-            <div class="notification-item ${item.is_read ? '' : 'unread'}" onclick="handleNotificationClick(${item.id})">
-                <div style="font-weight: 700; color: var(--text-primary);">${escapeHtml(item.title)}</div>
-                <div style="color: var(--text-secondary); margin-top: 2px;">${escapeHtml(item.body)}</div>
-                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">${new Date(item.created_at).toLocaleString()}</div>
+            <div class="notification-item unread" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="flex: 1; cursor: pointer;" onclick="handleNotificationClick(${item.id})">
+                    <div style="font-weight: 700; color: var(--text-primary);">${escapeHtml(item.title)}</div>
+                    <div style="color: var(--text-secondary); margin-top: 2px;">${escapeHtml(item.body)}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">${new Date(item.created_at).toLocaleString()}</div>
+                </div>
+                <button class="danger-link-btn" style="padding: 2px 6px; font-size: 1rem; line-height: 1;" onclick="handleNotificationClick(${item.id})" title="알림 확인 및 삭제">✕</button>
             </div>
         `).join('');
     } catch (err) {

@@ -58,29 +58,25 @@ export default async function handler(req, res) {
                 return res.status(200).json({ message: '푸시 알림 구독이 등록되었습니다.' });
             }
 
-            // (2) 알림 읽음 처리
+            // (2) 알림 확인 처리 -> DB에서 완전 삭제
             if (action === 'mark_read') {
                 const { id } = req.body;
                 if (!id) return res.status(400).json({ error: '알림 ID가 필요합니다.' });
 
                 await supabaseAdminFetch(`/rest/v1/notifications?id=eq.${id}&user_id=eq.${auth.userId}`, {
-                    method: 'PATCH',
-                    headers: { 'Prefer': 'return=minimal' },
-                    body: JSON.stringify({ is_read: true })
+                    method: 'DELETE'
                 });
 
-                return res.status(200).json({ message: '알림을 읽음 처리했습니다.' });
+                return res.status(200).json({ message: '확인한 알림이 DB에서 삭제되었습니다.' });
             }
 
-            // (3) 모든 알림 읽음 처리
+            // (3) 모든 알림 확인 처리 -> DB에서 완전 삭제
             if (action === 'mark_all_read') {
-                await supabaseAdminFetch(`/rest/v1/notifications?user_id=eq.${auth.userId}&is_read=eq.false`, {
-                    method: 'PATCH',
-                    headers: { 'Prefer': 'return=minimal' },
-                    body: JSON.stringify({ is_read: true })
+                await supabaseAdminFetch(`/rest/v1/notifications?user_id=eq.${auth.userId}`, {
+                    method: 'DELETE'
                 });
 
-                return res.status(200).json({ message: '모든 알림을 읽음 처리했습니다.' });
+                return res.status(200).json({ message: '모든 알림이 DB에서 삭제되었습니다.' });
             }
 
             return res.status(400).json({ error: '알 수 없는 action입니다.' });
