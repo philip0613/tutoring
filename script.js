@@ -751,8 +751,8 @@ function autoFitButtonText() {
     });
 }
 
-// 📑 메인 탭 통합 전환 함수 (상단 탭 바 + 하단 독 + 가로 스와이프 제스처 공용)
-function switchMainTab(targetId, direction = 'auto') {
+// 📑 메인 탭 통합 전환 함수 (상단 탭 바 + 하단 독 + 가로 뷰페이저 트랙 공용)
+function switchMainTab(targetId, animate = true) {
     if (!targetId || !currentUser) return;
     const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
     const dashboardId = isTeacher ? 'teacherDashboard' : 'studentDashboard';
@@ -776,42 +776,44 @@ function switchMainTab(targetId, direction = 'auto') {
             'studentProfileTab': 'dockStudentProfile'
         };
 
-    // 현재 열려있는 탭 인덱스 및 이동 대상 인덱스
-    const currentIdx = tabList.findIndex(id => {
-        const el = document.getElementById(id);
-        return el && !el.classList.contains('hidden');
-    });
     const targetIdx = tabList.indexOf(targetId);
+    if (targetIdx === -1) return;
 
-    // 슬라이드 애니메이션 방향 결정
-    let animClass = '';
-    if (direction === 'auto') {
-        if (currentIdx !== -1 && targetIdx !== -1 && currentIdx !== targetIdx) {
-            animClass = targetIdx > currentIdx ? 'tab-slide-right' : 'tab-slide-left';
+    const trackId = isTeacher ? 'teacherTabTrack' : 'studentTabTrack';
+    const track = document.getElementById(trackId);
+    const shouldAnimate = (animate !== false);
+
+    // 1. 모바일 트랙 뷰페이저 가로 이동 (4개 탭 기준: 1개당 25%)
+    if (track) {
+        if (track._transitionTimeout) {
+            clearTimeout(track._transitionTimeout);
+            track._transitionTimeout = null;
         }
-    } else if (direction === 'right') {
-        animClass = 'tab-slide-right';
-    } else if (direction === 'left') {
-        animClass = 'tab-slide-left';
+
+        if (shouldAnimate) {
+            track.classList.add('is-transitioning');
+            track.style.transition = 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)';
+            track.style.transform = `translate3d(-${targetIdx * 25}%, 0, 0)`;
+
+            track._transitionTimeout = setTimeout(() => {
+                track.classList.remove('is-transitioning');
+                track._transitionTimeout = null;
+            }, 330);
+        } else {
+            track.classList.remove('is-transitioning');
+            track.style.transition = 'none';
+            track.style.transform = `translate3d(-${targetIdx * 25}%, 0, 0)`;
+        }
     }
 
-    // 1. 모든 메인 탭 숨김 및 기존 애니메이션 클래스 제거
+    // 2. 탭 페이지 active 클래스 동기화 (데스크톱 및 비활성 페이지 높이 제어용)
     tabList.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.classList.remove('tab-slide-right', 'tab-slide-left');
-            el.classList.add('hidden');
+        const page = document.getElementById(id);
+        if (page) {
+            page.classList.toggle('active-tab-page', id === targetId);
+            page.classList.remove('hidden', 'tab-slide-right', 'tab-slide-left');
         }
     });
-
-    // 2. 대상 탭 표시 및 부드러운 가로 슬라이드 인 애니메이션 부여
-    const targetTab = document.getElementById(targetId);
-    if (targetTab) {
-        targetTab.classList.remove('hidden');
-        if (animClass) {
-            targetTab.classList.add(animClass);
-        }
-    }
 
     // 3. 상단 탭 바 (Segmented Control) 활성 상태 및 유체 인디케이터 동기화
     const tabBar = document.querySelector(`#${dashboardId} .tab-bar`);
@@ -820,7 +822,7 @@ function switchMainTab(targetId, direction = 'auto') {
             const isMatch = (btn.getAttribute('data-target') === targetId);
             btn.classList.toggle('active', isMatch);
             if (isMatch) {
-                moveTabIndicator(tabBar, btn, true);
+                moveTabIndicator(tabBar, btn, shouldAnimate);
             }
         });
     }
@@ -1037,71 +1039,164 @@ function setupStudentBottomDock() {
     });
 }
 
-// 📱 인스타그램 스타일 가로 스와이프 제스처 네비게이션
+// 📱 인스타그램 스타일 실시간 1:1 터치 추적 및 스프링 스냅 가로 스와이프 제스처 네비게이션
 function setupInstagramSwipeNavigation() {
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
+    let currentIdx = 0;
+    let trackWidth = 0;
+    let isTracking = false;
     let isSwiping = false;
+    let directionLocked = null; // null | 'horizontal' | 'vertical'
+    let activeTrack = null;
+    let activeTabList = [];
+    let wasSwiping = false;
 
-    document.addEventListener('touchstart', (e) => {
+    // 스와이프 제스처 직후 터치 릴리즈 시 원치 않는 내부 카드 클릭 억제
+    window.addEventListener('click', (e) => {
+        if (wasSwiping) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }, true);
+
+    // 터치 대상에서 스와이프를 제외할 셀렉터들
+    const EXCLUDED_SELECTORS = '.modal-overlay:not(.hidden), input, textarea, select, button, .subject-chip-list, .sub-tab-bar, .scrollable-list, .qna-filter-bar, .calendar-month-picker, .image-lightbox-modal:not(.hidden)';
+
+    window.addEventListener('touchstart', (e) => {
         // 모바일 화면(768px 이하) 및 로그인 상태에서만 동작
         if (window.innerWidth > 768 || !currentUser) return;
 
-        // 모달, 폼 입력 컨트롤, 가로 스크롤 리스트, 사진 라이트박스 터치 시에는 스와이프 억제
-        if (e.target.closest('.modal-overlay:not(.hidden), input, textarea, select, .subject-chip-list, .scrollable-list, .qna-filter-bar, .image-lightbox-modal:not(.hidden)')) {
-            return;
+        // 예외 요소 터치 시 스와이프 시작 금지
+        if (e.target.closest(EXCLUDED_SELECTORS)) return;
+
+        const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+        activeTabList = isTeacher 
+            ? ['teacherClassTab', 'teacherCalendarTab', 'teacherQnaTab', 'teacherProfileTab']
+            : ['studentStudyTab', 'studentCalendarTab', 'studentReportTab', 'studentProfileTab'];
+
+        const trackId = isTeacher ? 'teacherTabTrack' : 'studentTabTrack';
+        activeTrack = document.getElementById(trackId);
+        if (!activeTrack) return;
+
+        // 진행 중이던 애니메이션 타임아웃 해제
+        if (activeTrack._transitionTimeout) {
+            clearTimeout(activeTrack._transitionTimeout);
+            activeTrack._transitionTimeout = null;
         }
+
+        // 현재 활성 탭 인덱스 찾기
+        currentIdx = activeTabList.findIndex(id => {
+            const el = document.getElementById(id);
+            return el && el.classList.contains('active-tab-page');
+        });
+        if (currentIdx === -1) currentIdx = 0;
 
         const touch = e.touches[0];
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
         touchStartTime = Date.now();
-        isSwiping = true;
+        trackWidth = activeTrack.parentElement ? activeTrack.parentElement.clientWidth : window.innerWidth;
+        isTracking = true;
+        isSwiping = false;
+        directionLocked = null;
     }, { passive: true });
 
-    document.addEventListener('touchend', (e) => {
-        if (!isSwiping || !currentUser) return;
-        isSwiping = false;
+    window.addEventListener('touchmove', (e) => {
+        if (!isTracking || !activeTrack || e.touches.length > 1) return;
 
-        const touch = e.changedTouches[0];
+        const touch = e.touches[0];
         const deltaX = touch.clientX - touchStartX;
         const deltaY = touch.clientY - touchStartY;
-        const duration = Date.now() - touchStartTime;
 
-        // 가로 스와이프 조건:
-        // 1. 최소 가로 거리 45px 이상
-        // 2. 가로 이동량이 세로 이동량의 1.35배 이상 (수직 스크롤과 엄격히 분리)
-        // 3. 550ms 이내 빠른 제스처
-        if (Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.35 && duration < 550) {
-            const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
-            // 🌟 빠른 추가(+) 액션 버튼은 스와이프 순서에서 완전히 제외!
-            const tabList = isTeacher 
-                ? ['teacherClassTab', 'teacherCalendarTab', 'teacherQnaTab', 'teacherProfileTab']
-                : ['studentStudyTab', 'studentCalendarTab', 'studentReportTab', 'studentProfileTab'];
-
-            const currentIdx = tabList.findIndex(id => {
-                const el = document.getElementById(id);
-                return el && !el.classList.contains('hidden');
-            });
-
-            if (currentIdx === -1) return;
-
-            if (deltaX < 0) {
-                // 👉 왼쪽으로 스와이프 (우 -> 좌) => 다음 탭
-                if (currentIdx < tabList.length - 1) {
-                    switchMainTab(tabList[currentIdx + 1], 'right');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+        // 제스처 방향 판별 전 (초기 8px 이동 동안)
+        if (!directionLocked) {
+            const distance = Math.hypot(deltaX, deltaY);
+            if (distance > 8) {
+                if (Math.abs(deltaY) >= Math.abs(deltaX)) {
+                    // 수직 스크롤 의도 -> 스와이프 중단하고 브라우저 네이티브 세로 스크롤에 양보
+                    directionLocked = 'vertical';
+                    isTracking = false;
+                    return;
+                } else {
+                    // 수평 스와이프 의도 -> 스와이프 잠금
+                    directionLocked = 'horizontal';
+                    isSwiping = true;
+                    activeTrack.classList.add('is-swiping');
                 }
             } else {
-                // 👈 오른쪽으로 스와이프 (좌 -> 우) => 이전 탭
-                if (currentIdx > 0) {
-                    switchMainTab(tabList[currentIdx - 1], 'left');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
+                return;
             }
         }
-    }, { passive: true });
+
+        if (directionLocked === 'horizontal' && isSwiping) {
+            // 수평 스와이프 중 세로 스크롤 방지
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+
+            // 인스타그램 스타일 실시간 1:1 트랙 이동 계산
+            const basePercent = -(currentIdx * 25);
+            let shiftPercent = (deltaX / trackWidth) * 25;
+
+            // 경계선(첫 번째 탭에서 오른쪽으로 당김 or 마지막 탭에서 왼쪽으로 당김) 고무줄 탄성 저항
+            const isLeftEdge = (currentIdx === 0 && deltaX > 0);
+            const isRightEdge = (currentIdx === activeTabList.length - 1 && deltaX < 0);
+            if (isLeftEdge || isRightEdge) {
+                shiftPercent *= 0.28; // 탄성 저항 계수
+            }
+
+            const currentPercent = basePercent + shiftPercent;
+            activeTrack.style.transform = `translate3d(${currentPercent}%, 0, 0)`;
+        }
+    }, { passive: false });
+
+    const handleTouchEnd = (e) => {
+        if (!isTracking || !activeTrack) return;
+        isTracking = false;
+
+        if (!isSwiping || directionLocked !== 'horizontal') {
+            return;
+        }
+        isSwiping = false;
+        activeTrack.classList.remove('is-swiping');
+
+        wasSwiping = true;
+        setTimeout(() => { wasSwiping = false; }, 120);
+
+        const touch = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+        const deltaX = touch ? (touch.clientX - touchStartX) : 0;
+        const duration = Math.max(Date.now() - touchStartTime, 1);
+        const velocity = Math.abs(deltaX) / duration; // px/ms
+        const distanceRatio = Math.abs(deltaX) / trackWidth;
+
+        // 탭 전환 판단 조건:
+        // 1. 빠른 튕기기(Flick): 속도 0.32px/ms 이상 & 28px 이상 이동
+        // 2. 충분한 드래그(Drag): 화면 너비의 18% 이상 이동
+        let targetIdx = currentIdx;
+        const isFlick = (velocity > 0.32 && Math.abs(deltaX) > 28);
+        const isDragPass = (distanceRatio > 0.18);
+
+        if (isFlick || isDragPass) {
+            if (deltaX < 0 && currentIdx < activeTabList.length - 1) {
+                targetIdx = currentIdx + 1; // 왼쪽으로 넘김 -> 다음 탭
+            } else if (deltaX > 0 && currentIdx > 0) {
+                targetIdx = currentIdx - 1; // 오른쪽으로 넘김 -> 이전 탭
+            }
+        }
+
+        // 새 탭으로 스프링 스냅 전환 또는 제자리로 탄성 복귀
+        switchMainTab(activeTabList[targetIdx], true);
+
+        // 탭이 실제로 바뀌었다면 상단으로 부드럽게 스크롤 정렬
+        if (targetIdx !== currentIdx && window.scrollY > 80) {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+    };
+
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 }
 
 // 📱 마이페이지 실시간 데이터 렌더링 함수
@@ -1423,10 +1518,12 @@ function updateUIForLoggedInUser() {
     if (isTeacher) {
         document.getElementById('teacherDashboard').classList.remove('hidden');
         document.getElementById('studentDashboard').classList.add('hidden');
+        switchMainTab('teacherClassTab', false);
         initTeacherView();
     } else {
         document.getElementById('studentDashboard').classList.remove('hidden');
         document.getElementById('teacherDashboard').classList.add('hidden');
+        switchMainTab('studentStudyTab', false);
         initStudentView();
     }
 

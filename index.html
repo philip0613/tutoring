@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="과외노트">
-    <link rel="stylesheet" href="style.css?v=20261019_1900">
+    <link rel="stylesheet" href="style.css?v=20261019_1920">
 </head>
 <body>
     <!-- 실시간 인앱 토스트 알림 컨테이너 -->
@@ -161,9 +161,12 @@
                 </button>
             </div>
 
-            <!-- [선생님 탭 1] 과목 & 학생 관리 화면 -->
-            <div id="teacherClassTab">
-                <!-- 나의 개설 과목 바 -->
+            <!-- 선생님 탭 뷰포트 & 트랙 (인스타그램 스타일 가로 뷰페이저) -->
+            <div class="tab-viewport" id="teacherTabViewport">
+                <div class="tab-track" id="teacherTabTrack">
+                    <!-- [선생님 탭 1] 과목 & 학생 관리 화면 -->
+                    <div id="teacherClassTab" class="tab-page active-tab-page">
+                        <!-- 나의 개설 과목 바 -->
                 <div class="card card-subject-filter">
                     <div class="section-header-inline">
                         <div>
@@ -316,7 +319,7 @@
             </div>
 
             <!-- [선생님 탭 2] 수업 캘린더 화면 -->
-            <div id="teacherCalendarTab" class="hidden">
+            <div id="teacherCalendarTab" class="tab-page">
                 <div class="calendar-card">
                     <div class="calendar-nav">
                         <div class="calendar-nav-controls">
@@ -362,7 +365,7 @@
             </div>
 
             <!-- [선생님 탭 3] 학생 질문 관리 및 풀이 공간 -->
-            <div id="teacherQnaTab" class="hidden">
+            <div id="teacherQnaTab" class="tab-page">
                 <div class="qna-feed-header-wrapper">
                     <div class="qna-header-row">
                         <div>
@@ -403,7 +406,7 @@
             </div>
 
             <!-- [선생님 탭 4] 마이페이지 (내 정보, 알림 센터, 설정) -->
-            <div id="teacherProfileTab" class="hidden">
+            <div id="teacherProfileTab" class="tab-page">
                 <!-- 1. 프로필 히어로 카드 -->
                 <div class="card mypage-hero-card">
                     <div class="mypage-hero-top">
@@ -524,7 +527,9 @@
                     <p>과외노트 v2.0 • 스마트 과외 관리 시스템</p>
                 </div>
             </div>
-        </section>
+        </div>
+    </div>
+</section>
 
         <!-- 3. 학생 대시보드 -->
         <section id="studentDashboard" class="hidden">
@@ -571,8 +576,11 @@
                 </button>
             </div>
 
-            <!-- [학생 탭 1] 학습 & 질문 -->
-            <div id="studentStudyTab">
+            <!-- 학생 탭 뷰포트 & 트랙 (인스타그램 스타일 가로 뷰페이저) -->
+            <div class="tab-viewport" id="studentTabViewport">
+                <div class="tab-track" id="studentTabTrack">
+                    <!-- [학생 탭 1] 학습 & 질문 -->
+                    <div id="studentStudyTab" class="tab-page active-tab-page">
                 <div class="card card-subject-filter">
                     <h3 class="section-title">수강 과목</h3>
                     <div id="studentSubjectChips" class="subject-chip-list"></div>
@@ -608,7 +616,7 @@
             </div>
 
             <!-- [학생 탭 2] 수업 캘린더 -->
-            <div id="studentCalendarTab" class="hidden">
+            <div id="studentCalendarTab" class="tab-page">
                 <div class="calendar-card">
                     <div class="calendar-nav">
                         <div class="calendar-nav-controls">
@@ -646,7 +654,7 @@
             </div>
 
             <!-- [학생 탭 3] 성적 & 수업 일지 리포트 화면 -->
-            <div id="studentReportTab" class="hidden">
+            <div id="studentReportTab" class="tab-page">
                 <!-- 내 성적표 -->
                 <div class="card">
                     <h3 class="section-title">나의 시험 결과</h3>
@@ -663,7 +671,7 @@
             </div>
 
             <!-- [학생 탭 4] 마이페이지 (내 정보, 알림 센터, 설정) -->
-            <div id="studentProfileTab" class="hidden">
+            <div id="studentProfileTab" class="tab-page">
                 <!-- 1. 프로필 히어로 카드 -->
                 <div class="card mypage-hero-card">
                     <div class="mypage-hero-top">
@@ -784,7 +792,9 @@
                     <p>과외노트 v2.0 • 스마트 과외 관리 시스템</p>
                 </div>
             </div>
-        </section>
+        </div>
+    </div>
+</section>
     </main>
 
     <!-- 모달 1: 과목 추가 모달 -->
@@ -1120,6 +1130,6 @@
         <div class="lightbox-bottom-hint">화면 아무 곳이나 탭하면 닫힙니다</div>
     </div>
 
-    <script src="script.js?v=20261019_1900"></script>
+    <script src="script.js?v=20261019_1920"></script>
 </body>
 </html>

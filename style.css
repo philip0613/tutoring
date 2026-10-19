@@ -2970,36 +2970,78 @@ input[type="file"] {
 }
 
 /* =========================================
-   18. 📱 인스타 스타일 탭 가로 슬라이드 전환 애니메이션 (Swipe & Fluid Transition)
+   18. 📱 인스타그램 스타일 가로 스와이프 뷰페이저 (Instagram-Style Real-time ViewPager Track)
    ========================================= */
-@keyframes tabSlideInRight {
-    from {
-        opacity: 0.2;
-        transform: translate3d(24px, 0, 0);
+.tab-viewport {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .tab-viewport {
+        touch-action: pan-y;
+        user-select: none;
+        -webkit-user-select: none;
     }
-    to {
-        opacity: 1;
-        transform: translate3d(0, 0, 0);
+
+    .tab-track {
+        display: flex;
+        width: 400%; /* 4개 탭: 각 100% (전체 400%) */
+        align-items: flex-start;
+        will-change: transform;
+        transform: translate3d(0%, 0, 0);
+        transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tab-track.is-swiping {
+        transition: none !important;
+    }
+
+    .tab-page {
+        width: 25%; /* 400% 트랙 기준 1개 페이지 = 100% 화면 너비 */
+        flex-shrink: 0;
+        box-sizing: border-box;
+        min-height: calc(100vh - 210px);
+    }
+
+    /* 비활성 탭 페이지는 스와이프/전환 중이 아닐 때 스크롤 공간을 차지하지 않도록 높이 0 처리 */
+    .tab-page:not(.active-tab-page) {
+        height: 0;
+        overflow: hidden;
+        visibility: hidden;
+    }
+
+    .tab-track.is-swiping .tab-page,
+    .tab-track.is-transitioning .tab-page {
+        height: auto !important;
+        overflow: visible !important;
+        visibility: visible !important;
     }
 }
 
-@keyframes tabSlideInLeft {
-    from {
-        opacity: 0.2;
-        transform: translate3d(-24px, 0, 0);
+/* 💻 데스크톱 (769px 이상) 에서는 트랙 없이 기본 블록으로 깔끔하게 표시 */
+@media (min-width: 769px) {
+    .tab-viewport {
+        overflow: visible;
     }
-    to {
-        opacity: 1;
-        transform: translate3d(0, 0, 0);
+
+    .tab-track {
+        display: block !important;
+        width: 100% !important;
+        transform: none !important;
+        transition: none !important;
+    }
+
+    .tab-page {
+        width: 100% !important;
+        display: none;
+    }
+
+    .tab-page.active-tab-page {
+        display: block !important;
     }
 }
 
-.tab-slide-right {
-    animation: tabSlideInRight 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.tab-slide-left {
-    animation: tabSlideInLeft 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
 
 
