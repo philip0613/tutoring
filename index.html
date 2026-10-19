@@ -564,6 +564,105 @@
         </div>
     </div>
 
+    <!-- 모달 4: 내 계정 / 프로필 바텀 시트 (하단 독 '내 정보' 클릭 시) -->
+    <div id="accountProfileModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-drag-handle"></div>
+            <div class="modal-header">
+                <h3>내 계정 정보</h3>
+                <button class="modal-close-btn" aria-label="닫기">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <div class="profile-modal-card">
+                <div class="profile-modal-avatar">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+                <div>
+                    <h4 id="profileModalName" style="font-size: 1.08rem; font-weight: 700; color: var(--text-primary);"></h4>
+                    <span id="profileModalRole" style="font-size: 0.82rem; color: var(--text-muted);"></span>
+                </div>
+            </div>
+
+            <div class="profile-actions-list">
+                <button id="modalPushBtn" class="profile-action-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span>웹 푸시 알림 설정</span>
+                </button>
+                <button id="modalPasswordBtn" class="profile-action-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span>비밀번호 변경하기</span>
+                </button>
+                <button id="modalLogoutBtn" class="profile-action-btn danger-text">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span>로그아웃</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📱 하단 플로팅 독 네비게이션 (Instagram / iOS Style Floating Dock) -->
+    <nav id="bottomNavDock" class="bottom-dock hidden" aria-label="하단 네비게이션">
+        <div class="bottom-dock-inner">
+            <!-- 1. 홈 / 학습 / 관리 탭 -->
+            <button class="dock-item active" id="dockTabHome" data-dock="home" aria-label="홈">
+                <div class="dock-pill">
+                    <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                </div>
+            </button>
+
+            <!-- 2. 캘린더 탭 -->
+            <button class="dock-item" id="dockTabCalendar" data-dock="calendar" aria-label="캘린더">
+                <div class="dock-pill">
+                    <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                </div>
+            </button>
+
+            <!-- 3. 중앙 빠른 추가 액션 (+) 버튼 -->
+            <button class="dock-item dock-action-item" id="dockActionBtn" data-dock="action" aria-label="빠른 작업">
+                <div class="dock-action-circle">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                </div>
+            </button>
+
+            <!-- 4. 알림 센터 버튼 -->
+            <button class="dock-item" id="dockNotificationBtn" data-dock="notifications" aria-label="알림">
+                <div class="dock-pill">
+                    <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    <span id="dockNotificationBadge" class="dock-badge hidden">0</span>
+                </div>
+            </button>
+
+            <!-- 5. 프로필 / 내 정보 버튼 -->
+            <button class="dock-item" id="dockProfileBtn" data-dock="profile" aria-label="내 계정">
+                <div class="dock-pill">
+                    <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+            </button>
+        </div>
+    </nav>
+
     <script src="script.js"></script>
 </body>
 </html>
