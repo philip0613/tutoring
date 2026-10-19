@@ -301,7 +301,7 @@ function showToast(title, body) {
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
     toast.innerHTML = `
-        <div style="color: #60a5fa; margin-top: 1px; flex-shrink: 0;">
+        <div style="color: #34d399; margin-top: 1px; flex-shrink: 0;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         </div>
         <div style="flex: 1;">
@@ -2063,7 +2063,7 @@ window.selectCalendarDate = function(dateStr) {
         const endTime = new Date(s.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const subjectName = (s.subjects && s.subjects.name) || '과목 미지정';
         const studentName = s.profiles ? `${s.profiles.name} 1:1` : '과목 공통';
-        const color = (s.subjects && s.subjects.color) || '#2563eb';
+        const color = (s.subjects && s.subjects.color) || '#0d9488';
         const isCompleted = s.status === 'completed';
 
         return `
