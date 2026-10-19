@@ -2024,8 +2024,11 @@ input[type="file"] {
     body.has-dock .container {
         padding-bottom: 24px;
     }
-    /* 모바일에서는 중복되는 장식성 인사 배너 숨김 */
-    body.has-dock .dashboard-greeting-bar {
+    /* 📱 핸드폰(모바일)에서는 하단 독이 전담하므로 상단 탭 및 장식성 인사 배너 숨김 (노트북/데스크톱에서만 상단 탭 노출) */
+    .tab-bar {
+        display: none !important;
+    }
+    .dashboard-greeting-bar {
         display: none !important;
     }
 }
