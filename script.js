@@ -713,6 +713,8 @@ function setupTabs() {
                     targetTab.classList.remove('hidden');
                     if (targetId.includes('Calendar')) {
                         renderCalendar();
+                    } else if (targetId === 'teacherQnaTab') {
+                        loadAllTeacherQuestions();
                     }
                 }
 
@@ -723,6 +725,9 @@ function setupTabs() {
                         if (targetId.includes('Calendar')) {
                             const calBtn = document.getElementById('dockTeacherCalendar');
                             if (calBtn) moveDockIndicator('teacherBottomDock', calBtn);
+                        } else if (targetId === 'teacherQnaTab') {
+                            const qnaBtn = document.getElementById('dockTeacherQna');
+                            if (qnaBtn) moveDockIndicator('teacherBottomDock', qnaBtn);
                         } else {
                             const stuBtn = document.getElementById('dockTeacherStudents');
                             if (stuBtn) moveDockIndicator('teacherBottomDock', stuBtn);
@@ -859,18 +864,8 @@ function setupTeacherBottomDock() {
     // 4. 질문 풀이 (Q&A)
     document.getElementById('dockTeacherQna')?.addEventListener('click', (e) => {
         moveDockIndicator('teacherBottomDock', e.currentTarget);
-        document.querySelector('#teacherDashboard .tab-btn[data-target="teacherClassTab"]')?.click();
-
-        // 질문 관리 서브탭 열기
-        const qSubTab = document.querySelector('#teacherClassTab .sub-tab-btn[data-subtarget="studentQuestionsTab"]');
-        if (qSubTab) qSubTab.click();
-
-        const qSection = document.getElementById('studentQuestionsTab') || document.getElementById('questionListAdmin');
-        if (qSection) {
-            setTimeout(() => {
-                qSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 200);
-        }
+        document.querySelector('#teacherDashboard .tab-btn[data-target="teacherQnaTab"]')?.click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     // 5. 내 정보 및 알림 센터
@@ -1367,6 +1362,7 @@ async function handleCreateSubject() {
 async function initTeacherView() {
     await loadSubjects();
     await loadStudents();
+    loadAllTeacherQuestions();
     renderCalendar();
 }
 
@@ -1521,6 +1517,178 @@ async function handleSaveEnrollment() {
     } finally {
         setButtonLoading(btn, false);
     }
+}
+
+// ==========================================
+// 💬 선생님 전체 질문 관리 & 풀이 피드
+// ==========================================
+let teacherAllQuestionsCache = [];
+let currentTeacherQnaFilter = 'unanswered'; // 'unanswered' | 'answered' | 'all'
+
+window.setTeacherQnaFilter = function(filter) {
+    currentTeacherQnaFilter = filter;
+    
+    // 버튼 활성 스타일 전환
+    document.querySelectorAll('.qna-filter-btn').forEach(btn => {
+        if (btn.getAttribute('data-filter') === filter) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    renderTeacherQuestionsFeed();
+};
+
+async function loadAllTeacherQuestions(forceRefresh = false) {
+    const list = document.getElementById('teacherAllQuestionsList');
+    if (!list) return;
+
+    if (forceRefresh || teacherAllQuestionsCache.length === 0) {
+        showSkeleton('teacherAllQuestionsList', 3);
+        try {
+            let url = '/api/getQuestions';
+            if (currentSubjectFilter) url += `?subject_id=${currentSubjectFilter}`;
+
+            const res = await authFetch(url);
+            const data = await res.json();
+            teacherAllQuestionsCache = Array.isArray(data) ? data : [];
+        } catch (err) {
+            console.error('전체 질문 목록 로드 실패:', err);
+            list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:30px 0;">질문 목록을 불러오지 못했습니다.</div>';
+            return;
+        }
+    }
+
+    renderTeacherQuestionsFeed();
+}
+
+function renderTeacherQuestionsFeed() {
+    const list = document.getElementById('teacherAllQuestionsList');
+    if (!list) return;
+
+    const unanswered = teacherAllQuestionsCache.filter(q => !(q.is_answered || (q.answer_text && q.answer_text.trim() !== '')));
+    const answered = teacherAllQuestionsCache.filter(q => Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== '')));
+    const totalCount = teacherAllQuestionsCache.length;
+    const unansweredCount = unanswered.length;
+    const answeredCount = answered.length;
+
+    // 뱃지 숫자 갱신
+    const badgeUnanswered = document.getElementById('badgeUnansweredCount');
+    const badgeAnswered = document.getElementById('badgeAnsweredCount');
+    const badgeAll = document.getElementById('badgeAllCount');
+    if (badgeUnanswered) badgeUnanswered.textContent = unansweredCount;
+    if (badgeAnswered) badgeAnswered.textContent = answeredCount;
+    if (badgeAll) badgeAll.textContent = totalCount;
+
+    // 상단 탭 및 하단 독 배지 동기화
+    const qnaBadge = document.getElementById('teacherQnaBadge');
+    const topQnaBadge = document.getElementById('teacherTopQnaBadge');
+    [qnaBadge, topQnaBadge].forEach(badge => {
+        if (!badge) return;
+        if (unansweredCount > 0) {
+            badge.textContent = unansweredCount > 99 ? '99+' : unansweredCount;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    });
+
+    // 현재 선택된 필터에 따라 목록 추출
+    let displayList = [];
+    if (currentTeacherQnaFilter === 'unanswered') {
+        displayList = unanswered;
+    } else if (currentTeacherQnaFilter === 'answered') {
+        displayList = answered;
+    } else {
+        displayList = teacherAllQuestionsCache;
+    }
+
+    if (displayList.length === 0) {
+        if (currentTeacherQnaFilter === 'unanswered') {
+            list.innerHTML = `
+                <div class="empty-hint" style="padding:48px 16px; text-align:center;">
+                    <div style="font-size:2rem; margin-bottom:8px;">🎉</div>
+                    <div style="font-weight:700; color:var(--text-primary); font-size:1rem;">현재 답변 대기 중인 질문이 없습니다!</div>
+                    <div style="font-size:0.84rem; color:var(--text-muted); margin-top:4px;">학생이 새로 질문을 등록하면 실시간으로 알림을 보내드립니다.</div>
+                </div>
+            `;
+        } else if (currentTeacherQnaFilter === 'answered') {
+            list.innerHTML = '<div class="empty-hint" style="padding:40px 0; text-align:center;">아직 답변 완료된 질문이 없습니다.</div>';
+        } else {
+            list.innerHTML = '<div class="empty-hint" style="padding:40px 0; text-align:center;">등록된 질문이 없습니다.</div>';
+        }
+        return;
+    }
+
+    list.innerHTML = displayList.map(q => {
+        const hasAnswer = Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''));
+        const studentName = q.profiles?.name || '학생';
+        const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}15; color:${q.subjects.color}; border: 1px solid ${q.subjects.color}35;">${escapeHtml(q.subjects.name)}</span>` : '';
+        const statusBadge = hasAnswer
+            ? `<span class="badge badge-answered">${ICONS.check} 답변 완료</span>`
+            : `<span class="badge badge-waiting">${ICONS.clock} 답변 대기</span>`;
+
+        return `
+            <div class="feed-card" id="question-${q.id}">
+                <div class="feed-header">
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                        <span class="badge-student">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            ${escapeHtml(studentName)} 학생
+                        </span>
+                        ${subjectBadge}
+                        ${statusBadge}
+                    </div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <span style="font-size:0.75rem; color:var(--text-muted);">${new Date(q.created_at).toLocaleDateString()} ${new Date(q.created_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</span>
+                        <button class="danger-link-btn" onclick="deleteRecord('Question', ${q.id})">삭제</button>
+                    </div>
+                </div>
+
+                <div class="feed-title" style="margin-top:10px; font-size:0.96rem; font-weight:600; line-height:1.5;">
+                    <span>Q. ${escapeHtml(q.question_text)}</span>
+                </div>
+
+                ${q.question_image_url ? `
+                    <div class="image-preview-wrapper" onclick="window.open('${q.question_image_url}')" title="클릭하여 원본 사진 보기">
+                        <img src="${q.question_image_url}" alt="문제 사진">
+                    </div>
+                ` : ''}
+
+                <div class="answer-box" style="margin-top:12px;">
+                    ${hasAnswer ? `
+                        <div class="answer-box-header">
+                            <span class="answer-box-title" style="color:#059669; font-weight:700;">👨‍🏫 선생님 풀이 답변</span>
+                            <div>
+                                <button class="text-link-btn" onclick="promptEditAnswer(${q.id}, '${escapeHtml(q.answer_text || '')}')">수정</button>
+                                <button class="danger-link-btn" onclick="deleteRecord('Answer', ${q.id})">답변취소</button>
+                            </div>
+                        </div>
+                        <p class="answer-box-content" style="white-space:pre-wrap; margin-top:6px;">${escapeHtml(q.answer_text || '')}</p>
+                        ${q.answer_image_url ? `
+                            <div class="image-preview-wrapper" style="margin-top:8px;" onclick="window.open('${q.answer_image_url}')">
+                                <img src="${q.answer_image_url}" alt="풀이 사진">
+                            </div>
+                        ` : ''}
+                    ` : `
+                        <div style="font-weight:700; font-size:0.86rem; color:var(--text-primary); margin-bottom:8px;">
+                            ✍️ ${escapeHtml(studentName)} 학생에게 풀이 답변 남기기
+                        </div>
+                        <textarea id="ansText-${q.id}" rows="3" placeholder="${escapeHtml(studentName)} 학생을 위한 상세 풀이 및 설명을 적어주세요." style="width:100%; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px; font-size:0.88rem; font-family:inherit; resize:vertical;"></textarea>
+                        
+                        <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">
+                            <label style="font-size:0.8rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
+                                <span>📷 풀이 사진 첨부 (선택):</span>
+                                <input type="file" id="ansImg-${q.id}" accept="image/*" style="font-size:0.82rem;">
+                            </label>
+                            <button class="primary-btn-sm" style="width:100%; padding:10px; font-weight:700;" onclick="submitAnswer(${q.id}, this)">답변 등록 완료하기</button>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // ==========================================
@@ -1863,7 +2031,9 @@ window.submitAnswer = async function(questionId, triggerBtn) {
         if (!res.ok) throw new Error(data.error || '답변 등록 실패');
 
         alert('답변이 등록되었습니다.');
-        loadAdminQuestions(currentStudentId);
+        teacherAllQuestionsCache = [];
+        await loadAllTeacherQuestions(true);
+        if (currentStudentId) loadAdminQuestions(currentStudentId);
     } catch (err) {
         alert(err.message);
     } finally {
@@ -1883,6 +2053,8 @@ window.deleteRecord = async function(type, id) {
         if (!res.ok) throw new Error(data.error || '삭제 실패');
 
         alert('삭제 완료되었습니다.');
+        teacherAllQuestionsCache = [];
+        loadAllTeacherQuestions(true);
         if (currentStudentId) loadStudentDetail(currentStudentId);
     } catch (err) {
         alert(err.message);
@@ -1930,7 +2102,11 @@ window.promptEditAnswer = async function(id, curText) {
             method: 'POST',
             body: JSON.stringify({ action: 'editAnswer', id, answerText: text })
         });
-        if (res.ok) loadAdminQuestions(currentStudentId);
+        if (res.ok) {
+            teacherAllQuestionsCache = [];
+            loadAllTeacherQuestions(true);
+            if (currentStudentId) loadAdminQuestions(currentStudentId);
+        }
     } catch (err) {
         alert(err.message);
     }

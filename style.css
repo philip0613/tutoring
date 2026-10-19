@@ -2125,3 +2125,85 @@ input[type="file"] {
     }
 }
 
+/* =========================================
+   18. 💬 선생님 질문 관리 & 풀이 세그먼트 필터 (Teacher Q&A Feed)
+   ========================================= */
+.qna-filter-bar {
+    display: flex;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 5px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.qna-filter-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.qna-filter-btn:hover {
+    color: var(--text-primary);
+}
+
+.qna-filter-btn.active {
+    background: #ffffff;
+    color: var(--text-primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.dot-status {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dot-waiting {
+    background: #f59e0b;
+}
+
+.dot-answered {
+    background: #10b981;
+}
+
+.tab-count-badge.danger-badge {
+    background: #fee2e2;
+    color: #ef4444;
+    border: 1px solid #fca5a5;
+    font-weight: 700;
+}
+
+.tab-count-badge.success-badge {
+    background: #d1fae5;
+    color: #059669;
+    border: 1px solid #6ee7b7;
+    font-weight: 700;
+}
+
+.badge-student {
+    background: #eef2ff !important;
+    color: #4f46e5 !important;
+    border: 1px solid #c7d2fe !important;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 0.82rem;
+    border-radius: var(--radius-full);
+}
+
