@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTabs();
     setupSubTabs();
     setupBottomDock();
+    setTimeout(autoFitButtonText, 100);
 
     // 3. 알림 및 푸시 이벤트
     document.getElementById('enablePushBtn')?.addEventListener('click', requestPushPermission);
@@ -468,6 +469,28 @@ function moveDockIndicator(dockId, activeBtn) {
     }
 }
 
+// ==========================================
+// 📱 기기별/화면 크기별 버튼 텍스트 자동 크기 최적화 (Auto-fit font size to container box)
+// ==========================================
+function autoFitButtonText() {
+    const selector = '.outline-btn-sm, .primary-btn-sm, .danger-btn-sm, .small-btn, .section-header-inline button';
+    document.querySelectorAll(selector).forEach(btn => {
+        btn.style.fontSize = '';
+        btn.style.whiteSpace = 'nowrap';
+
+        // 텍스트 너비가 버튼의 가용 너비(clientWidth)를 초과할 경우 한 줄로 맞춰지도록 폰트 크기 미세 조절
+        if (btn.scrollWidth > btn.clientWidth && btn.clientWidth > 0) {
+            let currentSize = parseFloat(window.getComputedStyle(btn).fontSize);
+            let loops = 0;
+            while (btn.scrollWidth > btn.clientWidth && currentSize > 9.5 && loops < 12) {
+                currentSize -= 0.5;
+                btn.style.fontSize = `${currentSize}px`;
+                loops++;
+            }
+        }
+    });
+}
+
 function setupTabs() {
     document.querySelectorAll('.tab-bar').forEach(bar => {
         bar.querySelectorAll('.tab-btn').forEach(btn => {
@@ -580,13 +603,15 @@ function setupBottomDock() {
         handleLogout();
     });
 
-    // 화면 회전이나 리사이즈 시 활성 인디케이터 위치 재계산
+    // 화면 회전이나 리사이즈 시 활성 인디케이터 위치 재계산 및 버튼 폰트 크기 최적화
     window.addEventListener('resize', () => {
-        if (!currentUser) return;
-        const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
-        const dockId = isTeacher ? 'teacherBottomDock' : 'studentBottomDock';
-        const activeBtn = document.querySelector(`#${dockId} .dock-item.active`);
-        if (activeBtn) moveDockIndicator(dockId, activeBtn);
+        if (currentUser) {
+            const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+            const dockId = isTeacher ? 'teacherBottomDock' : 'studentBottomDock';
+            const activeBtn = document.querySelector(`#${dockId} .dock-item.active`);
+            if (activeBtn) moveDockIndicator(dockId, activeBtn);
+        }
+        autoFitButtonText();
     });
 }
 
@@ -860,6 +885,7 @@ function updateUIForLoggedInUser() {
 
     loadNotifications();
     startNotificationPolling();
+    setTimeout(autoFitButtonText, 150);
 }
 
 // ==========================================
@@ -1140,6 +1166,7 @@ async function loadStudents() {
                 <option value="${s.id}">${escapeHtml(s.name)}</option>
             `).join('');
         }
+        autoFitButtonText();
     } catch (err) {
         console.error('학생 로드 에러:', err);
         const list = document.getElementById('studentList');

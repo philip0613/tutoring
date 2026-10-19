@@ -82,6 +82,8 @@ body {
     letter-spacing: -0.02em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 /* =========================================
@@ -298,17 +300,22 @@ body {
 }
 
 .section-title {
-    font-size: 1.05rem;
+    font-size: clamp(0.96rem, 3vw, 1.05rem);
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1.3;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .section-desc {
-    font-size: 0.82rem;
+    font-size: clamp(0.74rem, 2.2vw, 0.82rem);
     color: var(--text-muted);
     margin-top: 3px;
     display: block;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    line-height: 1.4;
 }
 
 .section-header-inline {
@@ -316,7 +323,20 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
-    gap: 8px;
+    gap: 12px;
+}
+
+.section-header-inline > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.section-header-inline button,
+.section-header-inline .outline-btn-sm,
+.section-header-inline .primary-btn-sm,
+.section-header-inline .danger-btn-sm {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 /* 대시보드 웰컴 배너 (과장된 그라디언트 대신 단정하고 신뢰감 있는 스타일) */
@@ -477,13 +497,22 @@ button:active {
 }
 
 .primary-btn-sm {
-    min-height: 34px;
-    padding: 6px 12px;
+    min-height: 32px;
+    padding: 5px clamp(8px, 2vw, 12px);
     background: var(--primary);
     color: #ffffff;
     border-radius: var(--radius-sm);
-    font-size: 0.82rem;
+    font-size: clamp(0.74rem, 2.2vw, 0.82rem);
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    word-break: keep-all;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
 .primary-btn-sm:hover {
@@ -492,13 +521,22 @@ button:active {
 
 .outline-btn-sm {
     min-height: 32px;
-    padding: 5px 11px;
+    padding: 5px clamp(8px, 2vw, 12px);
     background: #ffffff;
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
     border-radius: var(--radius-sm);
-    font-size: 0.82rem;
+    font-size: clamp(0.74rem, 2.2vw, 0.82rem);
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    word-break: keep-all;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
 .outline-btn-sm:hover {
@@ -509,13 +547,22 @@ button:active {
 
 .danger-btn-sm {
     min-height: 32px;
-    padding: 5px 11px;
+    padding: 5px clamp(8px, 2vw, 12px);
     background: var(--danger-light);
     border: 1px solid var(--danger-border);
     color: var(--danger);
     border-radius: var(--radius-sm);
-    font-size: 0.82rem;
+    font-size: clamp(0.74rem, 2.2vw, 0.82rem);
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    word-break: keep-all;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
 .danger-btn-sm:hover {
@@ -525,17 +572,42 @@ button:active {
 
 .small-btn {
     min-height: 30px;
-    padding: 4px 10px;
+    padding: 4px clamp(6px, 1.8vw, 10px);
     background: var(--bg-subtle);
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    font-size: 0.82rem;
+    font-size: clamp(0.72rem, 2vw, 0.82rem);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    word-break: keep-all;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
 .small-btn:hover {
     background: var(--border-color);
     color: var(--text-primary);
+}
+
+.outline-btn-sm svg,
+.primary-btn-sm svg,
+.danger-btn-sm svg,
+.small-btn svg {
+    flex-shrink: 0;
+    width: 13px;
+    height: 13px;
+}
+
+.outline-btn-sm span,
+.primary-btn-sm span,
+.danger-btn-sm span,
+.small-btn span {
+    white-space: nowrap;
 }
 
 .text-link-btn {
@@ -879,12 +951,15 @@ input[type="file"] {
     align-items: center;
     padding-bottom: 14px;
     border-bottom: 1px solid var(--border-color);
+    gap: 12px;
 }
 
 .student-profile-info {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .student-avatar-large {
@@ -1853,3 +1928,38 @@ input[type="file"] {
         animation: modalSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 }
+
+/* =========================================
+   17. 📱 기기별 반응형 텍스트 및 박스 버튼 최적화 (Device-Adaptive Action Buttons)
+   ========================================= */
+@media (max-width: 480px) {
+    .section-header-inline {
+        gap: 8px;
+    }
+    
+    .outline-btn-sm,
+    .primary-btn-sm,
+    .danger-btn-sm {
+        min-height: 30px;
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        gap: 4px;
+    }
+    
+    .outline-btn-sm svg,
+    .primary-btn-sm svg,
+    .danger-btn-sm svg {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    .outline-btn-sm,
+    .primary-btn-sm,
+    .danger-btn-sm {
+        padding: 3px 6px;
+        font-size: 0.70rem;
+    }
+}
+
