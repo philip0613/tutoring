@@ -48,10 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('loginBtn')?.addEventListener('click', handleLogin);
     document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
 
-    // 2. 탭 전환 이벤트 (메인 탭 & 서브 탭 & 하단 플로팅 독)
+    // 2. 탭 전환 이벤트 (메인 탭 & 서브 탭 & 하단 플로팅 독 & 가로 스와이프 제스처)
     setupTabs();
     setupSubTabs();
     setupBottomDock();
+    setupInstagramSwipeNavigation();
     setTimeout(autoFitButtonText, 100);
 
     // 3. 알림 및 푸시 이벤트
@@ -482,35 +483,47 @@ async function loadNotifications() {
 
         const modalContainer = document.getElementById('modalNotificationList');
         const modalBadge = document.getElementById('modalNotifCountBadge');
+        const teacherMyPageContainer = document.getElementById('teacherMyPageNotifList');
+        const studentMyPageContainer = document.getElementById('studentMyPageNotifList');
+        const teacherMyPageBadge = document.getElementById('teacherMyPageNotifBadge');
+        const studentMyPageBadge = document.getElementById('studentMyPageNotifBadge');
+        const teacherTopNotifBadge = document.getElementById('teacherTopNotifBadge');
+        const studentTopNotifBadge = document.getElementById('studentTopNotifBadge');
 
-        if (modalBadge) {
+        [modalBadge, teacherMyPageBadge, studentMyPageBadge, teacherTopNotifBadge, studentTopNotifBadge].forEach(badgeEl => {
+            if (!badgeEl) return;
             if (unreadCount > 0) {
-                modalBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                modalBadge.classList.remove('hidden');
+                badgeEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badgeEl.classList.remove('hidden');
             } else {
-                modalBadge.classList.add('hidden');
+                badgeEl.classList.add('hidden');
             }
-        }
+        });
 
         if (list.length === 0) {
+            const emptyHtml = '<div class="empty-hint" style="padding:16px 0; font-size:0.84rem;">새로운 알림이 없습니다.</div>';
             container.innerHTML = '<div class="empty-hint">새로운 알림이 없습니다.</div>';
-            if (modalContainer) modalContainer.innerHTML = '<div class="empty-hint" style="padding:14px 0; font-size:0.84rem;">새로운 알림이 없습니다.</div>';
+            if (modalContainer) modalContainer.innerHTML = emptyHtml;
+            if (teacherMyPageContainer) teacherMyPageContainer.innerHTML = emptyHtml;
+            if (studentMyPageContainer) studentMyPageContainer.innerHTML = emptyHtml;
             return;
         }
 
         const itemsHtml = list.map(item => `
-            <div class="notification-item unread" style="display:flex; justify-content:space-between; align-items:flex-start; padding: 10px 12px; margin-bottom: 6px;">
+            <div class="notification-item unread" style="display:flex; justify-content:space-between; align-items:flex-start; padding: 12px 14px; margin-bottom: 8px; border-radius: var(--radius-sm); background: var(--bg-surface); border: 1px solid var(--border-color); box-shadow: var(--shadow-xs);">
                 <div style="flex: 1; cursor: pointer;" onclick="handleNotificationClick(${item.id}, '${escapeHtml(item.link || '')}')">
-                    <div style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(item.title)}</div>
-                    <div style="color: var(--text-secondary); font-size: 0.82rem; margin-top: 2px; line-height: 1.35;">${escapeHtml(item.body)}</div>
-                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">${new Date(item.created_at).toLocaleString()}</div>
+                    <div style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${escapeHtml(item.title)}</div>
+                    <div style="color: var(--text-secondary); font-size: 0.84rem; margin-top: 3px; line-height: 1.4;">${escapeHtml(item.body)}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 5px;">${new Date(item.created_at).toLocaleString()}</div>
                 </div>
-                <button class="danger-link-btn" style="padding: 2px 6px; font-size: 0.9rem; line-height: 1;" onclick="handleNotificationClick(${item.id})" title="알림 확인 및 삭제">✕</button>
+                <button class="danger-link-btn" style="padding: 3px 8px; font-size: 0.9rem; line-height: 1; margin-left: 8px;" onclick="handleNotificationClick(${item.id})" title="알림 확인 및 삭제">✕</button>
             </div>
         `).join('');
 
         container.innerHTML = itemsHtml;
         if (modalContainer) modalContainer.innerHTML = itemsHtml;
+        if (teacherMyPageContainer) teacherMyPageContainer.innerHTML = itemsHtml;
+        if (studentMyPageContainer) studentMyPageContainer.innerHTML = itemsHtml;
     } catch (err) {
         console.error('알림 로드 실패:', err);
     }
@@ -542,25 +555,13 @@ function navigateToLink(link) {
     const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
 
     if (link.includes('CalendarTab') || link.includes('calendar')) {
-        if (isTeacher) {
-            document.querySelector('#teacherDashboard .tab-btn[data-target="teacherCalendarTab"]')?.click();
-            const calBtn = document.getElementById('dockTeacherCalendar');
-            if (calBtn) moveDockIndicator('teacherBottomDock', calBtn);
-        } else {
-            document.querySelector('#studentDashboard .tab-btn[data-target="studentCalendarTab"]')?.click();
-            const calBtn = document.getElementById('dockStudentCalendar');
-            if (calBtn) moveDockIndicator('studentBottomDock', calBtn);
-        }
+        switchMainTab(isTeacher ? 'teacherCalendarTab' : 'studentCalendarTab');
     } else if (link.includes('question-')) {
         const questionId = link.split('question-')[1];
         if (isTeacher) {
-            document.querySelector('#teacherDashboard .tab-btn[data-target="teacherQnaTab"]')?.click();
-            const qBtn = document.getElementById('dockTeacherQna');
-            if (qBtn) moveDockIndicator('teacherBottomDock', qBtn);
+            switchMainTab('teacherQnaTab');
         } else {
-            document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
-            const homeBtn = document.getElementById('dockStudentHome');
-            if (homeBtn) moveDockIndicator('studentBottomDock', homeBtn);
+            switchMainTab('studentStudyTab');
         }
 
         setTimeout(() => {
@@ -571,21 +572,17 @@ function navigateToLink(link) {
                 el.style.transition = 'box-shadow 0.4s ease';
                 setTimeout(() => { el.style.boxShadow = ''; }, 2500);
             }
-        }, 400);
+        }, 350);
     } else if (link.includes('feedback')) {
         if (!isTeacher) {
-            document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
-            const homeBtn = document.getElementById('dockStudentHome');
-            if (homeBtn) moveDockIndicator('studentBottomDock', homeBtn);
+            switchMainTab('studentReportTab');
             setTimeout(() => {
                 document.getElementById('myFeedbackList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 300);
         }
     } else if (link.includes('exam')) {
         if (!isTeacher) {
-            document.querySelector('#studentDashboard .tab-btn[data-target="studentReportTab"]')?.click();
-            const repBtn = document.getElementById('dockStudentReport');
-            if (repBtn) moveDockIndicator('studentBottomDock', repBtn);
+            switchMainTab('studentReportTab');
             setTimeout(() => {
                 document.getElementById('myExamList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 300);
@@ -609,9 +606,11 @@ window.handleBellClick = function(e) {
     }
 
     // 📱 모바일 환경(768px 이하 또는 독 활성화)에서는 헤더 종 버튼 클릭 시
-    // 하단 메뉴바 끝의 '알림·계정' 화면(바텀 시트)으로 즉시 열기
+    // 마이페이지 (알림 센터) 화면으로 즉시 전환
     if (window.innerWidth <= 768 || document.body.classList.contains('has-dock')) {
-        openProfileModal(true);
+        const isTeacher = (currentUser?.role === 'admin' || currentUser?.role === 'teacher');
+        switchMainTab(isTeacher ? 'teacherProfileTab' : 'studentProfileTab');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
     }
 
@@ -752,6 +751,104 @@ function autoFitButtonText() {
     });
 }
 
+// 📑 메인 탭 통합 전환 함수 (상단 탭 바 + 하단 독 + 가로 스와이프 제스처 공용)
+function switchMainTab(targetId, direction = 'auto') {
+    if (!targetId || !currentUser) return;
+    const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+    const dashboardId = isTeacher ? 'teacherDashboard' : 'studentDashboard';
+    const dockId = isTeacher ? 'teacherBottomDock' : 'studentBottomDock';
+
+    const tabList = isTeacher 
+        ? ['teacherClassTab', 'teacherCalendarTab', 'teacherQnaTab', 'teacherProfileTab']
+        : ['studentStudyTab', 'studentCalendarTab', 'studentReportTab', 'studentProfileTab'];
+
+    const dockMap = isTeacher
+        ? {
+            'teacherClassTab': 'dockTeacherStudents',
+            'teacherCalendarTab': 'dockTeacherCalendar',
+            'teacherQnaTab': 'dockTeacherQna',
+            'teacherProfileTab': 'dockTeacherProfile'
+        }
+        : {
+            'studentStudyTab': 'dockStudentHome',
+            'studentCalendarTab': 'dockStudentCalendar',
+            'studentReportTab': 'dockStudentReport',
+            'studentProfileTab': 'dockStudentProfile'
+        };
+
+    // 현재 열려있는 탭 인덱스 및 이동 대상 인덱스
+    const currentIdx = tabList.findIndex(id => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains('hidden');
+    });
+    const targetIdx = tabList.indexOf(targetId);
+
+    // 슬라이드 애니메이션 방향 결정
+    let animClass = '';
+    if (direction === 'auto') {
+        if (currentIdx !== -1 && targetIdx !== -1 && currentIdx !== targetIdx) {
+            animClass = targetIdx > currentIdx ? 'tab-slide-right' : 'tab-slide-left';
+        }
+    } else if (direction === 'right') {
+        animClass = 'tab-slide-right';
+    } else if (direction === 'left') {
+        animClass = 'tab-slide-left';
+    }
+
+    // 1. 모든 메인 탭 숨김 및 기존 애니메이션 클래스 제거
+    tabList.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('tab-slide-right', 'tab-slide-left');
+            el.classList.add('hidden');
+        }
+    });
+
+    // 2. 대상 탭 표시 및 부드러운 가로 슬라이드 인 애니메이션 부여
+    const targetTab = document.getElementById(targetId);
+    if (targetTab) {
+        targetTab.classList.remove('hidden');
+        if (animClass) {
+            targetTab.classList.add(animClass);
+        }
+    }
+
+    // 3. 상단 탭 바 (Segmented Control) 활성 상태 및 유체 인디케이터 동기화
+    const tabBar = document.querySelector(`#${dashboardId} .tab-bar`);
+    if (tabBar) {
+        tabBar.querySelectorAll('.tab-btn').forEach(btn => {
+            const isMatch = (btn.getAttribute('data-target') === targetId);
+            btn.classList.toggle('active', isMatch);
+            if (isMatch) {
+                moveTabIndicator(tabBar, btn, true);
+            }
+        });
+    }
+
+    // 4. 하단 플로팅 독 활성 상태 및 인디케이터 동기화
+    const dockBtnId = dockMap[targetId];
+    if (dockBtnId) {
+        const dockBtn = document.getElementById(dockBtnId);
+        if (dockBtn) {
+            moveDockIndicator(dockId, dockBtn);
+        }
+    }
+
+    // 5. 탭별 비동기 데이터 갱신
+    if (targetId.includes('Calendar')) {
+        renderCalendar();
+    } else if (targetId === 'teacherQnaTab') {
+        loadAllTeacherQuestions();
+    } else if (targetId === 'studentReportTab') {
+        loadMyExams();
+        loadMyFeedbacks();
+    } else if (targetId === 'studentStudyTab') {
+        loadMyQuestions();
+    } else if (targetId === 'teacherProfileTab' || targetId === 'studentProfileTab') {
+        renderMyPage();
+    }
+}
+
 function setupTabs() {
     document.querySelectorAll('.tab-bar').forEach(bar => {
         // 인디케이터 엘리먼트 보장
@@ -763,53 +860,9 @@ function setupTabs() {
 
         bar.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                // 🌟 상단 탭 유체 슬라이딩 애니메이션 즉시 가동!
-                moveTabIndicator(bar, btn, true);
-
                 const targetId = btn.getAttribute('data-target');
-                
-                // 해당 탭 바가 관리하는 메인 탭들만 숨김 처리
-                bar.querySelectorAll('.tab-btn').forEach(b => {
-                    const tid = b.getAttribute('data-target');
-                    if (tid) document.getElementById(tid)?.classList.add('hidden');
-                });
-                
-                const targetTab = document.getElementById(targetId);
-                if (targetTab) {
-                    targetTab.classList.remove('hidden');
-                    if (targetId.includes('Calendar')) {
-                        renderCalendar();
-                    } else if (targetId === 'teacherQnaTab') {
-                        loadAllTeacherQuestions();
-                    }
-                }
-
-                // 하단 플로팅 독 활성 상태 및 인디케이터 동기화
-                if (currentUser) {
-                    const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
-                    if (isTeacher) {
-                        if (targetId.includes('Calendar')) {
-                            const calBtn = document.getElementById('dockTeacherCalendar');
-                            if (calBtn) moveDockIndicator('teacherBottomDock', calBtn);
-                        } else if (targetId === 'teacherQnaTab') {
-                            const qnaBtn = document.getElementById('dockTeacherQna');
-                            if (qnaBtn) moveDockIndicator('teacherBottomDock', qnaBtn);
-                        } else {
-                            const stuBtn = document.getElementById('dockTeacherStudents');
-                            if (stuBtn) moveDockIndicator('teacherBottomDock', stuBtn);
-                        }
-                    } else {
-                        if (targetId.includes('Calendar')) {
-                            const calBtn = document.getElementById('dockStudentCalendar');
-                            if (calBtn) moveDockIndicator('studentBottomDock', calBtn);
-                        } else {
-                            const homeBtn = document.getElementById('dockStudentHome');
-                            if (homeBtn) moveDockIndicator('studentBottomDock', homeBtn);
-                        }
-                    }
+                if (targetId) {
+                    switchMainTab(targetId, 'auto');
                 }
             });
         });
@@ -900,20 +953,18 @@ function setupBottomDock() {
 // 👨‍🏫 1. 선생님 전용 하단 독 네비게이션
 function setupTeacherBottomDock() {
     // 1. 학생·과목 관리
-    document.getElementById('dockTeacherStudents')?.addEventListener('click', (e) => {
-        moveDockIndicator('teacherBottomDock', e.currentTarget);
-        document.querySelector('#teacherDashboard .tab-btn[data-target="teacherClassTab"]')?.click();
+    document.getElementById('dockTeacherStudents')?.addEventListener('click', () => {
+        switchMainTab('teacherClassTab');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     // 2. 수업 캘린더
-    document.getElementById('dockTeacherCalendar')?.addEventListener('click', (e) => {
-        moveDockIndicator('teacherBottomDock', e.currentTarget);
-        document.querySelector('#teacherDashboard .tab-btn[data-target="teacherCalendarTab"]')?.click();
+    document.getElementById('dockTeacherCalendar')?.addEventListener('click', () => {
+        switchMainTab('teacherCalendarTab');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // 3. 중앙 빠른 추가 액션 (+)
+    // 3. 중앙 빠른 추가 액션 (+) - 모달 열기 (스와이프 순서에서는 제외)
     document.getElementById('dockTeacherQuick')?.addEventListener('click', () => {
         openModal('teacherQuickActionModal');
     });
@@ -926,8 +977,8 @@ function setupTeacherBottomDock() {
 
     document.getElementById('quickManageScheduleBtn')?.addEventListener('click', () => {
         closeModal('teacherQuickActionModal');
-        const calBtn = document.getElementById('dockTeacherCalendar');
-        if (calBtn) calBtn.click();
+        switchMainTab('teacherCalendarTab');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     document.getElementById('quickAddSubjectBtn')?.addEventListener('click', () => {
@@ -937,40 +988,35 @@ function setupTeacherBottomDock() {
     });
 
     // 4. 질문 풀이 (Q&A)
-    document.getElementById('dockTeacherQna')?.addEventListener('click', (e) => {
-        moveDockIndicator('teacherBottomDock', e.currentTarget);
-        document.querySelector('#teacherDashboard .tab-btn[data-target="teacherQnaTab"]')?.click();
+    document.getElementById('dockTeacherQna')?.addEventListener('click', () => {
+        switchMainTab('teacherQnaTab');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // 5. 내 정보 및 알림 센터
-    document.getElementById('dockTeacherProfile')?.addEventListener('click', (e) => {
-        openProfileModal();
+    // 5. 마이페이지 (내 정보 및 알림 센터)
+    document.getElementById('dockTeacherProfile')?.addEventListener('click', () => {
+        switchMainTab('teacherProfileTab');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
 
 // 🧑‍🎓 2. 학생 전용 하단 독 네비게이션
 function setupStudentBottomDock() {
     // 1. 홈 / 내 학습
-    document.getElementById('dockStudentHome')?.addEventListener('click', (e) => {
-        moveDockIndicator('studentBottomDock', e.currentTarget);
-        document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
+    document.getElementById('dockStudentHome')?.addEventListener('click', () => {
+        switchMainTab('studentStudyTab');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     // 2. 내 캘린더
-    document.getElementById('dockStudentCalendar')?.addEventListener('click', (e) => {
-        moveDockIndicator('studentBottomDock', e.currentTarget);
-        document.querySelector('#studentDashboard .tab-btn[data-target="studentCalendarTab"]')?.click();
+    document.getElementById('dockStudentCalendar')?.addEventListener('click', () => {
+        switchMainTab('studentCalendarTab');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // 3. 중앙 질문하기 (+)
+    // 3. 중앙 질문하기 (+) - 질문 등록 입력창으로 즉시 포커스
     document.getElementById('dockStudentAsk')?.addEventListener('click', () => {
-        document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
-        const homeBtn = document.getElementById('dockStudentHome');
-        if (homeBtn) moveDockIndicator('studentBottomDock', homeBtn);
-
+        switchMainTab('studentStudyTab');
         const qInput = document.getElementById('questionText');
         if (qInput) {
             qInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -979,23 +1025,207 @@ function setupStudentBottomDock() {
     });
 
     // 4. 성적 & 일지 리포트
-    document.getElementById('dockStudentReport')?.addEventListener('click', (e) => {
-        moveDockIndicator('studentBottomDock', e.currentTarget);
-        document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
-
-        const examCard = document.getElementById('myExamList') || document.getElementById('myFeedbackList');
-        if (examCard) {
-            setTimeout(() => {
-                examCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 200);
-        }
+    document.getElementById('dockStudentReport')?.addEventListener('click', () => {
+        switchMainTab('studentReportTab');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // 5. 내 계정 & 알림
-    document.getElementById('dockStudentProfile')?.addEventListener('click', (e) => {
-        openProfileModal();
+    // 5. 마이페이지 (내 계정 & 알림)
+    document.getElementById('dockStudentProfile')?.addEventListener('click', () => {
+        switchMainTab('studentProfileTab');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
+
+// 📱 인스타그램 스타일 가로 스와이프 제스처 네비게이션
+function setupInstagramSwipeNavigation() {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let isSwiping = false;
+
+    document.addEventListener('touchstart', (e) => {
+        // 모바일 화면(768px 이하) 및 로그인 상태에서만 동작
+        if (window.innerWidth > 768 || !currentUser) return;
+
+        // 모달, 폼 입력 컨트롤, 가로 스크롤 리스트, 사진 라이트박스 터치 시에는 스와이프 억제
+        if (e.target.closest('.modal-overlay:not(.hidden), input, textarea, select, .subject-chip-list, .scrollable-list, .qna-filter-bar, .image-lightbox-modal:not(.hidden)')) {
+            return;
+        }
+
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchStartTime = Date.now();
+        isSwiping = true;
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+        if (!isSwiping || !currentUser) return;
+        isSwiping = false;
+
+        const touch = e.changedTouches[0];
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        const duration = Date.now() - touchStartTime;
+
+        // 가로 스와이프 조건:
+        // 1. 최소 가로 거리 45px 이상
+        // 2. 가로 이동량이 세로 이동량의 1.35배 이상 (수직 스크롤과 엄격히 분리)
+        // 3. 550ms 이내 빠른 제스처
+        if (Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.35 && duration < 550) {
+            const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+            // 🌟 빠른 추가(+) 액션 버튼은 스와이프 순서에서 완전히 제외!
+            const tabList = isTeacher 
+                ? ['teacherClassTab', 'teacherCalendarTab', 'teacherQnaTab', 'teacherProfileTab']
+                : ['studentStudyTab', 'studentCalendarTab', 'studentReportTab', 'studentProfileTab'];
+
+            const currentIdx = tabList.findIndex(id => {
+                const el = document.getElementById(id);
+                return el && !el.classList.contains('hidden');
+            });
+
+            if (currentIdx === -1) return;
+
+            if (deltaX < 0) {
+                // 👉 왼쪽으로 스와이프 (우 -> 좌) => 다음 탭
+                if (currentIdx < tabList.length - 1) {
+                    switchMainTab(tabList[currentIdx + 1], 'right');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } else {
+                // 👈 오른쪽으로 스와이프 (좌 -> 우) => 이전 탭
+                if (currentIdx > 0) {
+                    switchMainTab(tabList[currentIdx - 1], 'left');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+        }
+    }, { passive: true });
+}
+
+// 📱 마이페이지 실시간 데이터 렌더링 함수
+function renderMyPage() {
+    if (!currentUser) return;
+    const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+
+    if (isTeacher) {
+        const nameEl = document.getElementById('teacherMyPageName');
+        const idEl = document.getElementById('teacherMyPageId');
+        if (nameEl) nameEl.textContent = `${currentUser.name} 선생님`;
+
+        let displayId = currentUser.login_id || currentUser.user || 'admin';
+        if (typeof displayId === 'object' && displayId.email) displayId = displayId.email.replace('@tutor.com', '');
+        if (idEl) idEl.textContent = `아이디: @${displayId}`;
+
+        // 개설 과목 수 통계
+        const chips = document.getElementById('teacherSubjectChips');
+        const subCount = chips ? chips.children.length : 0;
+        const subStat = document.getElementById('teacherStatSubjects');
+        if (subStat) subStat.textContent = subCount;
+
+        // 담당 학생 수
+        const stuStat = document.getElementById('teacherStatStudents');
+        if (stuStat) stuStat.textContent = (cachedStudents && cachedStudents.length) ? cachedStudents.length : 0;
+
+        // 답변 대기 질문 수
+        const unansBadge = document.getElementById('badgeUnansweredCount');
+        const unansStat = document.getElementById('teacherStatUnanswered');
+        if (unansStat) unansStat.textContent = unansBadge?.textContent || '0';
+
+        updateMyPagePushStatus('teacher');
+    } else {
+        const nameEl = document.getElementById('studentMyPageName');
+        const idEl = document.getElementById('studentMyPageId');
+        if (nameEl) nameEl.textContent = `${currentUser.name} 학생`;
+
+        let displayId = currentUser.login_id || currentUser.user || currentUser.id || 'student';
+        if (typeof displayId === 'object' && displayId.email) displayId = displayId.email.replace('@tutor.com', '');
+        if (idEl) idEl.textContent = `아이디: @${displayId}`;
+
+        // 수강 과목 수 통계
+        const chips = document.getElementById('studentSubjectChips');
+        const subCount = chips ? chips.children.length : 0;
+        const subStat = document.getElementById('studentStatSubjects');
+        if (subStat) subStat.textContent = subCount;
+
+        // 질문 수
+        const qList = document.getElementById('myQuestionList');
+        const qCount = qList ? qList.querySelectorAll('.feed-item').length : 0;
+        const qStat = document.getElementById('studentStatQuestions');
+        if (qStat) qStat.textContent = qCount;
+
+        // 시험 수
+        const examList = document.getElementById('myExamList');
+        const examCount = examList ? examList.querySelectorAll('.feed-item').length : 0;
+        const examStat = document.getElementById('studentStatExams');
+        if (examStat) examStat.textContent = examCount;
+
+        updateMyPagePushStatus('student');
+    }
+
+    loadNotifications();
+}
+
+function updateMyPagePushStatus(role) {
+    const descId = role === 'teacher' ? 'teacherPushDesc' : 'studentPushDesc';
+    const btnId = role === 'teacher' ? 'teacherPushBtn' : 'studentPushBtn';
+    const descEl = document.getElementById(descId);
+    const btnEl = document.getElementById(btnId);
+    if (!('Notification' in window)) {
+        if (descEl) descEl.textContent = '이 브라우저는 푸시 알림을 지원하지 않습니다.';
+        if (btnEl) btnEl.style.display = 'none';
+        return;
+    }
+    if (Notification.permission === 'granted') {
+        if (descEl) descEl.textContent = '실시간 푸시 알림 수신 중 (정상 연동됨)';
+        if (btnEl) {
+            btnEl.textContent = '테스트 알림';
+            btnEl.onclick = () => showToast('🔔 알림 테스트', '푸시 알림이 정상적으로 연동되어 있습니다.');
+        }
+    } else if (Notification.permission === 'denied') {
+        if (descEl) descEl.textContent = '브라우저 설정에서 알림 권한이 차단되어 있습니다.';
+        if (btnEl) {
+            btnEl.textContent = '권한 차단됨';
+            btnEl.disabled = true;
+        }
+    } else {
+        if (descEl) descEl.textContent = '실시간 질문 및 수업 알림 받기';
+        if (btnEl) {
+            btnEl.textContent = '알림 켜기';
+            btnEl.onclick = () => requestPushPermission();
+        }
+    }
+}
+
+window.toggleMyPagePassword = function(role) {
+    const formId = role === 'teacher' ? 'teacherPassForm' : 'studentPassForm';
+    const form = document.getElementById(formId);
+    if (form) form.classList.toggle('hidden');
+};
+
+window.handleMyPageChangePassword = async function(role) {
+    const inputId = role === 'teacher' ? 'teacherNewPassword' : 'studentNewPassword';
+    const passInput = document.getElementById(inputId);
+    const newPassword = passInput?.value.trim();
+    if (!newPassword || newPassword.length < 6) {
+        alert('비밀번호는 6자리 이상 입력해 주세요.');
+        return;
+    }
+    try {
+        const res = await authFetch('/api/changePassword', {
+            method: 'POST',
+            body: JSON.stringify({ newPassword })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '비밀번호 변경 실패');
+        alert('비밀번호가 성공적으로 변경되었습니다!');
+        passInput.value = '';
+        window.toggleMyPagePassword(role);
+    } catch (e) {
+        alert(e.message);
+    }
+};
 
 // 프로필 모달 열기 공통 함수
 function openProfileModal(fromBell = false) {

@@ -2745,4 +2745,261 @@ input[type="file"] {
     }
 }
 
+/* =========================================
+   17. 📱 인스타그램 스타일 마이페이지 (My Page)
+   ========================================= */
+.mypage-hero-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid var(--border-color);
+    padding: 24px 20px;
+    margin-bottom: 16px;
+}
+
+.mypage-hero-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.mypage-avatar-wrap {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.mypage-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.mypage-avatar.teacher-avatar {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+}
+
+.mypage-avatar.student-avatar {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #ffffff;
+}
+
+.mypage-role-badge {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: var(--radius-full);
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.mypage-role-badge.teacher-badge {
+    background: #10b981;
+    color: #ffffff;
+}
+
+.mypage-role-badge.student-badge {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.mypage-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mypage-user-name {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.025em;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mypage-user-id {
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.mypage-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    background: var(--bg-subtle);
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.mypage-stat-item {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mypage-stat-label {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.mypage-stat-val {
+    font-size: 1.18rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.mypage-stat-val.danger-text {
+    color: var(--danger);
+}
+
+.mypage-icon-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--bg-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    flex-shrink: 0;
+}
+
+.mypage-icon-box.bell-box {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--primary);
+}
+
+.mypage-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.mypage-notif-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.mypage-settings-card {
+    margin-top: 16px;
+}
+
+.mypage-setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-color);
+    gap: 12px;
+}
+
+.mypage-setting-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.setting-row-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.setting-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.setting-icon-box.danger-box {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+
+.setting-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.setting-desc {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 1px;
+    word-break: keep-all;
+}
+
+.mypage-inline-form {
+    background: var(--bg-subtle);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    margin-top: 8px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.mypage-footer {
+    text-align: center;
+    padding: 24px 0 20px 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+/* =========================================
+   18. 📱 인스타 스타일 탭 가로 슬라이드 전환 애니메이션 (Swipe & Fluid Transition)
+   ========================================= */
+@keyframes tabSlideInRight {
+    from {
+        opacity: 0.2;
+        transform: translate3d(24px, 0, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes tabSlideInLeft {
+    from {
+        opacity: 0.2;
+        transform: translate3d(-24px, 0, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.tab-slide-right {
+    animation: tabSlideInRight 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.tab-slide-left {
+    animation: tabSlideInLeft 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 
