@@ -605,33 +605,63 @@
         </div>
     </div>
 
-    <!-- 📱 하단 플로팅 독 네비게이션 (Instagram / iOS Style Floating Dock) -->
-    <nav id="bottomNavDock" class="bottom-dock hidden" aria-label="하단 네비게이션">
+    <!-- ⚡ 선생님 빠른 작업 바텀 시트 모달 -->
+    <div id="teacherQuickActionModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-drag-handle"></div>
+            <div class="modal-header">
+                <h3>⚡ 빠른 작업</h3>
+                <button class="modal-close-btn" aria-label="닫기">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="profile-actions-list">
+                <button id="quickAddScheduleBtn" class="profile-action-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+                    <span>새 수업 일정 잡기</span>
+                </button>
+                <button id="quickManageScheduleBtn" class="profile-action-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span>오늘 수업 및 완료 확인</span>
+                </button>
+                <button id="quickAddSubjectBtn" class="profile-action-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="12" y1="8" x2="12" y2="14"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+                    <span>새 과목 개설하기</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 👨‍🏫 1. 선생님 전용 하단 플로팅 독 네비게이션 -->
+    <nav id="teacherBottomDock" class="bottom-dock hidden" aria-label="선생님 하단 네비게이션">
         <div class="bottom-dock-inner">
-            <!-- 1. 홈 / 학습 / 관리 탭 -->
-            <button class="dock-item active" id="dockTabHome" data-dock="home" aria-label="홈">
-                <div class="dock-pill">
-                    <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                        <polyline points="9 22 9 12 15 12 15 22"/>
-                    </svg>
-                </div>
+            <!-- iOS 스타일 유체 슬라이딩 액티브 인디케이터 -->
+            <div class="dock-sliding-pill" id="teacherDockIndicator"></div>
+
+            <!-- 1. 학생 & 과목 관리 -->
+            <button class="dock-item active" id="dockTeacherStudents" data-dock="students" aria-label="학생·과목">
+                <svg class="dock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span class="dock-label">학생·과목</span>
             </button>
 
-            <!-- 2. 캘린더 탭 -->
-            <button class="dock-item" id="dockTabCalendar" data-dock="calendar" aria-label="캘린더">
-                <div class="dock-pill">
-                    <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                </div>
+            <!-- 2. 수업 캘린더 -->
+            <button class="dock-item" id="dockTeacherCalendar" data-dock="calendar" aria-label="수업 캘린더">
+                <svg class="dock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span class="dock-label">캘린더</span>
             </button>
 
             <!-- 3. 중앙 빠른 추가 액션 (+) 버튼 -->
-            <button class="dock-item dock-action-item" id="dockActionBtn" data-dock="action" aria-label="빠른 작업">
+            <button class="dock-item dock-action-item" id="dockTeacherQuick" data-dock="quick" aria-label="빠른 작업">
                 <div class="dock-action-circle">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19"/>
@@ -640,25 +670,87 @@
                 </div>
             </button>
 
-            <!-- 4. 알림 센터 버튼 -->
-            <button class="dock-item" id="dockNotificationBtn" data-dock="notifications" aria-label="알림">
-                <div class="dock-pill">
-                    <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <!-- 4. 질문 풀이 (Q&A) -->
+            <button class="dock-item" id="dockTeacherQna" data-dock="qna" aria-label="질문 풀이">
+                <div class="dock-icon-wrapper">
+                    <svg class="dock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                    </svg>
+                    <span id="teacherQnaBadge" class="dock-badge hidden">0</span>
+                </div>
+                <span class="dock-label">질문풀이</span>
+            </button>
+
+            <!-- 5. 내 정보 및 알림 센터 -->
+            <button class="dock-item" id="dockTeacherProfile" data-dock="profile" aria-label="내 정보">
+                <div class="dock-icon-wrapper">
+                    <svg class="dock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                     </svg>
-                    <span id="dockNotificationBadge" class="dock-badge hidden">0</span>
+                    <span id="teacherNotifBadge" class="dock-badge hidden">0</span>
+                </div>
+                <span class="dock-label">알림·계정</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- 🧑‍🎓 2. 학생 전용 하단 플로팅 독 네비게이션 -->
+    <nav id="studentBottomDock" class="bottom-dock hidden" aria-label="학생 하단 네비게이션">
+        <div class="bottom-dock-inner">
+            <!-- iOS 스타일 유체 슬라이딩 액티브 인디케이터 -->
+            <div class="dock-sliding-pill" id="studentDockIndicator"></div>
+
+            <!-- 1. 홈 / 내 학습 -->
+            <button class="dock-item active" id="dockStudentHome" data-dock="home" aria-label="홈">
+                <svg class="dock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span class="dock-label">내 학습</span>
+            </button>
+
+            <!-- 2. 내 캘린더 -->
+            <button class="dock-item" id="dockStudentCalendar" data-dock="calendar" aria-label="내 캘린더">
+                <svg class="dock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span class="dock-label">캘린더</span>
+            </button>
+
+            <!-- 3. 중앙 질문하기 (+) 버튼 -->
+            <button class="dock-item dock-action-item" id="dockStudentAsk" data-dock="ask" aria-label="질문하기">
+                <div class="dock-action-circle">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
                 </div>
             </button>
 
-            <!-- 5. 프로필 / 내 정보 버튼 -->
-            <button class="dock-item" id="dockProfileBtn" data-dock="profile" aria-label="내 계정">
-                <div class="dock-pill">
-                    <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <!-- 4. 성적 & 일지 리포트 -->
+            <button class="dock-item" id="dockStudentReport" data-dock="report" aria-label="성적·일지">
+                <svg class="dock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+                <span class="dock-label">성적·일지</span>
+            </button>
+
+            <!-- 5. 내 계정 & 알림 -->
+            <button class="dock-item" id="dockStudentProfile" data-dock="profile" aria-label="내 계정">
+                <div class="dock-icon-wrapper">
+                    <svg class="dock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                         <circle cx="12" cy="7" r="4"/>
                     </svg>
+                    <span id="studentNotifBadge" class="dock-badge hidden">0</span>
                 </div>
+                <span class="dock-label">내 계정</span>
             </button>
         </div>
     </nav>

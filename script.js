@@ -283,7 +283,6 @@ async function loadNotifications() {
             document.title = '과외노트 v2.0';
         }
 
-        const dockBadge = document.getElementById('dockNotificationBadge');
         if (badge) {
             if (unreadCount > 0) {
                 badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
@@ -292,14 +291,18 @@ async function loadNotifications() {
                 badge.classList.add('hidden');
             }
         }
-        if (dockBadge) {
+
+        const teacherBadge = document.getElementById('teacherNotifBadge');
+        const studentBadge = document.getElementById('studentNotifBadge');
+        [teacherBadge, studentBadge].forEach(dockBadge => {
+            if (!dockBadge) return;
             if (unreadCount > 0) {
                 dockBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
                 dockBadge.classList.remove('hidden');
             } else {
                 dockBadge.classList.add('hidden');
             }
-        }
+        });
 
         if (list.length === 0) {
             container.innerHTML = '<div class="empty-hint">새로운 알림이 없습니다.</div>';
@@ -357,14 +360,36 @@ document.addEventListener('click', (e) => {
 // ==========================================
 // 📑 메인 및 서브 탭 네비게이션 & 하단 독 네비게이션
 // ==========================================
-function setDockActive(type) {
-    document.querySelectorAll('.dock-item').forEach(item => {
+// 🌟 iOS 스타일 유체 슬라이딩 액티브 인디케이터 계산 및 부드러운 이동 함수
+function moveDockIndicator(dockId, activeBtn) {
+    const dock = document.getElementById(dockId);
+    if (!dock || !activeBtn) return;
+    const indicator = dock.querySelector('.dock-sliding-pill');
+    const dockInner = dock.querySelector('.bottom-dock-inner');
+    if (!indicator || !dockInner) return;
+
+    dock.querySelectorAll('.dock-item:not(.dock-action-item)').forEach(item => {
         item.classList.remove('active');
     });
-    if (type === 'home') {
-        document.getElementById('dockTabHome')?.classList.add('active');
-    } else if (type === 'calendar') {
-        document.getElementById('dockTabCalendar')?.classList.add('active');
+    activeBtn.classList.add('active');
+
+    if (dock.offsetParent === null && window.innerWidth > 768) return;
+
+    const innerRect = dockInner.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+
+    let leftOffset = btnRect.left - innerRect.left;
+    let width = btnRect.width;
+
+    if (width === 0) {
+        leftOffset = activeBtn.offsetLeft;
+        width = activeBtn.offsetWidth;
+    }
+
+    if (width > 0) {
+        indicator.style.width = `${width}px`;
+        indicator.style.transform = `translateX(${leftOffset}px)`;
+        indicator.classList.add('ready');
     }
 }
 
@@ -390,11 +415,26 @@ function setupTabs() {
                     }
                 }
 
-                // 하단 플로팅 독 활성 상태 동기화
-                if (targetId.includes('Calendar')) {
-                    setDockActive('calendar');
-                } else {
-                    setDockActive('home');
+                // 하단 플로팅 독 활성 상태 및 인디케이터 동기화
+                if (currentUser) {
+                    const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+                    if (isTeacher) {
+                        if (targetId.includes('Calendar')) {
+                            const calBtn = document.getElementById('dockTeacherCalendar');
+                            if (calBtn) moveDockIndicator('teacherBottomDock', calBtn);
+                        } else {
+                            const stuBtn = document.getElementById('dockTeacherStudents');
+                            if (stuBtn) moveDockIndicator('teacherBottomDock', stuBtn);
+                        }
+                    } else {
+                        if (targetId.includes('Calendar')) {
+                            const calBtn = document.getElementById('dockStudentCalendar');
+                            if (calBtn) moveDockIndicator('studentBottomDock', calBtn);
+                        } else {
+                            const homeBtn = document.getElementById('dockStudentHome');
+                            if (homeBtn) moveDockIndicator('studentBottomDock', homeBtn);
+                        }
+                    }
                 }
             });
         });
@@ -417,80 +457,27 @@ function setupSubTabs() {
 
                 const targetTab = document.getElementById(targetId);
                 if (targetTab) targetTab.classList.remove('hidden');
+
+                // 선생님 독 탭 동기화
+                if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher')) {
+                    if (targetId === 'studentQuestionsTab') {
+                        const qnaBtn = document.getElementById('dockTeacherQna');
+                        if (qnaBtn) moveDockIndicator('teacherBottomDock', qnaBtn);
+                    } else {
+                        const stuBtn = document.getElementById('dockTeacherStudents');
+                        if (stuBtn) moveDockIndicator('teacherBottomDock', stuBtn);
+                    }
+                }
             });
         });
     });
 }
 
 function setupBottomDock() {
-    // 1. 홈 / 학습 탭
-    document.getElementById('dockTabHome')?.addEventListener('click', () => {
-        setDockActive('home');
-        if (!currentUser) return;
+    setupTeacherBottomDock();
+    setupStudentBottomDock();
 
-        if (currentUser.role === 'admin' || currentUser.role === 'teacher') {
-            document.querySelector('#teacherDashboard .tab-btn[data-target="teacherClassTab"]')?.click();
-        } else {
-            document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
-        }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // 2. 캘린더 탭
-    document.getElementById('dockTabCalendar')?.addEventListener('click', () => {
-        setDockActive('calendar');
-        if (!currentUser) return;
-
-        if (currentUser.role === 'admin' || currentUser.role === 'teacher') {
-            document.querySelector('#teacherDashboard .tab-btn[data-target="teacherCalendarTab"]')?.click();
-        } else {
-            document.querySelector('#studentDashboard .tab-btn[data-target="studentCalendarTab"]')?.click();
-        }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // 3. 중앙 빠른 추가 액션 (+) 버튼
-    document.getElementById('dockActionBtn')?.addEventListener('click', () => {
-        if (!currentUser) return;
-        if (currentUser.role === 'admin' || currentUser.role === 'teacher') {
-            openScheduleModal();
-        } else {
-            // 학생: 내 학습 탭 전환 후 질문 작성란으로 부드럽게 스크롤 및 포커스
-            document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
-            setDockActive('home');
-            const qInput = document.getElementById('questionText');
-            if (qInput) {
-                qInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                setTimeout(() => qInput.focus(), 350);
-            }
-        }
-    });
-
-    // 4. 알림 센터 토글
-    document.getElementById('dockNotificationBtn')?.addEventListener('click', (e) => {
-        toggleNotificationDropdown(e);
-    });
-
-    // 5. 내 정보 / 프로필 바텀 시트 열기
-    document.getElementById('dockProfileBtn')?.addEventListener('click', () => {
-        if (!currentUser) return;
-        const nameEl = document.getElementById('profileModalName');
-        const roleEl = document.getElementById('profileModalRole');
-        const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
-        
-        if (nameEl) nameEl.textContent = `${currentUser.name} ${isTeacher ? '선생님' : '학생'}`;
-        if (roleEl) roleEl.textContent = `아이디: ${currentUser.user || currentUser.id || ''}`;
-
-        // 학생일 때만 비밀번호 변경 버튼 표시
-        const passBtn = document.getElementById('modalPasswordBtn');
-        if (passBtn) {
-            passBtn.style.display = isTeacher ? 'none' : 'flex';
-        }
-
-        openModal('accountProfileModal');
-    });
-
-    // 프로필 모달 내 버튼 액션들
+    // 프로필 모달 공통 버튼 이벤트
     document.getElementById('modalPushBtn')?.addEventListener('click', () => {
         closeModal('accountProfileModal');
         requestPushPermission();
@@ -499,7 +486,9 @@ function setupBottomDock() {
     document.getElementById('modalPasswordBtn')?.addEventListener('click', () => {
         closeModal('accountProfileModal');
         document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
-        setDockActive('home');
+        const homeBtn = document.getElementById('dockStudentHome');
+        if (homeBtn) moveDockIndicator('studentBottomDock', homeBtn);
+
         const form = document.getElementById('passwordFormContainer');
         form?.classList.remove('hidden-form');
         const passInput = document.getElementById('newPassword');
@@ -513,6 +502,142 @@ function setupBottomDock() {
         closeModal('accountProfileModal');
         handleLogout();
     });
+
+    // 화면 회전이나 리사이즈 시 활성 인디케이터 위치 재계산
+    window.addEventListener('resize', () => {
+        if (!currentUser) return;
+        const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+        const dockId = isTeacher ? 'teacherBottomDock' : 'studentBottomDock';
+        const activeBtn = document.querySelector(`#${dockId} .dock-item.active`);
+        if (activeBtn) moveDockIndicator(dockId, activeBtn);
+    });
+}
+
+// 👨‍🏫 1. 선생님 전용 하단 독 네비게이션
+function setupTeacherBottomDock() {
+    // 1. 학생·과목 관리
+    document.getElementById('dockTeacherStudents')?.addEventListener('click', (e) => {
+        moveDockIndicator('teacherBottomDock', e.currentTarget);
+        document.querySelector('#teacherDashboard .tab-btn[data-target="teacherClassTab"]')?.click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // 2. 수업 캘린더
+    document.getElementById('dockTeacherCalendar')?.addEventListener('click', (e) => {
+        moveDockIndicator('teacherBottomDock', e.currentTarget);
+        document.querySelector('#teacherDashboard .tab-btn[data-target="teacherCalendarTab"]')?.click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // 3. 중앙 빠른 추가 액션 (+)
+    document.getElementById('dockTeacherQuick')?.addEventListener('click', () => {
+        openModal('teacherQuickActionModal');
+    });
+
+    // 빠른 작업 모달 내 액션들
+    document.getElementById('quickAddScheduleBtn')?.addEventListener('click', () => {
+        closeModal('teacherQuickActionModal');
+        openScheduleModal();
+    });
+
+    document.getElementById('quickManageScheduleBtn')?.addEventListener('click', () => {
+        closeModal('teacherQuickActionModal');
+        const calBtn = document.getElementById('dockTeacherCalendar');
+        if (calBtn) calBtn.click();
+    });
+
+    document.getElementById('quickAddSubjectBtn')?.addEventListener('click', () => {
+        closeModal('teacherQuickActionModal');
+        openModal('addSubjectModal');
+    });
+
+    // 4. 질문 풀이 (Q&A)
+    document.getElementById('dockTeacherQna')?.addEventListener('click', (e) => {
+        moveDockIndicator('teacherBottomDock', e.currentTarget);
+        document.querySelector('#teacherDashboard .tab-btn[data-target="teacherClassTab"]')?.click();
+
+        // 질문 관리 서브탭 열기
+        const qSubTab = document.querySelector('#teacherClassTab .sub-tab-btn[data-subtarget="studentQuestionsTab"]');
+        if (qSubTab) qSubTab.click();
+
+        const qSection = document.getElementById('studentQuestionsTab') || document.getElementById('questionListAdmin');
+        if (qSection) {
+            setTimeout(() => {
+                qSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 200);
+        }
+    });
+
+    // 5. 내 정보 및 알림 센터
+    document.getElementById('dockTeacherProfile')?.addEventListener('click', (e) => {
+        openProfileModal();
+    });
+}
+
+// 🧑‍🎓 2. 학생 전용 하단 독 네비게이션
+function setupStudentBottomDock() {
+    // 1. 홈 / 내 학습
+    document.getElementById('dockStudentHome')?.addEventListener('click', (e) => {
+        moveDockIndicator('studentBottomDock', e.currentTarget);
+        document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // 2. 내 캘린더
+    document.getElementById('dockStudentCalendar')?.addEventListener('click', (e) => {
+        moveDockIndicator('studentBottomDock', e.currentTarget);
+        document.querySelector('#studentDashboard .tab-btn[data-target="studentCalendarTab"]')?.click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // 3. 중앙 질문하기 (+)
+    document.getElementById('dockStudentAsk')?.addEventListener('click', () => {
+        document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
+        const homeBtn = document.getElementById('dockStudentHome');
+        if (homeBtn) moveDockIndicator('studentBottomDock', homeBtn);
+
+        const qInput = document.getElementById('questionText');
+        if (qInput) {
+            qInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => qInput.focus(), 350);
+        }
+    });
+
+    // 4. 성적 & 일지 리포트
+    document.getElementById('dockStudentReport')?.addEventListener('click', (e) => {
+        moveDockIndicator('studentBottomDock', e.currentTarget);
+        document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
+
+        const examCard = document.getElementById('myExamList') || document.getElementById('myFeedbackList');
+        if (examCard) {
+            setTimeout(() => {
+                examCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 200);
+        }
+    });
+
+    // 5. 내 계정 & 알림
+    document.getElementById('dockStudentProfile')?.addEventListener('click', (e) => {
+        openProfileModal();
+    });
+}
+
+// 프로필 모달 열기 공통 함수
+function openProfileModal() {
+    if (!currentUser) return;
+    const nameEl = document.getElementById('profileModalName');
+    const roleEl = document.getElementById('profileModalRole');
+    const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+    
+    if (nameEl) nameEl.textContent = `${currentUser.name} ${isTeacher ? '선생님' : '학생'}`;
+    if (roleEl) roleEl.textContent = `아이디: ${currentUser.user || currentUser.id || ''}`;
+
+    const passBtn = document.getElementById('modalPasswordBtn');
+    if (passBtn) {
+        passBtn.style.display = isTeacher ? 'none' : 'flex';
+    }
+
+    openModal('accountProfileModal');
 }
 
 // ==========================================
@@ -580,7 +705,8 @@ function handleLogout() {
     document.getElementById('userInfo').classList.add('hidden');
     document.getElementById('teacherDashboard').classList.add('hidden');
     document.getElementById('studentDashboard').classList.add('hidden');
-    document.getElementById('bottomNavDock')?.classList.add('hidden');
+    document.getElementById('teacherBottomDock')?.classList.add('hidden');
+    document.getElementById('studentBottomDock')?.classList.add('hidden');
     document.body.classList.remove('has-dock');
 }
 
@@ -589,14 +715,33 @@ function updateUIForLoggedInUser() {
 
     document.getElementById('loginSection').classList.add('hidden');
     document.getElementById('userInfo').classList.remove('hidden');
-    document.getElementById('bottomNavDock')?.classList.remove('hidden');
-    document.body.classList.add('has-dock');
-    setDockActive('home');
 
-    const roleName = (currentUser.role === 'admin' || currentUser.role === 'teacher') ? '선생님' : '학생';
+    const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+    const teacherDock = document.getElementById('teacherBottomDock');
+    const studentDock = document.getElementById('studentBottomDock');
+
+    if (isTeacher) {
+        teacherDock?.classList.remove('hidden');
+        studentDock?.classList.add('hidden');
+        document.body.classList.add('has-dock');
+        setTimeout(() => {
+            const firstBtn = document.getElementById('dockTeacherStudents');
+            if (firstBtn) moveDockIndicator('teacherBottomDock', firstBtn);
+        }, 120);
+    } else {
+        studentDock?.classList.remove('hidden');
+        teacherDock?.classList.add('hidden');
+        document.body.classList.add('has-dock');
+        setTimeout(() => {
+            const firstBtn = document.getElementById('dockStudentHome');
+            if (firstBtn) moveDockIndicator('studentBottomDock', firstBtn);
+        }, 120);
+    }
+
+    const roleName = isTeacher ? '선생님' : '학생';
     document.getElementById('userGreeting').textContent = `${currentUser.name} ${roleName}`;
 
-    if (currentUser.role === 'admin' || currentUser.role === 'teacher') {
+    if (isTeacher) {
         document.getElementById('teacherDashboard').classList.remove('hidden');
         document.getElementById('studentDashboard').classList.add('hidden');
         initTeacherView();
@@ -931,6 +1076,18 @@ async function loadAdminQuestions(studentId) {
         const questions = Array.isArray(data) ? data : [];
 
         document.getElementById('adminQuestionCount').textContent = questions.length;
+
+        // 미답변 질문 수 카운트하여 선생님 하단 독 배지에 표시
+        const unansweredCount = questions.filter(q => !(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''))).length;
+        const qnaBadge = document.getElementById('teacherQnaBadge');
+        if (qnaBadge) {
+            if (unansweredCount > 0) {
+                qnaBadge.textContent = unansweredCount > 99 ? '99+' : unansweredCount;
+                qnaBadge.classList.remove('hidden');
+            } else {
+                qnaBadge.classList.add('hidden');
+            }
+        }
 
         if (questions.length === 0) {
             list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0;">아직 학생이 등록한 질문이 없습니다.</div>';
