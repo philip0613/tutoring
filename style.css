@@ -1438,11 +1438,28 @@ input[type="file"] {
 
     .modal-drag-handle {
         display: block;
-        width: 36px;
-        height: 4px;
-        background: var(--border-color);
+        width: 44px;
+        height: 5px;
+        background: #cbd5e1;
         border-radius: var(--radius-full);
-        margin: 0 auto 14px auto;
+        margin: 2px auto 14px auto;
+        cursor: grab;
+        touch-action: none;
+        position: relative;
+    }
+
+    .modal-drag-handle::before {
+        content: '';
+        position: absolute;
+        top: -14px;
+        bottom: -14px;
+        left: -24px;
+        right: -24px;
+    }
+
+    /* 📱 모바일 바텀 시트에서는 상단 ✕ 닫기 버튼을 숨기고 아래로 스와이프하여 닫도록 처리 */
+    .modal-close-btn {
+        display: none !important;
     }
 }
 

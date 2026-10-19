@@ -40,6 +40,7 @@ export default async function handler(req, res) {
 
         return res.status(200).json({
             user: authData.user,
+            login_id: authData.user?.email ? authData.user.email.replace('@tutor.com', '') : (id || ''),
             role,
             name,
             token: authData.access_token,

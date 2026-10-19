@@ -108,12 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentUser) loadNotifications();
     });
 
-    // 모달 닫기
-    document.querySelectorAll('.modal-close-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            btn.closest('.modal-overlay')?.classList.add('hidden');
-        });
-    });
+    // 모달 및 바텀 시트 스와이프 제스처 & 닫기 초기화
+    setupBottomSheetSwipeToDismiss();
 });
 
 // ==========================================
@@ -923,7 +919,18 @@ function openProfileModal() {
     const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
     
     if (nameEl) nameEl.textContent = `${currentUser.name} ${isTeacher ? '선생님' : '학생'}`;
-    if (roleEl) roleEl.textContent = `아이디: ${currentUser.user || currentUser.id || ''}`;
+    
+    let displayId = '';
+    if (currentUser.login_id) {
+        displayId = currentUser.login_id;
+    } else if (currentUser.user && typeof currentUser.user === 'object' && currentUser.user.email) {
+        displayId = currentUser.user.email.replace('@tutor.com', '');
+    } else if (typeof currentUser.user === 'string') {
+        displayId = currentUser.user;
+    } else if (typeof currentUser.id === 'string' && !currentUser.id.includes('-')) {
+        displayId = currentUser.id;
+    }
+    if (roleEl) roleEl.textContent = displayId ? `아이디: ${displayId}` : (isTeacher ? '선생님 계정' : '학생 계정');
 
     const passBtn = document.getElementById('modalPasswordBtn');
     if (passBtn) {
@@ -2410,14 +2417,119 @@ async function handleSaveSchedule() {
 }
 
 // ==========================================
-// 🛠 모달 헬퍼 및 이미지 유틸리티
+// 🛠 모달 헬퍼 및 바텀 시트 인터랙션 유틸리티
 // ==========================================
 function openModal(id) {
-    document.getElementById(id)?.classList.remove('hidden');
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    const content = modal.querySelector('.modal-content');
+    if (content) {
+        content.style.transform = '';
+        content.style.transition = '';
+    }
+    modal.classList.remove('hidden');
 }
 
 function closeModal(id) {
-    document.getElementById(id)?.classList.add('hidden');
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    const content = modal.querySelector('.modal-content');
+
+    if (window.innerWidth <= 640 && content) {
+        content.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
+        content.style.transform = 'translateY(100%)';
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            content.style.transform = '';
+            content.style.transition = '';
+        }, 220);
+    } else {
+        modal.classList.add('hidden');
+        if (content) {
+            content.style.transform = '';
+            content.style.transition = '';
+        }
+    }
+}
+
+function setupBottomSheetSwipeToDismiss() {
+    const overlays = document.querySelectorAll('.modal-overlay');
+
+    overlays.forEach(overlay => {
+        // 1. 오버레이 바깥 어두운 배경 클릭 시 닫기
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closeModal(overlay.id);
+            }
+        });
+
+        // 2. 닫기 버튼 클릭 시 애니메이션과 함께 닫기
+        overlay.querySelectorAll('.modal-close-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                closeModal(overlay.id);
+            });
+        });
+
+        const content = overlay.querySelector('.modal-content');
+        if (!content) return;
+
+        let startY = 0;
+        let currentY = 0;
+        let isDragging = false;
+        let isAtTop = false;
+
+        // 드래그 핸들이나 상단 헤더, 모달 최상단에서 터치 시작 시 제스처 추적
+        content.addEventListener('touchstart', (e) => {
+            if (window.innerWidth > 640) return;
+
+            isAtTop = (content.scrollTop <= 2);
+            startY = e.touches[0].clientY;
+            currentY = startY;
+            isDragging = false;
+        }, { passive: true });
+
+        content.addEventListener('touchmove', (e) => {
+            if (window.innerWidth > 640) return;
+            currentY = e.touches[0].clientY;
+            const deltaY = currentY - startY;
+
+            // 스크롤이 최상단이고 손가락을 아래로 당기는 경우
+            if (isAtTop && deltaY > 0) {
+                isDragging = true;
+                content.style.transition = 'none';
+                content.style.transform = `translateY(${deltaY}px)`;
+                if (e.cancelable) e.preventDefault();
+            }
+        }, { passive: false });
+
+        const handleTouchEnd = () => {
+            if (!isDragging || window.innerWidth > 640) return;
+            const deltaY = currentY - startY;
+            isDragging = false;
+
+            // 70px 이상 아래로 내렸으면 자연스럽게 슬라이드 다운 후 닫기
+            if (deltaY > 70) {
+                content.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
+                content.style.transform = 'translateY(100%)';
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    content.style.transform = '';
+                    content.style.transition = '';
+                }, 220);
+            } else {
+                // 살짝 당기다 말았으면 원래 위치로 통통 튀며 복귀 (스냅 백)
+                content.style.transition = 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
+                content.style.transform = 'translateY(0)';
+                setTimeout(() => {
+                    content.style.transform = '';
+                    content.style.transition = '';
+                }, 200);
+            }
+        };
+
+        content.addEventListener('touchend', handleTouchEnd, { passive: true });
+        content.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    });
 }
 
 function escapeHtml(str) {
