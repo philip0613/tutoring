@@ -104,8 +104,9 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding-top: env(safe-area-inset-top, 0px);
 }
 
 .app-header::after {
@@ -279,6 +280,9 @@ body {
 
 @media (max-width: 640px) {
     .hide-mobile {
+        display: none !important;
+    }
+    #enablePushBtn {
         display: none !important;
     }
     .user-chip {
@@ -1509,7 +1513,7 @@ input[type="file"] {
     .modal-content {
         max-width: 100%;
         border-radius: 20px 20px 0 0;
-        padding: 16px 20px 32px 20px;
+        padding: 16px 20px calc(24px + env(safe-area-inset-bottom, 12px)) 20px;
         max-height: 85vh;
         margin-bottom: 0;
         animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2658,6 +2662,8 @@ input[type="file"] {
     display: flex;
     flex-direction: column;
     padding: 16px;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     animation: fadeIn 0.2s ease-out;
 }
 
