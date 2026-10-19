@@ -554,8 +554,7 @@ function navigateToLink(link) {
     } else if (link.includes('question-')) {
         const questionId = link.split('question-')[1];
         if (isTeacher) {
-            document.querySelector('#teacherDashboard .tab-btn[data-target="teacherClassTab"]')?.click();
-            document.querySelector('#teacherClassTab .sub-tab-btn[data-subtarget="studentQuestionsTab"]')?.click();
+            document.querySelector('#teacherDashboard .tab-btn[data-target="teacherQnaTab"]')?.click();
             const qBtn = document.getElementById('dockTeacherQna');
             if (qBtn) moveDockIndicator('teacherBottomDock', qBtn);
         } else {
@@ -1595,6 +1594,20 @@ function renderTeacherQuestionsFeed() {
         }
     });
 
+    // 헤더 상태 라이브 배지 (qnaLiveBadge)
+    const liveBadge = document.getElementById('qnaLiveBadge');
+    if (liveBadge) {
+        if (unansweredCount > 0) {
+            liveBadge.textContent = `대기 ${unansweredCount}건`;
+            liveBadge.className = 'qna-live-pill';
+            liveBadge.classList.remove('hidden');
+        } else {
+            liveBadge.textContent = '모두 답변됨';
+            liveBadge.className = 'qna-live-pill all-done';
+            liveBadge.classList.remove('hidden');
+        }
+    }
+
     // 현재 선택된 필터에 따라 목록 추출
     let displayList = [];
     if (currentTeacherQnaFilter === 'unanswered') {
@@ -1608,16 +1621,28 @@ function renderTeacherQuestionsFeed() {
     if (displayList.length === 0) {
         if (currentTeacherQnaFilter === 'unanswered') {
             list.innerHTML = `
-                <div class="empty-hint" style="padding:48px 16px; text-align:center;">
-                    <div style="font-size:2rem; margin-bottom:8px;">🎉</div>
-                    <div style="font-weight:700; color:var(--text-primary); font-size:1rem;">현재 답변 대기 중인 질문이 없습니다!</div>
-                    <div style="font-size:0.84rem; color:var(--text-muted); margin-top:4px;">학생이 새로 질문을 등록하면 실시간으로 알림을 보내드립니다.</div>
+                <div class="empty-state-box">
+                    <div class="empty-icon">🎉</div>
+                    <div class="empty-title">현재 답변 대기 중인 질문이 없습니다!</div>
+                    <div class="empty-subtitle">모든 학생의 질문에 답변을 완료했습니다. 학생이 새 질문을 등록하면 실시간으로 알림을 보내드립니다.</div>
                 </div>
             `;
         } else if (currentTeacherQnaFilter === 'answered') {
-            list.innerHTML = '<div class="empty-hint" style="padding:40px 0; text-align:center;">아직 답변 완료된 질문이 없습니다.</div>';
+            list.innerHTML = `
+                <div class="empty-state-box">
+                    <div class="empty-icon">📝</div>
+                    <div class="empty-title">아직 완료된 질문이 없습니다</div>
+                    <div class="empty-subtitle">답변 대기 중인 질문을 확인하고 풀이를 등록해보세요.</div>
+                </div>
+            `;
         } else {
-            list.innerHTML = '<div class="empty-hint" style="padding:40px 0; text-align:center;">등록된 질문이 없습니다.</div>';
+            list.innerHTML = `
+                <div class="empty-state-box">
+                    <div class="empty-icon">💬</div>
+                    <div class="empty-title">등록된 질문이 없습니다</div>
+                    <div class="empty-subtitle">학생들이 등록한 질문이 이곳에 실시간으로 표시됩니다.</div>
+                </div>
+            `;
         }
         return;
     }
@@ -1625,15 +1650,20 @@ function renderTeacherQuestionsFeed() {
     list.innerHTML = displayList.map(q => {
         const hasAnswer = Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''));
         const studentName = q.profiles?.name || '학생';
-        const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}15; color:${q.subjects.color}; border: 1px solid ${q.subjects.color}35;">${escapeHtml(q.subjects.name)}</span>` : '';
+        const dateObj = new Date(q.created_at);
+        const formattedDate = `${dateObj.getFullYear()}.${dateObj.getMonth() + 1}.${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+
+        const subjectBadge = q.subjects 
+            ? `<span class="badge" style="background:${q.subjects.color}15; color:${q.subjects.color}; border: 1px solid ${q.subjects.color}35;">${escapeHtml(q.subjects.name)}</span>` 
+            : '';
         const statusBadge = hasAnswer
-            ? `<span class="badge badge-answered">${ICONS.check} 답변 완료</span>`
-            : `<span class="badge badge-waiting">${ICONS.clock} 답변 대기</span>`;
+            ? `<span class="badge badge-answered"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 답변 완료</span>`
+            : `<span class="badge badge-waiting"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 답변 대기</span>`;
 
         return `
             <div class="feed-card" id="question-${q.id}">
                 <div class="feed-header">
-                    <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                    <div class="feed-header-left">
                         <span class="badge-student">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             ${escapeHtml(studentName)} 학생
@@ -1641,52 +1671,82 @@ function renderTeacherQuestionsFeed() {
                         ${subjectBadge}
                         ${statusBadge}
                     </div>
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        <span style="font-size:0.75rem; color:var(--text-muted);">${new Date(q.created_at).toLocaleDateString()} ${new Date(q.created_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</span>
-                        <button class="danger-link-btn" onclick="deleteRecord('Question', ${q.id})">삭제</button>
+                    <div class="feed-header-right">
+                        <span class="feed-timestamp">${formattedDate}</span>
+                        <button class="danger-link-btn" onclick="deleteRecord('Question', ${q.id})" title="질문 영구 삭제">삭제</button>
                     </div>
                 </div>
 
-                <div class="feed-title" style="margin-top:10px; font-size:0.96rem; font-weight:600; line-height:1.5;">
-                    <span>Q. ${escapeHtml(q.question_text)}</span>
+                <div class="feed-title">
+                    <span class="feed-q-prefix">Q.</span>
+                    <span class="feed-q-text">${escapeHtml(q.question_text)}</span>
                 </div>
 
                 ${q.question_image_url ? `
-                    <div class="image-preview-wrapper" onclick="window.open('${q.question_image_url}')" title="클릭하여 원본 사진 보기">
-                        <img src="${q.question_image_url}" alt="문제 사진">
+                    <div class="image-preview-wrapper" onclick="openImageLightbox('${escapeHtml(q.question_image_url)}', '${escapeHtml(studentName)} 학생 질문 사진')" title="탭하여 원본 사진 크게 보기">
+                        <img src="${q.question_image_url}" alt="문제 사진" loading="lazy">
+                        <div class="image-zoom-overlay">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            <span>탭하여 확대</span>
+                        </div>
                     </div>
                 ` : ''}
 
-                <div class="answer-box" style="margin-top:12px;">
-                    ${hasAnswer ? `
-                        <div class="answer-box-header">
-                            <span class="answer-box-title" style="color:#059669; font-weight:700;">👨‍🏫 선생님 풀이 답변</span>
-                            <div>
+                ${hasAnswer ? `
+                    <div class="answer-box-completed">
+                        <div class="answer-box-completed-header">
+                            <span class="answer-completed-badge">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                선생님 풀이 답변
+                            </span>
+                            <div class="answer-action-buttons">
                                 <button class="text-link-btn" onclick="promptEditAnswer(${q.id}, '${escapeHtml(q.answer_text || '')}')">수정</button>
+                                <span class="action-divider">·</span>
                                 <button class="danger-link-btn" onclick="deleteRecord('Answer', ${q.id})">답변취소</button>
                             </div>
                         </div>
-                        <p class="answer-box-content" style="white-space:pre-wrap; margin-top:6px;">${escapeHtml(q.answer_text || '')}</p>
+                        <p class="answer-box-content">${escapeHtml(q.answer_text || '')}</p>
                         ${q.answer_image_url ? `
-                            <div class="image-preview-wrapper" style="margin-top:8px;" onclick="window.open('${q.answer_image_url}')">
-                                <img src="${q.answer_image_url}" alt="풀이 사진">
+                            <div class="image-preview-wrapper" style="margin-top:10px;" onclick="openImageLightbox('${escapeHtml(q.answer_image_url)}', '선생님 풀이 첨부 사진')" title="탭하여 풀이 사진 크게 보기">
+                                <img src="${q.answer_image_url}" alt="풀이 사진" loading="lazy">
+                                <div class="image-zoom-overlay">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                    <span>탭하여 확대</span>
+                                </div>
                             </div>
                         ` : ''}
-                    ` : `
-                        <div style="font-weight:700; font-size:0.86rem; color:var(--text-primary); margin-bottom:8px;">
-                            ✍️ ${escapeHtml(studentName)} 학생에게 풀이 답변 남기기
+                    </div>
+                ` : `
+                    <div class="answer-card-form">
+                        <div class="answer-form-header">
+                            <span class="answer-form-title">✍️ ${escapeHtml(studentName)} 학생에게 풀이 답변 남기기</span>
                         </div>
-                        <textarea id="ansText-${q.id}" rows="3" placeholder="${escapeHtml(studentName)} 학생을 위한 상세 풀이 및 설명을 적어주세요." style="width:100%; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px; font-size:0.88rem; font-family:inherit; resize:vertical;"></textarea>
+                        <textarea id="ansText-${q.id}" class="answer-textarea" rows="3" placeholder="${escapeHtml(studentName)} 학생을 위해 상세 풀이 과정이나 핵심 포인트를 입력해주세요."></textarea>
                         
-                        <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">
-                            <label style="font-size:0.8rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
-                                <span>📷 풀이 사진 첨부 (선택):</span>
-                                <input type="file" id="ansImg-${q.id}" accept="image/*" style="font-size:0.82rem;">
+                        <div class="answer-form-actions">
+                            <label class="custom-file-upload-label" for="ansImg-${q.id}">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                    <circle cx="12" cy="13" r="4"/>
+                                </svg>
+                                <span>풀이 사진 첨부</span>
                             </label>
-                            <button class="primary-btn-sm" style="width:100%; padding:10px; font-weight:700;" onclick="submitAnswer(${q.id}, this)">답변 등록 완료하기</button>
+                            <input type="file" id="ansImg-${q.id}" accept="image/*" class="sr-only-file-input" onchange="handleAnswerFileChange(${q.id}, this)">
+                            
+                            <div id="ansImgPreview-${q.id}" class="selected-file-chip hidden">
+                                <span id="ansImgName-${q.id}" class="file-name-text"></span>
+                                <button type="button" class="file-remove-btn" onclick="clearAnswerFile(${q.id})" title="사진 첨부 취소">✕</button>
+                            </div>
                         </div>
-                    `}
-                </div>
+                        
+                        <button class="answer-submit-btn" onclick="submitAnswer(${q.id}, this)">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            <span>답변 등록 완료하기</span>
+                        </button>
+                    </div>
+                `}
             </div>
         `;
     }).join('');
@@ -1759,8 +1819,12 @@ async function loadAdminQuestions(studentId) {
                     </div>
 
                     ${q.question_image_url ? `
-                        <div class="image-preview-wrapper" onclick="window.open('${q.question_image_url}')" title="클릭하여 원본 사진 보기">
-                            <img src="${q.question_image_url}" alt="문제 사진">
+                        <div class="image-preview-wrapper" onclick="openImageLightbox('${escapeHtml(q.question_image_url)}', '학생 질문 사진')" title="탭하여 원본 사진 보기">
+                            <img src="${q.question_image_url}" alt="문제 사진" loading="lazy">
+                            <div class="image-zoom-overlay">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                <span>탭하여 확대</span>
+                            </div>
                         </div>
                     ` : ''}
 
@@ -1775,8 +1839,12 @@ async function loadAdminQuestions(studentId) {
                             </div>
                             <p class="answer-box-content">${escapeHtml(q.answer_text || '')}</p>
                             ${q.answer_image_url ? `
-                                <div class="image-preview-wrapper" style="margin-top:8px;" onclick="window.open('${q.answer_image_url}')">
-                                    <img src="${q.answer_image_url}" alt="풀이 사진">
+                                <div class="image-preview-wrapper" style="margin-top:8px;" onclick="openImageLightbox('${escapeHtml(q.answer_image_url)}', '풀이 첨부 사진')" title="탭하여 풀이 사진 보기">
+                                    <img src="${q.answer_image_url}" alt="풀이 사진" loading="lazy">
+                                    <div class="image-zoom-overlay">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                        <span>탭하여 확대</span>
+                                    </div>
                                 </div>
                             ` : ''}
                         ` : `
@@ -1836,8 +1904,12 @@ async function loadAdminExams(studentId) {
                     </div>
 
                     ${e.paper_image_url ? `
-                        <div class="image-preview-wrapper" onclick="window.open('${e.paper_image_url}')" title="시험지 원본 사진 보기">
-                            <img src="${e.paper_image_url}" alt="시험지 사진">
+                        <div class="image-preview-wrapper" onclick="openImageLightbox('${escapeHtml(e.paper_image_url)}', '${escapeHtml(e.exam_title)} 시험지')" title="시험지 원본 사진 보기">
+                            <img src="${e.paper_image_url}" alt="시험지 사진" loading="lazy">
+                            <div class="image-zoom-overlay">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                <span>탭하여 확대</span>
+                            </div>
                         </div>
                     ` : ''}
                 </div>
@@ -1998,6 +2070,59 @@ async function handleSendFeedback() {
         setButtonLoading(btn, false);
     }
 }
+
+// 🖼️ 풀이 사진 첨부 UX 헬퍼 함수
+window.handleAnswerFileChange = function(qId, input) {
+    const previewContainer = document.getElementById(`ansImgPreview-${qId}`);
+    const nameSpan = document.getElementById(`ansImgName-${qId}`);
+    if (!previewContainer || !input.files || input.files.length === 0) {
+        if (previewContainer) previewContainer.classList.add('hidden');
+        return;
+    }
+    const file = input.files[0];
+    if (nameSpan) nameSpan.textContent = file.name;
+    previewContainer.classList.remove('hidden');
+};
+
+window.clearAnswerFile = function(qId) {
+    const input = document.getElementById(`ansImg-${qId}`);
+    const previewContainer = document.getElementById(`ansImgPreview-${qId}`);
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.classList.add('hidden');
+};
+
+// 🖼️ 전용 이미지 전체화면 라이트박스 뷰어 함수 (Tap to Zoom & Inspect)
+window.openImageLightbox = function(imageUrl, title = '사진 원본') {
+    const modal = document.getElementById('imageLightboxModal');
+    const img = document.getElementById('lightboxImage');
+    const caption = document.getElementById('lightboxTitle');
+    if (!modal || !img) return;
+
+    img.src = imageUrl;
+    if (caption) caption.textContent = title;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeImageLightbox = function(e) {
+    if (e && e.target && e.target.id === 'lightboxImage') return;
+    const modal = document.getElementById('imageLightboxModal');
+    const img = document.getElementById('lightboxImage');
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    if (img) img.src = '';
+    document.body.style.overflow = '';
+};
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('imageLightboxModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            window.closeImageLightbox();
+        }
+    }
+});
 
 window.submitAnswer = async function(questionId, triggerBtn) {
     const text = document.getElementById(`ansText-${questionId}`)?.value.trim();
@@ -2179,8 +2304,12 @@ async function loadMyExams() {
                         <span class="badge badge-score">${e.score}점</span>
                     </div>
                     ${e.paper_image_url ? `
-                        <div class="image-preview-wrapper" style="margin-top:8px;" onclick="window.open('${e.paper_image_url}')">
-                            <img src="${e.paper_image_url}" alt="시험지 사진">
+                        <div class="image-preview-wrapper" style="margin-top:8px;" onclick="openImageLightbox('${escapeHtml(e.paper_image_url)}', '${escapeHtml(e.exam_title)} 시험지')" title="시험지 원본 사진 보기">
+                            <img src="${e.paper_image_url}" alt="시험지 사진" loading="lazy">
+                            <div class="image-zoom-overlay">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                <span>탭하여 확대</span>
+                            </div>
                         </div>
                     ` : ''}
                 </div>
@@ -2238,8 +2367,12 @@ async function loadMyQuestions() {
                     </div>
 
                     ${q.question_image_url ? `
-                        <div class="image-preview-wrapper" onclick="window.open('${q.question_image_url}')">
-                            <img src="${q.question_image_url}" alt="문제 사진">
+                        <div class="image-preview-wrapper" onclick="openImageLightbox('${escapeHtml(q.question_image_url)}', '문제 사진')" title="탭하여 원본 사진 보기">
+                            <img src="${q.question_image_url}" alt="문제 사진" loading="lazy">
+                            <div class="image-zoom-overlay">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                <span>탭하여 확대</span>
+                            </div>
                         </div>
                     ` : ''}
 
@@ -2248,8 +2381,12 @@ async function loadMyQuestions() {
                             <div class="answer-box-title" style="margin-bottom:4px;">선생님 풀이 해설</div>
                             <p class="answer-box-content">${escapeHtml(q.answer_text || '')}</p>
                             ${q.answer_image_url ? `
-                                <div class="image-preview-wrapper" style="margin-top:8px;" onclick="window.open('${q.answer_image_url}')">
-                                    <img src="${q.answer_image_url}" alt="풀이 사진">
+                                <div class="image-preview-wrapper" style="margin-top:8px;" onclick="openImageLightbox('${escapeHtml(q.answer_image_url)}', '선생님 풀이 사진')" title="탭하여 풀이 사진 보기">
+                                    <img src="${q.answer_image_url}" alt="풀이 사진" loading="lazy">
+                                    <div class="image-zoom-overlay">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                        <span>탭하여 확대</span>
+                                    </div>
                                 </div>
                             ` : ''}
                         ` : `

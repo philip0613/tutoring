@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="과외노트">
-    <link rel="stylesheet" href="style.css?v=20261019_1742">
+    <link rel="stylesheet" href="style.css?v=20261019_1800">
 </head>
 <body>
     <!-- 실시간 인앱 토스트 알림 컨테이너 -->
@@ -354,41 +354,42 @@
 
             <!-- [선생님 탭 3] 학생 질문 관리 및 풀이 공간 -->
             <div id="teacherQnaTab" class="hidden">
-                <div class="card">
-                    <div class="section-header-inline">
+                <div class="qna-feed-header-wrapper">
+                    <div class="qna-header-row">
                         <div>
-                            <h3 class="section-title">학생 질문 관리 & 풀이</h3>
-                            <span class="section-desc">모든 학생이 등록한 질문을 실시간으로 확인하고 풀이를 작성합니다.</span>
+                            <div class="qna-header-title-wrap">
+                                <h2 class="qna-page-title">질문 & 풀이 피드</h2>
+                                <span id="qnaLiveBadge" class="qna-live-pill hidden"></span>
+                            </div>
+                            <p class="qna-page-subtitle">학생들이 등록한 질문을 실시간으로 확인하고 풀이를 작성합니다.</p>
                         </div>
-                        <button class="outline-btn-sm" onclick="loadAllTeacherQuestions(true)" title="질문 목록 새로고침">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <button class="qna-reload-btn" onclick="loadAllTeacherQuestions(true)" title="질문 목록 새로고침" aria-label="질문 새로고침">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
                             </svg>
-                            <span>새로고침</span>
+                            <span class="hide-mobile">새로고침</span>
                         </button>
                     </div>
 
-                    <!-- 🔘 질문 상태 분리 세그먼트 필터 (미처리 질문 / 답변 완료 질문 / 전체) -->
-                    <div class="qna-filter-bar mt-16">
+                    <!-- 🔘 질문 상태 분리 세그먼트 필터 (답변 대기 / 답변 완료 / 전체) -->
+                    <div class="qna-filter-bar">
                         <button class="qna-filter-btn active" id="filterUnansweredBtn" data-filter="unanswered" onclick="setTeacherQnaFilter('unanswered')">
-                            <span class="dot-status dot-waiting"></span>
-                            <span>답변 대기 (미처리)</span>
+                            <span>답변 대기</span>
                             <span id="badgeUnansweredCount" class="tab-count-badge danger-badge">0</span>
                         </button>
                         <button class="qna-filter-btn" id="filterAnsweredBtn" data-filter="answered" onclick="setTeacherQnaFilter('answered')">
-                            <span class="dot-status dot-answered"></span>
                             <span>답변 완료</span>
                             <span id="badgeAnsweredCount" class="tab-count-badge success-badge">0</span>
                         </button>
                         <button class="qna-filter-btn" id="filterAllBtn" data-filter="all" onclick="setTeacherQnaFilter('all')">
-                            <span>전체 보기</span>
+                            <span>전체</span>
                             <span id="badgeAllCount" class="tab-count-badge">0</span>
                         </button>
                     </div>
-
-                    <!-- 질문 리스트 영역 -->
-                    <div id="teacherAllQuestionsList" class="feed-list mt-16"></div>
                 </div>
+
+                <!-- 질문 리스트 영역 -->
+                <div id="teacherAllQuestionsList" class="qna-feed-list"></div>
             </div>
         </section>
 
@@ -838,6 +839,23 @@
         </div>
     </nav>
 
-    <script src="script.js?v=20261019_1742"></script>
+    <!-- 🖼️ 전용 이미지 전체화면 라이트박스 모달 (Tap to Zoom & Inspect) -->
+    <div id="imageLightboxModal" class="image-lightbox-modal hidden" onclick="closeImageLightbox(event)">
+        <div class="lightbox-top-bar">
+            <span id="lightboxTitle" class="lightbox-caption">문제 사진 원본</span>
+            <button class="lightbox-close-btn" onclick="closeImageLightbox(event)" aria-label="닫기">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="lightbox-body" onclick="event.stopPropagation()">
+            <img id="lightboxImage" src="" alt="확대 사진" class="lightbox-img">
+        </div>
+        <div class="lightbox-bottom-hint">화면 아무 곳이나 탭하면 닫힙니다</div>
+    </div>
+
+    <script src="script.js?v=20261019_1800"></script>
 </body>
 </html>
