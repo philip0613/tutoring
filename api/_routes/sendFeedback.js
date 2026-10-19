@@ -1,6 +1,7 @@
 // api/sendFeedback.js
 // 선생님 과외 일지/피드백 등록 API (JWT 인증, 과목 연결, 학생 알림 발송)
 import { authenticate, supabaseAdminFetch } from './_auth.js';
+import { sendWebPush } from './_pushSender.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
@@ -29,15 +30,26 @@ export default async function handler(req, res) {
         });
 
         // 학생에게 알림 발송
+        const notifTitle = '오늘의 과외 일지(피드백)가 도착했습니다 📝';
+        const notifBody = feedback_text.length > 40 ? feedback_text.substring(0, 40) + '...' : feedback_text;
+        const notifLink = '#feedback';
+
         await supabaseAdminFetch('/rest/v1/notifications', {
             method: 'POST',
             headers: { 'Prefer': 'return=minimal' },
             body: JSON.stringify({
                 user_id: student_id,
-                title: '오늘의 과외 일지(피드백)가 도착했습니다 📝',
-                body: feedback_text.length > 40 ? feedback_text.substring(0, 40) + '...' : feedback_text,
-                link: '#feedback'
+                title: notifTitle,
+                body: notifBody,
+                link: notifLink
             })
+        }).catch(() => {});
+
+        // 🔔 학생 기기로 백그라운드 웹 푸시 발송
+        await sendWebPush(student_id, {
+            title: notifTitle,
+            body: notifBody,
+            link: notifLink
         }).catch(() => {});
 
         return res.status(200).json({ message: '피드백이 성공적으로 등록되었습니다.', data: result[0] });

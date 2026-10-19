@@ -1,6 +1,7 @@
 // api/push.js
 // 웹 푸시(Web Push) 구독 등록 및 알림 센터 API
 import { authenticate, supabaseAdminFetch } from './_auth.js';
+import { VAPID_PUBLIC_KEY } from './_pushSender.js';
 
 export default async function handler(req, res) {
     try {
@@ -12,8 +13,7 @@ export default async function handler(req, res) {
 
             // (1) VAPID 공개키 반환
             if (action === 'vapid_public_key') {
-                const publicKey = process.env.VAPID_PUBLIC_KEY || '';
-                return res.status(200).json({ publicKey });
+                return res.status(200).json({ publicKey: VAPID_PUBLIC_KEY });
             }
 
             // (2) 사용자의 최근 알림 목록 조회

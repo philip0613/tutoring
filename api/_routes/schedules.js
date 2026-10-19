@@ -1,6 +1,7 @@
 // api/_routes/schedules.js
 // 수업 캘린더 (일정 등록, 조회, 수정, 삭제) API 및 학생 알림 발송
 import { authenticate, supabaseAdminFetch } from './_auth.js';
+import { sendWebPush } from './_pushSender.js';
 
 export default async function handler(req, res) {
     try {
@@ -92,16 +93,29 @@ export default async function handler(req, res) {
                 const dateObj = new Date(start_time);
                 const dateText = `${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일 ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
+                const notifTitle = '📅 새로운 수업 일정이 등록되었습니다!';
+                const notifBody = `[${subjectName}] ${title.trim()} (${dateText})`;
+                const notifLink = '#studentCalendarTab';
+
                 for (const sId of notifyStudentIds) {
                     await supabaseAdminFetch('/rest/v1/notifications', {
                         method: 'POST',
                         headers: { 'Prefer': 'return=minimal' },
                         body: JSON.stringify({
                             user_id: sId,
-                            title: `📅 새로운 수업 일정이 등록되었습니다!`,
-                            body: `[${subjectName}] ${title.trim()} (${dateText})`,
-                            link: '#studentCalendarTab'
+                            title: notifTitle,
+                            body: notifBody,
+                            link: notifLink
                         })
+                    }).catch(() => {});
+                }
+
+                // 🔔 학생 기기들로 백그라운드 웹 푸시 발송
+                if (notifyStudentIds.length > 0) {
+                    await sendWebPush(notifyStudentIds, {
+                        title: notifTitle,
+                        body: notifBody,
+                        link: notifLink
                     }).catch(() => {});
                 }
             } catch (notifyErr) {

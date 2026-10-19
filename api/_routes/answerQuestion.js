@@ -1,6 +1,7 @@
 // api/answerQuestion.js
 // 선생님 답변 등록 API (JWT 인증, 학생에게 알림 발송)
 import { authenticate, getSupabaseConfig, supabaseAdminFetch } from './_auth.js';
+import { sendWebPush } from './_pushSender.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
@@ -56,15 +57,26 @@ export default async function handler(req, res) {
 
         // 학생에게 알림 발송
         if (originalQuestion && originalQuestion.student_id) {
+            const notifTitle = '선생님의 풀이 답변이 등록되었습니다! 💡';
+            const notifBody = targetText.length > 40 ? targetText.substring(0, 40) + '...' : targetText;
+            const notifLink = `#question-${targetId}`;
+
             await supabaseAdminFetch('/rest/v1/notifications', {
                 method: 'POST',
                 headers: { 'Prefer': 'return=minimal' },
                 body: JSON.stringify({
                     user_id: originalQuestion.student_id,
-                    title: `선생님의 풀이 답변이 등록되었습니다! 💡`,
-                    body: targetText.length > 40 ? targetText.substring(0, 40) + '...' : targetText,
-                    link: `#question-${targetId}`
+                    title: notifTitle,
+                    body: notifBody,
+                    link: notifLink
                 })
+            }).catch(() => {});
+
+            // 🔔 학생 기기로 백그라운드 웹 푸시 발송
+            await sendWebPush(originalQuestion.student_id, {
+                title: notifTitle,
+                body: notifBody,
+                link: notifLink
             }).catch(() => {});
         }
 

@@ -1,6 +1,7 @@
 // api/uploadExam.js
 // 선생님 시험 성적 및 시험지 업로드 API (JWT 인증, 과목 연결, 학생 알림 발송)
 import { authenticate, getSupabaseConfig, supabaseAdminFetch } from './_auth.js';
+import { sendWebPush } from './_pushSender.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST만 가능합니다.' });
@@ -54,15 +55,26 @@ export default async function handler(req, res) {
         });
 
         // 학생에게 알림 발송
+        const notifTitle = '새로운 시험 성적이 등록되었습니다 📊';
+        const notifBody = `${targetTitle}: ${score}점`;
+        const notifLink = '#exam';
+
         await supabaseAdminFetch('/rest/v1/notifications', {
             method: 'POST',
             headers: { 'Prefer': 'return=minimal' },
             body: JSON.stringify({
                 user_id: targetStudentId,
-                title: `새로운 시험 성적이 등록되었습니다 📊`,
-                body: `${targetTitle}: ${score}점`,
-                link: '#exam'
+                title: notifTitle,
+                body: notifBody,
+                link: notifLink
             })
+        }).catch(() => {});
+
+        // 🔔 학생 기기로 백그라운드 웹 푸시 발송
+        await sendWebPush(targetStudentId, {
+            title: notifTitle,
+            body: notifBody,
+            link: notifLink
         }).catch(() => {});
 
         return res.status(200).json({ message: '시험 점수 및 사진 등록 성공!', data: dbRes[0] });

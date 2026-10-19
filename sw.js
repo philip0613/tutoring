@@ -1,7 +1,7 @@
 // sw.js - Web Push Notification Service Worker
 
 self.addEventListener('push', function(event) {
-    let data = { title: '스마트 과외 알림', body: '새로운 알림이 도착했습니다.', link: '/' };
+    let data = { title: '과외노트 알림', body: '새로운 알림이 도착했습니다.', link: '/' };
 
     if (event.data) {
         try {
@@ -13,6 +13,8 @@ self.addEventListener('push', function(event) {
 
     const options = {
         body: data.body,
+        icon: '/icon.svg',
+        badge: '/icon.svg',
         vibrate: [100, 50, 100],
         data: {
             link: data.link || '/'
@@ -33,6 +35,9 @@ self.addEventListener('notificationclick', function(event) {
             for (let i = 0; i < clientList.length; i++) {
                 const client = clientList[i];
                 if (client.url.includes(self.location.origin) && 'focus' in client) {
+                    if (targetUrl && targetUrl !== '/') {
+                        client.navigate(targetUrl);
+                    }
                     return client.focus();
                 }
             }

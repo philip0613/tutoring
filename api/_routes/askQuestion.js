@@ -1,6 +1,5 @@
-// api/askQuestion.js
-// 학생 질문 등록 및 미답변 질문 취소/삭제 API (JWT 인증, 과목 연결, 담당 선생님 알림 발송)
 import { authenticate, getSupabaseConfig, supabaseAdminFetch } from './_auth.js';
+import { sendWebPush } from './_pushSender.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST' && req.method !== 'DELETE') {
@@ -111,15 +110,26 @@ export default async function handler(req, res) {
         }
 
         if (teacherId) {
+            const notifTitle = `새 질문 도착 🙋‍♂️ (${auth.name} 학생)`;
+            const notifBody = targetText.length > 40 ? targetText.substring(0, 40) + '...' : targetText;
+            const notifLink = `#question-${inserted[0]?.id || ''}`;
+
             await supabaseAdminFetch('/rest/v1/notifications', {
                 method: 'POST',
                 headers: { 'Prefer': 'return=minimal' },
                 body: JSON.stringify({
                     user_id: teacherId,
-                    title: `새 질문 도착 🙋‍♂️ (${auth.name} 학생)`,
-                    body: targetText.length > 40 ? targetText.substring(0, 40) + '...' : targetText,
-                    link: `#question-${inserted[0]?.id || ''}`
+                    title: notifTitle,
+                    body: notifBody,
+                    link: notifLink
                 })
+            }).catch(() => {});
+
+            // 🔔 백그라운드 웹 푸시 발송 (웹을 꺼두어도 기기 잠금화면/배너로 알림)
+            await sendWebPush(teacherId, {
+                title: notifTitle,
+                body: notifBody,
+                link: notifLink
             }).catch(() => {});
         }
 
