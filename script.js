@@ -476,10 +476,11 @@ function setupTabs() {
                 btn.classList.add('active');
 
                 const targetId = btn.getAttribute('data-target');
-                const parent = bar.parentElement;
                 
-                parent.querySelectorAll('[id$="Tab"]').forEach(tab => {
-                    tab.classList.add('hidden');
+                // 해당 탭 바가 관리하는 메인 탭들만 숨김 처리
+                bar.querySelectorAll('.tab-btn').forEach(b => {
+                    const tid = b.getAttribute('data-target');
+                    if (tid) document.getElementById(tid)?.classList.add('hidden');
                 });
                 
                 const targetTab = document.getElementById(targetId);
@@ -524,10 +525,11 @@ function setupSubTabs() {
                 btn.classList.add('active');
 
                 const targetId = btn.getAttribute('data-subtarget');
-                const parent = bar.parentElement;
 
-                parent.querySelectorAll('[id^="student"][id$="Tab"]').forEach(tab => {
-                    tab.classList.add('hidden');
+                // 해당 서브 탭 바가 관리하는 서브 탭들만 숨김 처리
+                bar.querySelectorAll('.sub-tab-btn').forEach(b => {
+                    const tid = b.getAttribute('data-subtarget');
+                    if (tid) document.getElementById(tid)?.classList.add('hidden');
                 });
 
                 const targetTab = document.getElementById(targetId);
@@ -1149,6 +1151,16 @@ window.selectStudent = function(studentId, studentName) {
     currentStudentId = studentId;
     document.getElementById('manageStudentTitle').textContent = `${studentName} 학생 관리`;
     document.getElementById('studentManagePanel').classList.remove('hidden');
+
+    // 질문 관리 서브탭을 기본 활성 상태로 초기화 및 표시
+    const subTabBar = document.querySelector('#studentManagePanel .sub-tab-bar');
+    if (subTabBar) {
+        subTabBar.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+        subTabBar.querySelector('.sub-tab-btn[data-subtarget="studentQuestionsTab"]')?.classList.add('active');
+    }
+    document.getElementById('studentQuestionsTab')?.classList.remove('hidden');
+    document.getElementById('studentExamsTab')?.classList.add('hidden');
+    document.getElementById('studentFeedbacksTab')?.classList.add('hidden');
 
     loadStudents();
     loadStudentDetail(studentId);
