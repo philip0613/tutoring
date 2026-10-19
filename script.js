@@ -8,6 +8,9 @@ let currentStudentId = null;     // 관리 중인 학생 ID
 let currentSubjectFilter = null; // 과목 필터 (null: 전체)
 let mySubjects = [];             // 과목 목록
 let allStudentsCache = [];       // 전체 학생 캐시
+let tokenRefreshTimer = null;    // 로그인 세션 자동 연장 타이머
+let isRefreshingToken = false;   // 토큰 갱신 중복 방지 플래그
+let refreshPromise = null;       // 토큰 갱신 동시 요청 제어 프로미스
 
 // 캘린더 상태
 let calendarYear = new Date().getFullYear();
@@ -31,6 +34,14 @@ const ICONS = {
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     initServiceWorker();
+
+    // 로그인 유지 체크박스 기본값 복원 (저장된 설정 없으면 기본 true)
+    const rememberMeBox = document.getElementById('rememberMeCheckbox');
+    if (rememberMeBox) {
+        const savedPref = localStorage.getItem('tutoring_remember_me');
+        rememberMeBox.checked = (savedPref === null || savedPref === 'true');
+    }
+
     checkSession();
 
     // 1. 로그인 / 로그아웃
@@ -130,8 +141,48 @@ function setButtonLoading(btn, isLoading, loadingText = '처리 중...') {
 }
 
 // ==========================================
-// 🔐 JWT 인증 래퍼 Fetch
+// 🔐 JWT 인증 및 로그인 세션 자동 연장 로직
 // ==========================================
+async function tryRefreshToken() {
+    if (!currentUser || !currentUser.refreshToken) return null;
+
+    try {
+        const res = await fetch('/api/refreshToken', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: currentUser.refreshToken })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '토큰 갱신 실패');
+
+        currentUser.token = data.token;
+        if (data.refreshToken) currentUser.refreshToken = data.refreshToken;
+        if (data.expiresAt) currentUser.expiresAt = data.expiresAt;
+        if (data.user) currentUser.user = data.user;
+        if (data.role) currentUser.role = data.role;
+        if (data.name) currentUser.name = data.name;
+
+        // 저장소에 갱신된 정보 동기화
+        const storage = currentUser.rememberMe ? localStorage : sessionStorage;
+        storage.setItem('tutoring_user_v2', JSON.stringify(currentUser));
+        return data.token;
+    } catch (err) {
+        console.warn('Silent token refresh warning:', err);
+        return null;
+    }
+}
+
+function startTokenRefreshTimer() {
+    if (tokenRefreshTimer) clearInterval(tokenRefreshTimer);
+    // 로그인 유지(rememberMe)가 켜져 있고 refreshToken이 있는 경우 40분마다 백그라운드에서 자동 연장
+    if (currentUser && currentUser.rememberMe && currentUser.refreshToken) {
+        tokenRefreshTimer = setInterval(() => {
+            tryRefreshToken();
+        }, 40 * 60 * 1000);
+    }
+}
+
 async function authFetch(url, options = {}) {
     const headers = {
         'Content-Type': 'application/json',
@@ -142,12 +193,33 @@ async function authFetch(url, options = {}) {
         headers['Authorization'] = `Bearer ${currentUser.token}`;
     }
 
-    const res = await fetch(url, {
+    let res = await fetch(url, {
         ...options,
         headers
     });
 
+    // 401 Unauthorized 발생 시: 토큰 갱신 가능한 경우 백그라운드에서 자동 갱신 후 1회 재시도
     if (res.status === 401) {
+        if (currentUser && currentUser.refreshToken) {
+            if (!isRefreshingToken) {
+                isRefreshingToken = true;
+                refreshPromise = tryRefreshToken().finally(() => {
+                    isRefreshingToken = false;
+                });
+            }
+            const newToken = await refreshPromise;
+            if (newToken) {
+                const retryHeaders = {
+                    ...headers,
+                    'Authorization': `Bearer ${newToken}`
+                };
+                return fetch(url, {
+                    ...options,
+                    headers: retryHeaders
+                });
+            }
+        }
+
         alert('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
         handleLogout();
         throw new Error('Unauthorized');
@@ -647,11 +719,25 @@ function openProfileModal() {
 // ==========================================
 // 🔑 인증 및 세션 관리
 // ==========================================
-function checkSession() {
+async function checkSession() {
     const saved = localStorage.getItem('tutoring_user_v2') || sessionStorage.getItem('tutoring_user_v2');
     if (saved) {
         try {
             currentUser = JSON.parse(saved);
+
+            // 로그인 유지(rememberMe) 유저인 경우 토큰 만료 여부 확인 및 자동 갱신
+            if (currentUser && currentUser.rememberMe && currentUser.refreshToken) {
+                const nowSec = Math.floor(Date.now() / 1000);
+                if (!currentUser.expiresAt || (currentUser.expiresAt - nowSec < 300)) {
+                    const refreshedToken = await tryRefreshToken();
+                    if (!refreshedToken && (!currentUser.token || (currentUser.expiresAt && currentUser.expiresAt - nowSec <= 0))) {
+                        handleLogout();
+                        return;
+                    }
+                }
+                startTokenRefreshTimer();
+            }
+
             updateUIForLoggedInUser();
         } catch (e) {
             handleLogout();
@@ -662,6 +748,7 @@ function checkSession() {
 async function handleLogin() {
     const id = document.getElementById('idInput').value.trim();
     const password = document.getElementById('passwordInput').value.trim();
+    const rememberMe = document.getElementById('rememberMeCheckbox')?.checked ?? true;
     const btn = document.getElementById('loginBtn');
 
     if (!id || !password) {
@@ -681,13 +768,26 @@ async function handleLogin() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '로그인 실패');
 
-        currentUser = data;
-        localStorage.setItem('tutoring_user_v2', JSON.stringify(currentUser));
+        currentUser = {
+            ...data,
+            rememberMe
+        };
+
+        if (rememberMe) {
+            localStorage.setItem('tutoring_user_v2', JSON.stringify(currentUser));
+            localStorage.setItem('tutoring_remember_me', 'true');
+            sessionStorage.removeItem('tutoring_user_v2');
+        } else {
+            sessionStorage.setItem('tutoring_user_v2', JSON.stringify(currentUser));
+            localStorage.setItem('tutoring_remember_me', 'false');
+            localStorage.removeItem('tutoring_user_v2');
+        }
         
         document.getElementById('idInput').value = '';
         document.getElementById('passwordInput').value = '';
 
         updateUIForLoggedInUser();
+        startTokenRefreshTimer();
     } catch (err) {
         alert(err.message);
     } finally {
@@ -700,6 +800,7 @@ function handleLogout() {
     currentStudentId = null;
     currentSubjectFilter = null;
     if (notificationPollTimer) clearInterval(notificationPollTimer);
+    if (tokenRefreshTimer) clearInterval(tokenRefreshTimer);
     knownUnreadIds.clear();
     isFirstNotificationLoad = true;
     localStorage.removeItem('tutoring_user_v2');

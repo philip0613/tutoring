@@ -17,6 +17,7 @@ import subjects from './_routes/subjects.js';
 import enrollments from './_routes/enrollments.js';
 import schedules from './_routes/schedules.js';
 import push from './_routes/push.js';
+import refreshToken from './_routes/refreshToken.js';
 
 const routes = {
     login,
@@ -34,7 +35,8 @@ const routes = {
     subjects,
     enrollments,
     schedules,
-    push
+    push,
+    refreshToken
 };
 
 export default async function handler(req, res) {
