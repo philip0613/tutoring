@@ -1992,6 +1992,50 @@ input[type="file"] {
     border-color: var(--danger-border);
 }
 
+/* 프로필 모달 내 알림 센터 섹션 */
+.modal-notification-section {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.modal-notif-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-notif-list {
+    max-height: 190px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.modal-notif-item {
+    padding: 9px 12px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xs);
+    font-size: 0.84rem;
+    transition: all 0.15s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.modal-notif-item:hover {
+    background: var(--primary-light);
+    border-color: var(--primary-border);
+}
+
 /* 모바일 화면(768px 이하)에서 알림 센터 드롭다운 위치 보정 (독 바로 위에 플로팅) */
 @media (max-width: 768px) {
     .notification-dropdown {

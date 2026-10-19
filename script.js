@@ -58,7 +58,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('enablePushBtn')?.addEventListener('click', requestPushPermission);
     document.getElementById('notificationBellBtn')?.addEventListener('click', toggleNotificationDropdown);
     document.getElementById('markAllReadBtn')?.addEventListener('click', markAllNotificationsAsRead);
+    document.getElementById('modalMarkAllReadBtn')?.addEventListener('click', markAllNotificationsAsRead);
     syncPushNotificationState();
+
+    // 외부 링크/푸시 알림 클릭으로 해시 진입 시 자동 탭 이동 및 스크롤
+    if (window.location.hash) {
+        setTimeout(() => {
+            navigateToLink(window.location.hash);
+        }, 600);
+    }
+    window.addEventListener('hashchange', () => {
+        if (window.location.hash) {
+            navigateToLink(window.location.hash);
+        }
+    });
 
     // 4. 선생님 대시보드 이벤트
     document.getElementById('createStudentBtn')?.addEventListener('click', handleCreateStudent);
@@ -471,33 +484,119 @@ async function loadNotifications() {
             }
         });
 
+        const modalContainer = document.getElementById('modalNotificationList');
+        const modalBadge = document.getElementById('modalNotifCountBadge');
+
+        if (modalBadge) {
+            if (unreadCount > 0) {
+                modalBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                modalBadge.classList.remove('hidden');
+            } else {
+                modalBadge.classList.add('hidden');
+            }
+        }
+
         if (list.length === 0) {
             container.innerHTML = '<div class="empty-hint">새로운 알림이 없습니다.</div>';
+            if (modalContainer) modalContainer.innerHTML = '<div class="empty-hint" style="padding:14px 0; font-size:0.84rem;">새로운 알림이 없습니다.</div>';
             return;
         }
 
-        container.innerHTML = list.map(item => `
-            <div class="notification-item unread" style="display:flex; justify-content:space-between; align-items:flex-start;">
-                <div style="flex: 1; cursor: pointer;" onclick="handleNotificationClick(${item.id})">
-                    <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(item.title)}</div>
-                    <div style="color: var(--text-secondary); font-size: 0.82rem; margin-top: 2px;">${escapeHtml(item.body)}</div>
+        const itemsHtml = list.map(item => `
+            <div class="notification-item unread" style="display:flex; justify-content:space-between; align-items:flex-start; padding: 10px 12px; margin-bottom: 6px;">
+                <div style="flex: 1; cursor: pointer;" onclick="handleNotificationClick(${item.id}, '${escapeHtml(item.link || '')}')">
+                    <div style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(item.title)}</div>
+                    <div style="color: var(--text-secondary); font-size: 0.82rem; margin-top: 2px; line-height: 1.35;">${escapeHtml(item.body)}</div>
                     <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">${new Date(item.created_at).toLocaleString()}</div>
                 </div>
                 <button class="danger-link-btn" style="padding: 2px 6px; font-size: 0.9rem; line-height: 1;" onclick="handleNotificationClick(${item.id})" title="알림 확인 및 삭제">✕</button>
             </div>
         `).join('');
+
+        container.innerHTML = itemsHtml;
+        if (modalContainer) modalContainer.innerHTML = itemsHtml;
     } catch (err) {
         console.error('알림 로드 실패:', err);
     }
 }
 
-window.handleNotificationClick = async function(id) {
-    await authFetch('/api/push', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'mark_read', id })
-    });
+window.handleNotificationClick = async function(id, link) {
+    try {
+        await authFetch('/api/push', {
+            method: 'POST',
+            body: JSON.stringify({ action: 'mark_read', id })
+        });
+    } catch (e) {}
+
+    // 모달 및 드롭다운 닫기
+    closeModal('accountProfileModal');
+    document.getElementById('notificationDropdown')?.classList.add('hidden');
+
+    // 해당 콘텐츠 링크로 즉시 이동
+    if (link) {
+        navigateToLink(link);
+    }
+
     loadNotifications();
 };
+
+// 🧭 알림 링크(해시 및 탭) 자동 네비게이션 함수
+function navigateToLink(link) {
+    if (!link || !currentUser) return;
+    const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+
+    if (link.includes('CalendarTab') || link.includes('calendar')) {
+        if (isTeacher) {
+            document.querySelector('#teacherDashboard .tab-btn[data-target="teacherCalendarTab"]')?.click();
+            const calBtn = document.getElementById('dockTeacherCalendar');
+            if (calBtn) moveDockIndicator('teacherBottomDock', calBtn);
+        } else {
+            document.querySelector('#studentDashboard .tab-btn[data-target="studentCalendarTab"]')?.click();
+            const calBtn = document.getElementById('dockStudentCalendar');
+            if (calBtn) moveDockIndicator('studentBottomDock', calBtn);
+        }
+    } else if (link.includes('question-')) {
+        const questionId = link.split('question-')[1];
+        if (isTeacher) {
+            document.querySelector('#teacherDashboard .tab-btn[data-target="teacherClassTab"]')?.click();
+            document.querySelector('#teacherClassTab .sub-tab-btn[data-subtarget="studentQuestionsTab"]')?.click();
+            const qBtn = document.getElementById('dockTeacherQuestions');
+            if (qBtn) moveDockIndicator('teacherBottomDock', qBtn);
+        } else {
+            document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
+            const homeBtn = document.getElementById('dockStudentHome');
+            if (homeBtn) moveDockIndicator('studentBottomDock', homeBtn);
+        }
+
+        setTimeout(() => {
+            const el = document.getElementById(`question-${questionId}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.4)';
+                el.style.transition = 'box-shadow 0.4s ease';
+                setTimeout(() => { el.style.boxShadow = ''; }, 2500);
+            }
+        }, 400);
+    } else if (link.includes('feedback')) {
+        if (!isTeacher) {
+            document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
+            const homeBtn = document.getElementById('dockStudentHome');
+            if (homeBtn) moveDockIndicator('studentBottomDock', homeBtn);
+            setTimeout(() => {
+                document.getElementById('myFeedbackList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        }
+    } else if (link.includes('exam')) {
+        if (!isTeacher) {
+            document.querySelector('#studentDashboard .tab-btn[data-target="studentReportTab"]')?.click();
+            const repBtn = document.getElementById('dockStudentReport');
+            if (repBtn) moveDockIndicator('studentBottomDock', repBtn);
+            setTimeout(() => {
+                document.getElementById('myExamList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        }
+    }
+}
 
 async function markAllNotificationsAsRead() {
     await authFetch('/api/push', {

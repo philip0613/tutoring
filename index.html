@@ -611,6 +611,20 @@
                 </div>
             </div>
 
+            <!-- 🔔 최근 알림 센터 섹션 (모바일에서 '알림·계정' 클릭 시 바로 확인) -->
+            <div class="modal-notification-section">
+                <div class="modal-notif-header">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary);">🔔 최근 알림 센터</span>
+                        <span id="modalNotifCountBadge" class="badge badge-waiting hidden" style="font-size:0.72rem; padding: 1px 6px;">0</span>
+                    </div>
+                    <button id="modalMarkAllReadBtn" class="text-link-btn danger-text" style="font-size:0.78rem;">모두 지우기</button>
+                </div>
+                <div id="modalNotificationList" class="modal-notif-list">
+                    <div class="empty-hint" style="padding:14px 0; font-size:0.84rem;">새로운 알림이 없습니다.</div>
+                </div>
+            </div>
+
             <div class="profile-actions-list">
                 <button id="modalPushBtn" class="profile-action-btn">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -765,15 +779,15 @@
             </button>
 
             <!-- 5. 내 계정 & 알림 -->
-            <button class="dock-item" id="dockStudentProfile" data-dock="profile" aria-label="내 계정">
+            <button class="dock-item" id="dockStudentProfile" data-dock="profile" aria-label="알림 및 내 계정">
                 <div class="dock-icon-wrapper">
                     <svg class="dock-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                     </svg>
                     <span id="studentNotifBadge" class="dock-badge hidden">0</span>
                 </div>
-                <span class="dock-label">내 계정</span>
+                <span class="dock-label">알림·계정</span>
             </button>
         </div>
     </nav>
