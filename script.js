@@ -14,6 +14,18 @@ let calendarYear = new Date().getFullYear();
 let calendarMonth = new Date().getMonth();
 let currentMonthSchedules = [];
 
+// 정제된 SVG 아이콘 세트 (이모지 남용 배제)
+const ICONS = {
+    check: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="20 6 9 17 4 12"/></svg>`,
+    clock: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    user: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+    book: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
+    calendar: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    edit: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+    trash: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+    bell: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`
+};
+
 // ==========================================
 // 🚀 앱 초기화 및 이벤트 등록
 // ==========================================
@@ -82,7 +94,7 @@ function showSkeleton(containerId, count = 2) {
     for (let i = 0; i < count; i++) {
         html += `
             <div class="skeleton-card">
-                <div class="skeleton-line" style="width: 35%; height: 18px; margin-bottom: 12px;"></div>
+                <div class="skeleton-line" style="width: 35%; height: 16px; margin-bottom: 12px;"></div>
                 <div class="skeleton-line" style="width: 85%;"></div>
                 <div class="skeleton-line" style="width: 60%;"></div>
             </div>
@@ -91,13 +103,13 @@ function showSkeleton(containerId, count = 2) {
     el.innerHTML = html;
 }
 
-function showLoading(containerId, message = '데이터를 불러오는 중입니다...') {
+function showLoading(containerId, message = '불러오는 중입니다...') {
     const el = document.getElementById(containerId);
     if (!el) return;
     el.innerHTML = `
         <div class="loading-box">
             <div class="spinner"></div>
-            <span style="font-size:0.88rem; font-weight:600; color:var(--text-secondary);">${escapeHtml(message)}</span>
+            <span style="font-size:0.86rem; font-weight:500; color:var(--text-muted);">${escapeHtml(message)}</span>
         </div>
     `;
 }
@@ -182,7 +194,7 @@ async function requestPushPermission() {
             });
         }
 
-        alert('🔔 웹 푸시 알림이 성공적으로 활성화되었습니다!');
+        alert('웹 푸시 알림이 활성화되었습니다.');
         document.getElementById('enablePushBtn')?.classList.add('hidden');
     } catch (err) {
         console.error('푸시 구독 실패:', err);
@@ -212,10 +224,12 @@ function showToast(title, body) {
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
     toast.innerHTML = `
-        <div style="font-size: 1.25rem;">🔔</div>
+        <div style="color: #60a5fa; margin-top: 1px; flex-shrink: 0;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
         <div style="flex: 1;">
-            <div style="font-weight: 800; font-size: 0.92rem; margin-bottom: 2px;">${escapeHtml(title)}</div>
-            <div style="font-size: 0.84rem; color: #cbd5e1; line-height: 1.4;">${escapeHtml(body)}</div>
+            <div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; color: #ffffff;">${escapeHtml(title)}</div>
+            <div style="font-size: 0.82rem; color: #94a3b8; line-height: 1.4;">${escapeHtml(body)}</div>
         </div>
     `;
 
@@ -263,9 +277,9 @@ async function loadNotifications() {
 
         // 탭 타이틀 갱신
         if (unreadCount > 0) {
-            document.title = `(${unreadCount}) 📚 스마트 과외 v2.0`;
+            document.title = `(${unreadCount}) 과외노트 v2.0`;
         } else {
-            document.title = '📚 스마트 과외 v2.0';
+            document.title = '과외노트 v2.0';
         }
 
         if (badge) {
@@ -278,18 +292,18 @@ async function loadNotifications() {
         }
 
         if (list.length === 0) {
-            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px 0; font-size: 0.85rem;">새로운 알림이 없습니다.</div>';
+            container.innerHTML = '<div class="empty-hint">새로운 알림이 없습니다.</div>';
             return;
         }
 
         container.innerHTML = list.map(item => `
             <div class="notification-item unread" style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <div style="flex: 1; cursor: pointer;" onclick="handleNotificationClick(${item.id})">
-                    <div style="font-weight: 700; color: var(--text-primary);">${escapeHtml(item.title)}</div>
-                    <div style="color: var(--text-secondary); margin-top: 2px;">${escapeHtml(item.body)}</div>
+                    <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(item.title)}</div>
+                    <div style="color: var(--text-secondary); font-size: 0.82rem; margin-top: 2px;">${escapeHtml(item.body)}</div>
                     <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">${new Date(item.created_at).toLocaleString()}</div>
                 </div>
-                <button class="danger-link-btn" style="padding: 2px 6px; font-size: 1rem; line-height: 1;" onclick="handleNotificationClick(${item.id})" title="알림 확인 및 삭제">✕</button>
+                <button class="danger-link-btn" style="padding: 2px 6px; font-size: 0.9rem; line-height: 1;" onclick="handleNotificationClick(${item.id})" title="알림 확인 및 삭제">✕</button>
             </div>
         `).join('');
     } catch (err) {
@@ -603,7 +617,7 @@ async function handleCreateSubject() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '과목 개설 실패');
 
-        alert(`'${name}' 과목이 개설되었습니다! 🎉`);
+        alert(`'${name}' 과목이 개설되었습니다.`);
         document.getElementById('modalSubjectName').value = '';
         document.getElementById('modalSubjectDesc').value = '';
         closeModal('addSubjectModal');
@@ -642,16 +656,25 @@ async function loadStudents() {
         if (!list) return;
 
         if (students.length === 0) {
-            list.innerHTML = '<li style="text-align:center; color:var(--text-muted); padding:20px 0;">등록된 학생이 없습니다.</li>';
+            list.innerHTML = '<li style="text-align:center; color:var(--text-muted); padding:24px 0; font-size:0.86rem;">등록된 학생이 없습니다.</li>';
             return;
         }
 
-        list.innerHTML = students.map(s => `
-            <li style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 12px 14px; ${currentStudentId === s.id ? 'border: 2px solid var(--primary); background: var(--primary-light);' : ''}" onclick="selectStudent('${s.id}', '${escapeHtml(s.name)}')">
-                <span style="font-weight: 700; color: var(--text-primary);">👤 ${escapeHtml(s.name)}</span>
-                <span class="small-btn" style="background: var(--primary); color: white; border: none; font-size: 0.8rem; font-weight: 700;">상세보기</span>
-            </li>
-        `).join('');
+        list.innerHTML = students.map(s => {
+            const isSelected = currentStudentId === s.id;
+            const initial = (s.name || '학').trim().charAt(0);
+            return `
+                <li class="student-list-item ${isSelected ? 'selected' : ''}" onclick="selectStudent('${s.id}', '${escapeHtml(s.name)}')">
+                    <div class="student-item-left">
+                        <div class="student-avatar-circle">${escapeHtml(initial)}</div>
+                        <span class="student-name-text">${escapeHtml(s.name)}</span>
+                    </div>
+                    <span class="outline-btn-sm" style="${isSelected ? 'background:var(--primary); color:#ffffff; border-color:var(--primary);' : ''}">
+                        ${isSelected ? '선택됨' : '관리'}
+                    </span>
+                </li>
+            `;
+        }).join('');
 
         const schedStudentSel = document.getElementById('scheduleStudentSelect');
         if (schedStudentSel) {
@@ -668,7 +691,7 @@ async function loadStudents() {
 
 window.selectStudent = function(studentId, studentName) {
     currentStudentId = studentId;
-    document.getElementById('manageStudentTitle').textContent = `👤 ${studentName} 학생 상세 관리`;
+    document.getElementById('manageStudentTitle').textContent = `${studentName} 학생 관리`;
     document.getElementById('studentManagePanel').classList.remove('hidden');
 
     loadStudents();
@@ -746,7 +769,7 @@ async function handleSaveEnrollment() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '수강 등록 실패');
 
-        alert('학생이 과목에 성공적으로 배정되었습니다! 🎓');
+        alert('학생이 과목에 배정되었습니다.');
         closeModal('enrollStudentModal');
         await loadSubjects();
         await loadStudents();
@@ -790,10 +813,10 @@ async function loadAdminQuestions(studentId) {
 
         list.innerHTML = questions.map(q => {
             const hasAnswer = Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''));
-            const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}20; color:${q.subjects.color}; border: 1px solid ${q.subjects.color}40;">📚 ${escapeHtml(q.subjects.name)}</span>` : '';
+            const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}15; color:${q.subjects.color}; border: 1px solid ${q.subjects.color}35;">${escapeHtml(q.subjects.name)}</span>` : '';
             const statusBadge = hasAnswer
-                ? '<span class="badge badge-answered">✅ 답변완료</span>'
-                : '<span class="badge badge-waiting">⏳ 답변대기</span>';
+                ? `<span class="badge badge-answered">${ICONS.check} 답변 완료</span>`
+                : `<span class="badge badge-waiting">${ICONS.clock} 답변 대기</span>`;
 
             return `
                 <div class="feed-card" id="question-${q.id}">
@@ -807,7 +830,7 @@ async function loadAdminQuestions(studentId) {
                         </div>
                     </div>
 
-                    <div class="feed-title" style="margin-top: 4px;">
+                    <div class="feed-title">
                         <span>Q. ${escapeHtml(q.question_text)}</span>
                     </div>
 
@@ -819,24 +842,24 @@ async function loadAdminQuestions(studentId) {
 
                     <div class="answer-box">
                         ${hasAnswer ? `
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="color:var(--primary); font-size:0.9rem;">💡 선생님의 해설</strong>
+                            <div class="answer-box-header">
+                                <span class="answer-box-title">선생님 풀이 해설</span>
                                 <div>
                                     <button class="text-link-btn" onclick="promptEditAnswer(${q.id}, '${escapeHtml(q.answer_text || '')}')">수정</button>
                                     <button class="danger-link-btn" onclick="deleteRecord('Answer', ${q.id})">답변취소</button>
                                 </div>
                             </div>
-                            <p style="margin-top: 6px; font-size:0.95rem; white-space: pre-wrap;">${escapeHtml(q.answer_text || '')}</p>
+                            <p class="answer-box-content">${escapeHtml(q.answer_text || '')}</p>
                             ${q.answer_image_url ? `
                                 <div class="image-preview-wrapper" style="margin-top:8px;" onclick="window.open('${q.answer_image_url}')">
                                     <img src="${q.answer_image_url}" alt="풀이 사진">
                                 </div>
                             ` : ''}
                         ` : `
-                            <div style="font-weight:700; font-size:0.88rem; color:var(--warning); margin-bottom: 6px;">✍️ 풀이 답변 작성하기</div>
+                            <div style="font-weight:600; font-size:0.86rem; color:var(--text-secondary); margin-bottom: 6px;">풀이 작성하기</div>
                             <input type="text" id="ansText-${q.id}" placeholder="상세 풀이 설명을 적어주세요">
                             <input type="file" id="ansImg-${q.id}" accept="image/*">
-                            <button class="primary-btn mt-12" style="padding: 8px 12px; font-size: 0.9rem;" onclick="submitAnswer(${q.id}, this)">답변 등록 완료</button>
+                            <button class="primary-btn-sm mt-12" style="width:100%;" onclick="submitAnswer(${q.id}, this)">답변 등록 완료</button>
                         `}
                     </div>
                 </div>
@@ -865,12 +888,12 @@ async function loadAdminExams(studentId) {
         document.getElementById('adminExamCount').textContent = Array.isArray(exams) ? exams.length : 0;
 
         if (!Array.isArray(exams) || exams.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0;">등록된 시험 결과가 없습니다.</div>';
+            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0; font-size:0.88rem;">등록된 시험 결과가 없습니다.</div>';
             return;
         }
 
         list.innerHTML = exams.map(e => {
-            const subjectBadge = e.subjects ? `<span class="badge" style="background:${e.subjects.color}20; color:${e.subjects.color}; border: 1px solid ${e.subjects.color}40;">📚 ${escapeHtml(e.subjects.name)}</span>` : '';
+            const subjectBadge = e.subjects ? `<span class="badge" style="background:${e.subjects.color}15; color:${e.subjects.color}; border: 1px solid ${e.subjects.color}35;">${escapeHtml(e.subjects.name)}</span>` : '';
             return `
                 <div class="feed-card">
                     <div class="feed-header">
@@ -884,7 +907,7 @@ async function loadAdminExams(studentId) {
                         </div>
                     </div>
 
-                    <div style="font-size:1.05rem; font-weight:800; color:var(--text-primary); margin: 6px 0;">
+                    <div style="font-size:1.02rem; font-weight:700; color:var(--text-primary); margin: 6px 0;">
                         ${escapeHtml(e.exam_title)}
                     </div>
 
@@ -919,18 +942,18 @@ async function loadAdminFeedbacks(studentId) {
         document.getElementById('adminFeedbackCount').textContent = Array.isArray(feedbacks) ? feedbacks.length : 0;
 
         if (!Array.isArray(feedbacks) || feedbacks.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0;">작성된 과외 일지가 없습니다.</div>';
+            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0; font-size:0.88rem;">작성된 과외 일지가 없습니다.</div>';
             return;
         }
 
         list.innerHTML = feedbacks.map(f => {
-            const subjectBadge = f.subjects ? `<span class="badge" style="background:${f.subjects.color}20; color:${f.subjects.color}; border: 1px solid ${f.subjects.color}40;">📚 ${escapeHtml(f.subjects.name)}</span>` : '';
+            const subjectBadge = f.subjects ? `<span class="badge" style="background:${f.subjects.color}15; color:${f.subjects.color}; border: 1px solid ${f.subjects.color}35;">${escapeHtml(f.subjects.name)}</span>` : '';
             return `
-                <div class="feed-card" style="background: #ffffff;">
+                <div class="feed-card">
                     <div class="feed-header">
                         <div style="display:flex; align-items:center; gap:8px;">
                             ${subjectBadge}
-                            <span style="font-size:0.8rem; color:var(--text-muted);">${new Date(f.created_at).toLocaleDateString()}</span>
+                            <span style="font-size:0.78rem; color:var(--text-muted);">${new Date(f.created_at).toLocaleDateString()}</span>
                         </div>
                         <div style="display:flex; gap:4px;">
                             <button class="text-link-btn" onclick="promptEditFeedback(${f.id}, '${escapeHtml(f.feedback_text)}')">수정</button>
@@ -938,11 +961,11 @@ async function loadAdminFeedbacks(studentId) {
                         </div>
                     </div>
 
-                    <div style="font-size:1.05rem; font-weight:800; color:var(--text-primary); margin-bottom: 6px;">
-                        📝 ${escapeHtml(f.feedback_title || '과외 일지')}
+                    <div style="font-size:1.02rem; font-weight:700; color:var(--text-primary); margin-bottom: 6px;">
+                        ${escapeHtml(f.feedback_title || '과외 일지')}
                     </div>
                     
-                    <div style="background: #f8fafc; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.95rem; white-space: pre-wrap; line-height: 1.6;">${escapeHtml(f.feedback_text)}</div>
+                    <div class="feedback-box-content">${escapeHtml(f.feedback_text)}</div>
                 </div>
             `;
         }).join('');
@@ -997,7 +1020,7 @@ async function handleUploadExam() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '시험 등록 실패');
 
-        alert('시험 결과가 성공적으로 등록되었습니다! 📊');
+        alert('시험 결과가 등록되었습니다.');
         document.getElementById('examTitle').value = '';
         document.getElementById('examScore').value = '';
         document.getElementById('examImage').value = '';
@@ -1041,7 +1064,7 @@ async function handleSendFeedback() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '피드백 등록 실패');
 
-        alert('피드백이 전송되었습니다! 💌');
+        alert('피드백이 전송되었습니다.');
         document.getElementById('feedbackTitleAdmin').value = '';
         document.getElementById('feedbackTextAdmin').value = '';
         loadAdminFeedbacks(currentStudentId);
@@ -1084,7 +1107,7 @@ window.submitAnswer = async function(questionId, triggerBtn) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '답변 등록 실패');
 
-        alert('풀이 답변이 등록되었습니다! 💡');
+        alert('답변이 등록되었습니다.');
         loadAdminQuestions(currentStudentId);
     } catch (err) {
         alert(err.message);
@@ -1160,7 +1183,7 @@ window.promptEditAnswer = async function(id, curText) {
 
 async function handleDeleteStudent() {
     if (!currentStudentId) return;
-    if (!confirm('🚨 경고: 이 학생의 계정, 모든 사진, 질문, 시험, 피드백이 영구 삭제됩니다. 계속하시겠습니까?')) return;
+    if (!confirm('경고: 이 학생의 계정, 모든 사진, 질문, 시험, 피드백이 영구 삭제됩니다. 계속하시겠습니까?')) return;
 
     try {
         const res = await authFetch('/api/adminAction', {
@@ -1208,18 +1231,18 @@ async function loadMyExams() {
         const exams = await res.json();
 
         if (!Array.isArray(exams) || exams.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:20px 0;">시험 기록이 없습니다.</div>';
+            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px 0; font-size:0.86rem;">시험 기록이 없습니다.</div>';
             return;
         }
 
         list.innerHTML = exams.map(e => {
-            const subjectBadge = e.subjects ? `<span class="badge" style="background:${e.subjects.color}20; color:${e.subjects.color};">📚 ${escapeHtml(e.subjects.name)}</span>` : '';
+            const subjectBadge = e.subjects ? `<span class="badge" style="background:${e.subjects.color}15; color:${e.subjects.color}; border: 1px solid ${e.subjects.color}35;">${escapeHtml(e.subjects.name)}</span>` : '';
             return `
-                <div class="feed-card" style="padding:12px; margin-bottom:10px;">
+                <div class="feed-card" style="padding:14px; margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
+                        <div style="display:flex; align-items:center; gap:6px;">
                             ${subjectBadge}
-                            <strong style="margin-left:4px;">${escapeHtml(e.exam_title)}</strong>
+                            <span style="font-weight:600; font-size:0.95rem;">${escapeHtml(e.exam_title)}</span>
                         </div>
                         <span class="badge badge-score">${e.score}점</span>
                     </div>
@@ -1251,16 +1274,16 @@ async function loadMyQuestions() {
         const questions = await res.json();
 
         if (!Array.isArray(questions) || questions.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0;">아직 질문한 내역이 없습니다.</div>';
+            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0; font-size:0.88rem;">아직 질문한 내역이 없습니다.</div>';
             return;
         }
 
         list.innerHTML = questions.map(q => {
             const hasAnswer = Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''));
-            const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}20; color:${q.subjects.color};">📚 ${escapeHtml(q.subjects.name)}</span>` : '';
+            const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}15; color:${q.subjects.color}; border: 1px solid ${q.subjects.color}35;">${escapeHtml(q.subjects.name)}</span>` : '';
             const statusBadge = hasAnswer
-                ? '<span class="badge badge-answered">✅ 답변완료</span>'
-                : '<span class="badge badge-waiting">⏳ 풀이중</span>';
+                ? `<span class="badge badge-answered">${ICONS.check} 답변 완료</span>`
+                : `<span class="badge badge-waiting">${ICONS.clock} 풀이 작성 중</span>`;
 
             return `
                 <div class="feed-card" id="question-${q.id}">
@@ -1283,15 +1306,15 @@ async function loadMyQuestions() {
 
                     <div class="answer-box">
                         ${hasAnswer ? `
-                            <strong style="color:var(--primary); font-size:0.9rem;">💡 선생님의 해설:</strong>
-                            <p style="margin-top:4px; font-size:0.95rem; white-space: pre-wrap;">${escapeHtml(q.answer_text || '')}</p>
+                            <div class="answer-box-title" style="margin-bottom:4px;">선생님 풀이 해설</div>
+                            <p class="answer-box-content">${escapeHtml(q.answer_text || '')}</p>
                             ${q.answer_image_url ? `
                                 <div class="image-preview-wrapper" style="margin-top:8px;" onclick="window.open('${q.answer_image_url}')">
                                     <img src="${q.answer_image_url}" alt="풀이 사진">
                                 </div>
                             ` : ''}
                         ` : `
-                            <span style="color:var(--warning); font-weight:700; font-size:0.85rem;">⏳ 선생님이 풀이를 작성하고 있습니다...</span>
+                            <span style="color:var(--warning); font-weight:600; font-size:0.85rem;">선생님이 문제를 확인하고 풀이를 작성 중입니다.</span>
                         `}
                     </div>
                 </div>
@@ -1317,22 +1340,22 @@ async function loadMyFeedbacks() {
         const feedbacks = await res.json();
 
         if (!Array.isArray(feedbacks) || feedbacks.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0;">아직 도착한 과외 일지가 없습니다.</div>';
+            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0; font-size:0.88rem;">아직 도착한 과외 일지가 없습니다.</div>';
             return;
         }
 
         list.innerHTML = feedbacks.map(f => {
-            const subjectBadge = f.subjects ? `<span class="badge" style="background:${f.subjects.color}20; color:${f.subjects.color};">📚 ${escapeHtml(f.subjects.name)}</span>` : '';
+            const subjectBadge = f.subjects ? `<span class="badge" style="background:${f.subjects.color}15; color:${f.subjects.color}; border: 1px solid ${f.subjects.color}35;">${escapeHtml(f.subjects.name)}</span>` : '';
             return `
-                <div class="feed-card" style="background: white;">
+                <div class="feed-card">
                     <div class="feed-header">
                         ${subjectBadge}
-                        <span style="font-size:0.8rem; color:var(--text-muted);">${new Date(f.created_at).toLocaleDateString()}</span>
+                        <span style="font-size:0.78rem; color:var(--text-muted);">${new Date(f.created_at).toLocaleDateString()}</span>
                     </div>
-                    <div style="font-size:1.05rem; font-weight:800; color:var(--text-primary); margin-bottom: 6px;">
-                        📝 ${escapeHtml(f.feedback_title || '과외 일지')}
+                    <div style="font-size:1.02rem; font-weight:700; color:var(--text-primary); margin-bottom: 6px;">
+                        ${escapeHtml(f.feedback_title || '과외 일지')}
                     </div>
-                    <div style="background: #f8fafc; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.95rem; white-space: pre-wrap; line-height: 1.6;">${escapeHtml(f.feedback_text)}</div>
+                    <div class="feedback-box-content">${escapeHtml(f.feedback_text)}</div>
                 </div>
             `;
         }).join('');
@@ -1376,7 +1399,7 @@ async function handleAskQuestion() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '질문 등록 실패');
 
-        alert('질문이 등록되었습니다! 선생님께 전달되었습니다 🙋‍♂️');
+        alert('질문이 등록되었습니다. 선생님께 알림이 전송되었습니다.');
         document.getElementById('questionText').value = '';
         document.getElementById('questionImage').value = '';
         loadMyQuestions();
@@ -1520,11 +1543,11 @@ window.selectCalendarDate = function(dateStr) {
     if (!card || !title || !list) return;
 
     const daySchedules = currentMonthSchedules.filter(s => s.start_time.split('T')[0] === dateStr);
-    title.textContent = `📅 ${dateStr} 수업 일정 (${daySchedules.length}건)`;
+    title.textContent = `${dateStr} 수업 일정 (${daySchedules.length}건)`;
     card.classList.remove('hidden');
 
     if (daySchedules.length === 0) {
-        list.innerHTML = '<li style="text-align:center; color:var(--text-muted); padding:20px 0;">이날에는 예정된 수업이 없습니다.</li>';
+        list.innerHTML = '<li style="text-align:center; color:var(--text-muted); padding:20px 0; font-size:0.88rem;">이날에는 예정된 수업이 없습니다.</li>';
         return;
     }
 
@@ -1532,27 +1555,30 @@ window.selectCalendarDate = function(dateStr) {
         const startTime = new Date(s.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const endTime = new Date(s.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const subjectName = (s.subjects && s.subjects.name) || '과목 미지정';
-        const studentName = s.profiles ? `[${s.profiles.name} 1:1]` : '[과목 공통]';
+        const studentName = s.profiles ? `${s.profiles.name} 1:1` : '과목 공통';
+        const color = (s.subjects && s.subjects.color) || '#2563eb';
+        const isCompleted = s.status === 'completed';
 
         return `
-            <li style="border-left: 4px solid ${(s.subjects && s.subjects.color) || '#4f46e5'};">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div>
-                        <span style="font-weight:800; font-size:1.05rem;">${escapeHtml(s.title)}</span>
-                        <div style="color:var(--text-secondary); font-size:0.85rem; margin-top:2px;">
-                            📚 ${escapeHtml(subjectName)} | 👤 ${escapeHtml(studentName)} | ⏰ ${startTime} ~ ${endTime}
-                        </div>
-                        ${s.notes ? `<div style="margin-top:6px; font-size:0.9rem; background:#f8fafc; padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">📝 메모: ${escapeHtml(s.notes)}</div>` : ''}
+            <li class="schedule-feed-item" style="border-left: 3px solid ${color};">
+                <div style="flex:1;">
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <span class="badge" style="background:${color}15; color:${color}; font-size:0.75rem;">${escapeHtml(subjectName)}</span>
+                        <span class="badge" style="background:var(--bg-subtle); color:var(--text-secondary); font-size:0.75rem;">${escapeHtml(studentName)}</span>
+                        <span style="font-size:0.8rem; color:var(--text-muted);">${startTime} ~ ${endTime}</span>
+                        ${isCompleted ? `<span class="badge badge-answered" style="font-size:0.72rem;">${ICONS.check} 수업 완료</span>` : ''}
                     </div>
-                    ${isTeacher ? `
-                        <div style="display:flex; gap:6px;">
-                            <button class="small-btn" style="background:var(--success); color:white; border:none;" onclick="toggleScheduleStatus(${s.id}, '${s.status === 'completed' ? 'scheduled' : 'completed'}')">
-                                ${s.status === 'completed' ? '완료취소' : '수업완료'}
-                            </button>
-                            <button class="danger-link-btn" onclick="deleteSchedule(${s.id})">삭제</button>
-                        </div>
-                    ` : ''}
+                    <div style="font-weight:700; font-size:1rem; margin-top:6px; color:var(--text-primary);">${escapeHtml(s.title)}</div>
+                    ${s.notes ? `<div style="margin-top:8px; font-size:0.88rem; background:var(--bg-subtle); padding:8px 12px; border-radius:var(--radius-xs); color:var(--text-secondary);">메모: ${escapeHtml(s.notes)}</div>` : ''}
                 </div>
+                ${isTeacher ? `
+                    <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+                        <button class="small-btn" style="${isCompleted ? 'background:var(--bg-subtle); color:var(--text-secondary);' : 'background:var(--success); color:#ffffff; border:none;'}" onclick="toggleScheduleStatus(${s.id}, '${isCompleted ? 'scheduled' : 'completed'}')">
+                            ${isCompleted ? '완료취소' : '수업완료'}
+                        </button>
+                        <button class="danger-link-btn" onclick="deleteSchedule(${s.id})">삭제</button>
+                    </div>
+                ` : ''}
             </li>
         `;
     }).join('');
@@ -1630,7 +1656,7 @@ async function handleSaveSchedule() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '수업 일정 등록 실패');
 
-        alert('수업 일정이 등록되었습니다! 📅');
+        alert('수업 일정이 등록되었습니다.');
         closeModal('addScheduleModal');
         document.getElementById('scheduleTitle').value = '';
         document.getElementById('scheduleNotes').value = '';
