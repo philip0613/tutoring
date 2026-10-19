@@ -1048,28 +1048,59 @@ function setupInstagramSwipeNavigation() {
     let trackWidth = 0;
     let isTracking = false;
     let isSwiping = false;
-    let directionLocked = null; // null | 'horizontal' | 'vertical'
+    let directionLocked = null; // null | 'horizontal' | 'vertical' | 'child-scroll'
     let activeTrack = null;
     let activeTabList = [];
     let wasSwiping = false;
+    let touchStartTarget = null;
 
-    // 스와이프 제스처 직후 터치 릴리즈 시 원치 않는 내부 카드 클릭 억제
+    // 1. 스와이프 제스처 직후 손가락을 뗄 때 박스/버튼의 원치 않는 오발 클릭을 100% 캡처하여 차단
     window.addEventListener('click', (e) => {
         if (wasSwiping) {
             e.stopPropagation();
+            e.stopImmediatePropagation();
             e.preventDefault();
         }
     }, true);
 
-    // 터치 대상에서 스와이프를 제외할 셀렉터들
-    const EXCLUDED_SELECTORS = '.modal-overlay:not(.hidden), input, textarea, select, button, .subject-chip-list, .sub-tab-bar, .scrollable-list, .qna-filter-bar, .calendar-month-picker, .image-lightbox-modal:not(.hidden)';
+    // 2. 가로 스크롤 가능한 내부 자식 요소(과목 칩 등) 여부 및 여유 스크롤 공간 지능형 판별 함수
+    function canElementScrollHorizontally(target, deltaX) {
+        let el = target;
+        while (el && el !== document.body && el !== document.documentElement) {
+            if (el.classList.contains('tab-page') || el.classList.contains('tab-track') || el.classList.contains('tab-viewport')) {
+                break;
+            }
+            const style = window.getComputedStyle(el);
+            const overflowX = style.overflowX;
+            if (overflowX === 'auto' || overflowX === 'scroll') {
+                const maxScroll = el.scrollWidth - el.clientWidth;
+                if (maxScroll > 6) {
+                    // 왼쪽으로 스와이프 (손가락 좌측 이동 -> 컨텐츠 우측으로 스크롤)
+                    if (deltaX < 0 && el.scrollLeft < maxScroll - 3) {
+                        return true;
+                    }
+                    // 오른쪽으로 스와이프 (손가락 우측 이동 -> 컨텐츠 좌측으로 스크롤)
+                    if (deltaX > 0 && el.scrollLeft > 3) {
+                        return true;
+                    }
+                }
+            }
+            el = el.parentElement;
+        }
+        return false;
+    }
+
+    // 3. 진짜 스와이프에서 제외해야 할 최소 대상만 지정 (열려있는 모달 및 텍스트 타이핑 입력창)
+    const STRICT_EXCLUDED_SELECTORS = '.modal-overlay:not(.hidden), .image-lightbox-modal:not(.hidden), input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]), textarea, select';
 
     window.addEventListener('touchstart', (e) => {
         // 모바일 화면(768px 이하) 및 로그인 상태에서만 동작
         if (window.innerWidth > 768 || !currentUser) return;
 
-        // 예외 요소 터치 시 스와이프 시작 금지
-        if (e.target.closest(EXCLUDED_SELECTORS)) return;
+        touchStartTarget = e.target;
+
+        // 열려있는 모달창이나 텍스트 입력창 내부 터치 시에만 스와이프 제외 (그 외 모든 카드, 박스, 버튼은 스와이프 허용)
+        if (touchStartTarget.closest(STRICT_EXCLUDED_SELECTORS)) return;
 
         const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
         activeTabList = isTeacher 
@@ -1085,6 +1116,7 @@ function setupInstagramSwipeNavigation() {
             clearTimeout(activeTrack._transitionTimeout);
             activeTrack._transitionTimeout = null;
         }
+        activeTrack.classList.remove('is-transitioning');
 
         // 현재 활성 탭 인덱스 찾기
         currentIdx = activeTabList.findIndex(id => {
@@ -1109,29 +1141,39 @@ function setupInstagramSwipeNavigation() {
         const touch = e.touches[0];
         const deltaX = touch.clientX - touchStartX;
         const deltaY = touch.clientY - touchStartY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
 
-        // 제스처 방향 판별 전 (초기 8px 이동 동안)
+        // 제스처 방향 판별 단계 (지능형 각도 & 엄지손가락 자연 곡률 판별)
         if (!directionLocked) {
-            const distance = Math.hypot(deltaX, deltaY);
-            if (distance > 8) {
-                if (Math.abs(deltaY) >= Math.abs(deltaX)) {
-                    // 수직 스크롤 의도 -> 스와이프 중단하고 브라우저 네이티브 세로 스크롤에 양보
-                    directionLocked = 'vertical';
+            if (absX < 7 && absY < 7) {
+                return; // 미세한 초기 터치 떨림 무시
+            }
+
+            // 가로 이동이 감지되고, 엄지 곡률(수직 이동 대비 가로 비율 0.75 이상)을 만족할 때
+            if (absX >= 7 && absX > absY * 0.75) {
+                // 내부 가로 스크롤 가능 여부 체크 (칩 목록 등)
+                if (canElementScrollHorizontally(touchStartTarget, deltaX)) {
+                    directionLocked = 'child-scroll';
                     isTracking = false;
                     return;
-                } else {
-                    // 수평 스와이프 의도 -> 스와이프 잠금
-                    directionLocked = 'horizontal';
-                    isSwiping = true;
-                    activeTrack.classList.add('is-swiping');
                 }
-            } else {
+                // 수평 탭 스와이프로 완벽 잠금
+                directionLocked = 'horizontal';
+                isSwiping = true;
+                activeTrack.classList.add('is-swiping');
+            } else if (absY >= 7 && absY > absX * 1.25) {
+                // 명백한 세로 스크롤 의도 -> 브라우저 네이티브 세로 스크롤에 온전히 양보
+                directionLocked = 'vertical';
+                isTracking = false;
                 return;
+            } else {
+                return; // 아직 방향이 명확하지 않은 경우 추가 이동 관찰
             }
         }
 
         if (directionLocked === 'horizontal' && isSwiping) {
-            // 수평 스와이프 중 세로 스크롤 방지
+            // 수평 스와이프 중에는 브라우저 세로 스크롤 완벽 차단
             if (e.cancelable) {
                 e.preventDefault();
             }
@@ -1162,8 +1204,9 @@ function setupInstagramSwipeNavigation() {
         isSwiping = false;
         activeTrack.classList.remove('is-swiping');
 
+        // 스와이프 완료 직후 발생하는 클릭 이벤트를 200ms 동안 차단하여 카드/버튼 오작동 방지
         wasSwiping = true;
-        setTimeout(() => { wasSwiping = false; }, 120);
+        setTimeout(() => { wasSwiping = false; }, 200);
 
         const touch = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
         const deltaX = touch ? (touch.clientX - touchStartX) : 0;
@@ -1172,11 +1215,11 @@ function setupInstagramSwipeNavigation() {
         const distanceRatio = Math.abs(deltaX) / trackWidth;
 
         // 탭 전환 판단 조건:
-        // 1. 빠른 튕기기(Flick): 속도 0.32px/ms 이상 & 28px 이상 이동
-        // 2. 충분한 드래그(Drag): 화면 너비의 18% 이상 이동
+        // 1. 빠른 튕기기(Flick): 속도 0.28px/ms 이상 & 24px 이상 이동
+        // 2. 충분한 드래그(Drag): 화면 너비의 16% 이상 이동
         let targetIdx = currentIdx;
-        const isFlick = (velocity > 0.32 && Math.abs(deltaX) > 28);
-        const isDragPass = (distanceRatio > 0.18);
+        const isFlick = (velocity > 0.28 && Math.abs(deltaX) > 24);
+        const isDragPass = (distanceRatio > 0.16);
 
         if (isFlick || isDragPass) {
             if (deltaX < 0 && currentIdx < activeTabList.length - 1) {

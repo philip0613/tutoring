@@ -2979,10 +2979,37 @@ input[type="file"] {
 }
 
 @media (max-width: 768px) {
-    .tab-viewport {
+    .tab-viewport,
+    .tab-track,
+    .tab-page,
+    .tab-page .card,
+    .tab-page .scrollable-list,
+    .tab-page .calendar-card,
+    .tab-page .qna-feed-header-wrapper {
         touch-action: pan-y;
         user-select: none;
         -webkit-user-select: none;
+        -webkit-touch-callout: none;
+    }
+
+    /* 이미지 고스트 드래그 방지 */
+    .tab-page img {
+        -webkit-user-drag: none;
+        user-drag: none;
+    }
+
+    /* 텍스트 입력창은 커서 이동 및 텍스트 선택 허용 */
+    .tab-page input,
+    .tab-page textarea,
+    .tab-page select {
+        touch-action: auto;
+        -webkit-user-select: text;
+        user-select: text;
+    }
+
+    /* 가로 스크롤 가능 요소는 네이티브 터치 동작 허용 */
+    .subject-chip-list {
+        touch-action: pan-x pan-y;
     }
 
     .tab-track {
