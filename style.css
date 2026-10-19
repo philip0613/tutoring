@@ -403,32 +403,59 @@ body {
 }
 
 /* =========================================
-   4. 세그먼트형 탭 네비게이션 (iOS / Toss 스타일)
+   4. 세그먼트형 탭 네비게이션 (iOS / Toss 스타일 유체 슬라이딩 탭)
    ========================================= */
 .tab-bar {
+    position: relative;
     display: flex;
-    background: var(--bg-subtle);
+    background: #f1f5f9;
     padding: 4px;
     border-radius: var(--radius-md);
-    gap: 4px;
     margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    user-select: none;
+    overflow: hidden;
+}
+
+/* 🌟 iOS 스타일 유체 슬라이딩 액티브 인디케이터 캡슐 (Spring Motion Tab Indicator) */
+.tab-sliding-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 0;
+    border-radius: calc(var(--radius-md) - 2px);
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+    pointer-events: none;
+    z-index: 1;
+    transform: translateX(0);
+    opacity: 0;
+    /* 아이폰/토스 특유의 쫀득하고 유연한 스프링 감속/오버슈트 물리 곡선 */
+    transition: transform 0.36s cubic-bezier(0.2, 0.9, 0.3, 1.15), width 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.15), opacity 0.18s ease;
+}
+
+.tab-sliding-indicator.ready {
+    opacity: 1;
 }
 
 .tab-btn {
+    position: relative;
+    z-index: 2;
     flex: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 44px;
-    border-radius: var(--radius-sm);
+    min-height: 42px;
+    border-radius: calc(var(--radius-md) - 2px);
     font-size: 0.92rem;
     font-weight: 600;
     color: var(--text-secondary);
-    background: transparent;
+    background: transparent !important;
+    box-shadow: none !important;
     border: none;
     cursor: pointer;
-    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: color 0.18s ease;
 }
 
 .tab-btn:hover {
@@ -436,10 +463,10 @@ body {
 }
 
 .tab-btn.active {
-    background: #ffffff;
     color: var(--primary);
     font-weight: 700;
-    box-shadow: var(--shadow-sm);
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 /* 학생 관리 상세 서브 탭 */
@@ -1997,11 +2024,8 @@ input[type="file"] {
     body.has-dock .container {
         padding-bottom: 24px;
     }
-    /* 모바일에서는 하단 플로팅 독이 핵심 네비게이션을 전담하므로 중복 상단 탭 및 장식성 인사 배너 숨김 */
+    /* 모바일에서는 중복되는 장식성 인사 배너 숨김 */
     body.has-dock .dashboard-greeting-bar {
-        display: none !important;
-    }
-    body.has-dock .tab-bar {
         display: none !important;
     }
 }
@@ -2256,32 +2280,38 @@ input[type="file"] {
     background: var(--primary-light);
 }
 
-/* 🔘 3열 균등 분할 세그먼트 필터 바 (iOS / Toss 스타일) */
+/* 🔘 3열 균등 분할 세그먼트 필터 바 (iOS / Toss 스타일 유체 슬라이딩 필터) */
 .qna-filter-bar {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
+    gap: 4px;
     background: #f1f5f9;
     padding: 4px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
+    user-select: none;
+    overflow: hidden;
 }
 
 .qna-filter-btn {
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     padding: 9px 6px;
-    border-radius: var(--radius-sm);
+    border-radius: calc(var(--radius-md) - 2px);
     font-size: 0.84rem;
     font-weight: 600;
     color: var(--text-secondary);
-    background: transparent;
+    background: transparent !important;
     border: none;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: color 0.18s ease;
     white-space: nowrap;
+    box-shadow: none !important;
 }
 
 .qna-filter-btn:hover {
@@ -2289,10 +2319,10 @@ input[type="file"] {
 }
 
 .qna-filter-btn.active {
-    background: #ffffff;
     color: var(--text-primary);
     font-weight: 700;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 /* 필터 뱃지 */

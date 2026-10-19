@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="과외노트">
-    <link rel="stylesheet" href="style.css?v=20261019_1800">
+    <link rel="stylesheet" href="style.css?v=20261019_1810">
 </head>
 <body>
     <!-- 실시간 인앱 토스트 알림 컨테이너 -->
@@ -125,6 +125,7 @@
 
             <!-- 상단 네비게이션 탭 (Segmented Control) -->
             <div class="tab-bar">
+                <div class="tab-sliding-indicator"></div>
                 <button class="tab-btn active" data-target="teacherClassTab">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -373,6 +374,7 @@
 
                     <!-- 🔘 질문 상태 분리 세그먼트 필터 (답변 대기 / 답변 완료 / 전체) -->
                     <div class="qna-filter-bar">
+                        <div class="tab-sliding-indicator"></div>
                         <button class="qna-filter-btn active" id="filterUnansweredBtn" data-filter="unanswered" onclick="setTeacherQnaFilter('unanswered')">
                             <span>답변 대기</span>
                             <span id="badgeUnansweredCount" class="tab-count-badge danger-badge">0</span>
@@ -403,6 +405,7 @@
             </div>
 
             <div class="tab-bar">
+                <div class="tab-sliding-indicator"></div>
                 <button class="tab-btn active" data-target="studentStudyTab">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
@@ -856,6 +859,6 @@
         <div class="lightbox-bottom-hint">화면 아무 곳이나 탭하면 닫힙니다</div>
     </div>
 
-    <script src="script.js?v=20261019_1800"></script>
+    <script src="script.js?v=20261019_1810"></script>
 </body>
 </html>

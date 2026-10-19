@@ -670,6 +670,66 @@ function moveDockIndicator(dockId, activeBtn) {
     }
 }
 
+// 🌟 iOS / Toss 스타일 세그먼트형 상단 탭 유체 슬라이딩 인디케이터 계산 및 애니메이션 함수
+function moveTabIndicator(tabBar, activeBtn, animate = true) {
+    if (!tabBar || !activeBtn) return;
+    let indicator = tabBar.querySelector('.tab-sliding-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.className = 'tab-sliding-indicator';
+        tabBar.prepend(indicator);
+    }
+
+    const barRect = tabBar.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+
+    let leftOffset = btnRect.left - barRect.left;
+    let width = btnRect.width;
+
+    if (width === 0 || barRect.width === 0) {
+        leftOffset = activeBtn.offsetLeft;
+        width = activeBtn.offsetWidth;
+    }
+
+    if (!animate) {
+        indicator.style.transition = 'none';
+    }
+
+    if (width > 0) {
+        indicator.style.width = `${width}px`;
+        indicator.style.transform = `translateX(${leftOffset}px)`;
+        indicator.classList.add('ready');
+    }
+
+    if (!animate) {
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                indicator.style.transition = '';
+            }, 50);
+        });
+    }
+}
+
+function updateAllTabIndicators(animate = false) {
+    document.querySelectorAll('.tab-bar').forEach(bar => {
+        if (bar.offsetParent !== null) {
+            const activeBtn = bar.querySelector('.tab-btn.active');
+            if (activeBtn) moveTabIndicator(bar, activeBtn, animate);
+        }
+    });
+    document.querySelectorAll('.qna-filter-bar').forEach(bar => {
+        if (bar.offsetParent !== null) {
+            const activeBtn = bar.querySelector('.qna-filter-btn.active');
+            if (activeBtn) moveTabIndicator(bar, activeBtn, animate);
+        }
+    });
+}
+
+// 창 크기 변경 시 모든 활성 탭 인디케이터 위치 재조정
+window.addEventListener('resize', () => {
+    updateAllTabIndicators(false);
+});
+
 // ==========================================
 // 📱 기기별/화면 크기별 버튼 텍스트 자동 크기 최적화 (Auto-fit font size to container box)
 // ==========================================
@@ -694,10 +754,20 @@ function autoFitButtonText() {
 
 function setupTabs() {
     document.querySelectorAll('.tab-bar').forEach(bar => {
+        // 인디케이터 엘리먼트 보장
+        if (!bar.querySelector('.tab-sliding-indicator')) {
+            const ind = document.createElement('div');
+            ind.className = 'tab-sliding-indicator';
+            bar.prepend(ind);
+        }
+
         bar.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+
+                // 🌟 상단 탭 유체 슬라이딩 애니메이션 즉시 가동!
+                moveTabIndicator(bar, btn, true);
 
                 const targetId = btn.getAttribute('data-target');
                 
@@ -743,6 +813,12 @@ function setupTabs() {
                 }
             });
         });
+
+        // 초기 인디케이터 위치 세팅
+        const initialActive = bar.querySelector('.tab-btn.active');
+        if (initialActive) {
+            setTimeout(() => moveTabIndicator(bar, initialActive, false), 80);
+        }
     });
 }
 
@@ -1128,6 +1204,7 @@ function updateUIForLoggedInUser() {
     startNotificationPolling();
     syncPushNotificationState();
     setTimeout(autoFitButtonText, 150);
+    setTimeout(() => updateAllTabIndicators(false), 120);
 }
 
 // ==========================================
@@ -1529,13 +1606,20 @@ window.setTeacherQnaFilter = function(filter) {
     currentTeacherQnaFilter = filter;
     
     // 버튼 활성 스타일 전환
+    const filterBar = document.querySelector('.qna-filter-bar');
+    let targetBtn = null;
     document.querySelectorAll('.qna-filter-btn').forEach(btn => {
         if (btn.getAttribute('data-filter') === filter) {
             btn.classList.add('active');
+            targetBtn = btn;
         } else {
             btn.classList.remove('active');
         }
     });
+
+    if (filterBar && targetBtn) {
+        moveTabIndicator(filterBar, targetBtn, true);
+    }
 
     renderTeacherQuestionsFeed();
 };
@@ -1543,6 +1627,13 @@ window.setTeacherQnaFilter = function(filter) {
 async function loadAllTeacherQuestions(forceRefresh = false) {
     const list = document.getElementById('teacherAllQuestionsList');
     if (!list) return;
+
+    // 필터 바 인디케이터 초기 위치 동기화
+    const filterBar = document.querySelector('.qna-filter-bar');
+    const activeFilterBtn = filterBar?.querySelector('.qna-filter-btn.active');
+    if (filterBar && activeFilterBtn) {
+        setTimeout(() => moveTabIndicator(filterBar, activeFilterBtn, false), 60);
+    }
 
     if (forceRefresh || teacherAllQuestionsCache.length === 0) {
         showSkeleton('teacherAllQuestionsList', 3);
