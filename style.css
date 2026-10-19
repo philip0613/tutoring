@@ -1294,6 +1294,22 @@ input[type="file"] {
     grid-template-columns: repeat(7, 1fr);
     gap: 3px;
     margin-top: 6px;
+    will-change: opacity, transform;
+}
+
+.calendar-grid-days.month-transition {
+    animation: calendarFade 0.12s ease-out;
+}
+
+@keyframes calendarFade {
+    from {
+        opacity: 0.72;
+        transform: scale(0.996);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .calendar-cell {

@@ -1287,6 +1287,7 @@ function renderStudentSubjectChips() {
 
 window.selectSubjectFilter = function(subjectId) {
     currentSubjectFilter = subjectId;
+    calendarScheduleCache.clear();
     if (currentUser.role === 'admin' || currentUser.role === 'teacher') {
         renderTeacherSubjectChips();
         loadStudents();
@@ -1295,7 +1296,7 @@ window.selectSubjectFilter = function(subjectId) {
         renderStudentSubjectChips();
         loadStudentData();
     }
-    renderCalendar();
+    renderCalendar(true);
 };
 
 function updateSubjectSelectOptions() {
@@ -2394,8 +2395,11 @@ async function handleChangePassword() {
 }
 
 // ==========================================
-// 📅 수업 캘린더 로직 (로딩 UI 적용)
+// 📅 수업 캘린더 로직 (초고속 캐싱 & 0ms 즉시 렌더링 최적화)
 // ==========================================
+const calendarScheduleCache = new Map();
+let calendarFetchRequestId = 0;
+
 function changeCalendarMonth(offset) {
     calendarMonth += offset;
     if (calendarMonth < 0) {
@@ -2419,7 +2423,8 @@ function goToToday() {
     selectCalendarDate(todayStr, false);
 }
 
-async function renderCalendar() {
+// ⚡ 0ms 즉시 그리드 DOM 렌더링 함수 (지연 체감 100% 제거)
+function renderCalendarGridDOM(year, month, schedules) {
     const isTeacher = currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher');
     const monthTitleId = isTeacher ? 'calendarCurrentMonthTitle' : 'studentCalendarMonthTitle';
     const gridId = isTeacher ? 'calendarGridDays' : 'studentCalendarGridDays';
@@ -2428,42 +2433,29 @@ async function renderCalendar() {
     const grid = document.getElementById(gridId);
     if (!monthTitle || !grid) return;
 
-    monthTitle.textContent = `${calendarYear}년 ${calendarMonth + 1}월`;
+    monthTitle.textContent = `${year}년 ${month + 1}월`;
 
-    const startDate = new Date(calendarYear, calendarMonth, 1).toISOString();
-    const endDate = new Date(calendarYear, calendarMonth + 1, 0, 23, 59, 59).toISOString();
-
-    let url = `/api/schedules?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
-    if (currentSubjectFilter) url += `&subject_id=${currentSubjectFilter}`;
-
-    try {
-        const res = await authFetch(url);
-        currentMonthSchedules = await res.json();
-        if (!Array.isArray(currentMonthSchedules)) currentMonthSchedules = [];
-    } catch (err) {
-        console.error('캘린더 일정 로드 실패:', err);
-        currentMonthSchedules = [];
-    }
-
-    const firstDayIndex = new Date(calendarYear, calendarMonth, 1).getDay();
-    const lastDate = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-    const prevLastDate = new Date(calendarYear, calendarMonth, 0).getDate();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const prevLastDate = new Date(year, month, 0).getDate();
 
     const today = new Date();
-    const isCurrentMonthYear = today.getFullYear() === calendarYear && today.getMonth() === calendarMonth;
+    const isCurrentMonthYear = today.getFullYear() === year && today.getMonth() === month;
 
     let cellsHtml = '';
 
+    // 이전 달 잔여 일자
     for (let i = firstDayIndex - 1; i >= 0; i--) {
         const dayNum = prevLastDate - i;
         cellsHtml += `<div class="calendar-cell other-month"><div class="calendar-date-num">${dayNum}</div></div>`;
     }
 
+    // 이번 달 일자 (1 ~ lastDate)
     for (let d = 1; d <= lastDate; d++) {
         const isToday = isCurrentMonthYear && today.getDate() === d;
-        const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-        const daySchedules = currentMonthSchedules.filter(s => {
+        const daySchedules = schedules.filter(s => {
             const sDate = s.start_time.split('T')[0];
             return sDate === dateStr;
         });
@@ -2487,6 +2479,7 @@ async function renderCalendar() {
         `;
     }
 
+    // 다음 달 잔여 일자
     const totalRendered = firstDayIndex + lastDate;
     const remaining = (7 - (totalRendered % 7)) % 7;
     for (let j = 1; j <= remaining; j++) {
@@ -2494,6 +2487,90 @@ async function renderCalendar() {
     }
 
     grid.innerHTML = cellsHtml;
+
+    // 부드러운 전환 효과 트리거
+    grid.classList.remove('month-transition');
+    void grid.offsetWidth;
+    grid.classList.add('month-transition');
+}
+
+// 🚀 인접한 이전 달/다음 달 일정을 백그라운드에서 사전 로드 (Pre-fetching)
+function prefetchAdjacentMonths(year, month) {
+    [-1, 1].forEach(offset => {
+        let pYear = year;
+        let pMonth = month + offset;
+        if (pMonth < 0) {
+            pMonth = 11;
+            pYear--;
+        } else if (pMonth > 11) {
+            pMonth = 0;
+            pYear++;
+        }
+
+        const pCacheKey = `${pYear}-${pMonth}-${currentSubjectFilter || 'all'}`;
+        if (calendarScheduleCache.has(pCacheKey)) return;
+
+        const startDate = new Date(pYear, pMonth, 1).toISOString();
+        const endDate = new Date(pYear, pMonth + 1, 0, 23, 59, 59).toISOString();
+
+        let url = `/api/schedules?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+        if (currentSubjectFilter) url += `&subject_id=${currentSubjectFilter}`;
+
+        authFetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    calendarScheduleCache.set(pCacheKey, data);
+                }
+            })
+            .catch(() => {});
+    });
+}
+
+async function renderCalendar(forceRefresh = false) {
+    const year = calendarYear;
+    const month = calendarMonth;
+    const cacheKey = `${year}-${month}-${currentSubjectFilter || 'all'}`;
+
+    // 1. 이미 캐시에 데이터가 있으면 -> 0ms로 즉시 렌더링!
+    if (!forceRefresh && calendarScheduleCache.has(cacheKey)) {
+        currentMonthSchedules = calendarScheduleCache.get(cacheKey);
+        renderCalendarGridDOM(year, month, currentMonthSchedules);
+        prefetchAdjacentMonths(year, month);
+        return;
+    }
+
+    // 2. 캐시 미스 시: 날짜 달력 그리드는 0ms 즉각 화면 전환! (기존 월 지연 체감 100% 제거)
+    // 이전 달 일정 잔상이 남지 않도록 임시로 빈 배열을 전달하여 즉시 새 달 날짜(1~31) 표시
+    renderCalendarGridDOM(year, month, []);
+
+    const requestId = ++calendarFetchRequestId;
+
+    const startDate = new Date(year, month, 1).toISOString();
+    const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+
+    let url = `/api/schedules?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+    if (currentSubjectFilter) url += `&subject_id=${currentSubjectFilter}`;
+
+    try {
+        const res = await authFetch(url);
+        const data = await res.json();
+        const schedules = Array.isArray(data) ? data : [];
+
+        // 캐시 저장
+        calendarScheduleCache.set(cacheKey, schedules);
+
+        // 사용자가 여전히 이 달을 보고 있는 경우 일정 뱃지 업데이트
+        if (requestId === calendarFetchRequestId && calendarYear === year && calendarMonth === month) {
+            currentMonthSchedules = schedules;
+            renderCalendarGridDOM(year, month, schedules);
+        }
+    } catch (err) {
+        console.error('캘린더 일정 로드 실패:', err);
+    }
+
+    // 이전달 & 다음달 백그라운드 프리페치 실행
+    prefetchAdjacentMonths(year, month);
 }
 
 window.selectCalendarDate = function(dateStr, shouldScroll = true) {
@@ -2564,7 +2641,8 @@ window.toggleScheduleStatus = async function(id, newStatus) {
             method: 'PUT',
             body: JSON.stringify({ id, status: newStatus })
         });
-        renderCalendar();
+        calendarScheduleCache.clear();
+        renderCalendar(true);
     } catch (err) {
         alert(err.message);
     }
@@ -2574,7 +2652,8 @@ window.deleteSchedule = async function(id) {
     if (!confirm('수업 일정을 삭제하시겠습니까?')) return;
     try {
         await authFetch(`/api/schedules?id=${id}`, { method: 'DELETE' });
-        renderCalendar();
+        calendarScheduleCache.clear();
+        renderCalendar(true);
     } catch (err) {
         alert(err.message);
     }
@@ -2632,7 +2711,8 @@ async function handleSaveSchedule() {
         closeModal('addScheduleModal');
         document.getElementById('scheduleTitle').value = '';
         document.getElementById('scheduleNotes').value = '';
-        renderCalendar();
+        calendarScheduleCache.clear();
+        renderCalendar(true);
     } catch (err) {
         alert(err.message);
     } finally {
