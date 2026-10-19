@@ -556,7 +556,7 @@ function navigateToLink(link) {
         if (isTeacher) {
             document.querySelector('#teacherDashboard .tab-btn[data-target="teacherClassTab"]')?.click();
             document.querySelector('#teacherClassTab .sub-tab-btn[data-subtarget="studentQuestionsTab"]')?.click();
-            const qBtn = document.getElementById('dockTeacherQuestions');
+            const qBtn = document.getElementById('dockTeacherQna');
             if (qBtn) moveDockIndicator('teacherBottomDock', qBtn);
         } else {
             document.querySelector('#studentDashboard .tab-btn[data-target="studentStudyTab"]')?.click();
@@ -604,6 +604,14 @@ async function markAllNotificationsAsRead() {
 
 function toggleNotificationDropdown(e) {
     e.stopPropagation();
+
+    // 📱 모바일 환경(768px 이하 또는 독 활성화)에서는 헤더 종 버튼 클릭 시
+    // 하단 메뉴바 끝의 '알림·계정' 화면(바텀 시트)으로 즉시 열기
+    if (window.innerWidth <= 768 || document.body.classList.contains('has-dock')) {
+        openProfileModal(true);
+        return;
+    }
+
     const dropdown = document.getElementById('notificationDropdown');
     dropdown?.classList.toggle('hidden');
     if (!dropdown?.classList.contains('hidden')) {
@@ -912,7 +920,7 @@ function setupStudentBottomDock() {
 }
 
 // 프로필 모달 열기 공통 함수
-function openProfileModal() {
+function openProfileModal(fromBell = false) {
     if (!currentUser) return;
     const nameEl = document.getElementById('profileModalName');
     const roleEl = document.getElementById('profileModalRole');
@@ -938,7 +946,20 @@ function openProfileModal() {
     }
 
     syncPushNotificationState();
+    loadNotifications();
     openModal('accountProfileModal');
+
+    // 🔔 종(알림) 버튼을 눌러 들어온 경우 알림 센터 섹션으로 부드럽게 스크롤 및 하이라이트
+    if (fromBell) {
+        setTimeout(() => {
+            const notifSection = document.querySelector('.modal-notification-section');
+            if (notifSection) {
+                notifSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                notifSection.classList.add('notif-highlight');
+                setTimeout(() => notifSection.classList.remove('notif-highlight'), 1800);
+            }
+        }, 150);
+    }
 }
 
 // ==========================================
