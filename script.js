@@ -52,7 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('uploadExamBtn')?.addEventListener('click', handleUploadExam);
     document.getElementById('sendFeedbackBtn')?.addEventListener('click', handleSendFeedback);
     document.getElementById('deleteStudentBtn')?.addEventListener('click', handleDeleteStudent);
-    document.getElementById('openAddSubjectModalBtn')?.addEventListener('click', () => openModal('addSubjectModal'));
+    document.getElementById('openAddSubjectModalBtn')?.addEventListener('click', () => {
+        renderModalSubjectList();
+        openModal('addSubjectModal');
+    });
     document.getElementById('saveSubjectBtn')?.addEventListener('click', handleCreateSubject);
     document.getElementById('enrollExistingStudentBtn')?.addEventListener('click', openEnrollModal);
     document.getElementById('saveEnrollmentBtn')?.addEventListener('click', handleSaveEnrollment);
@@ -548,6 +551,7 @@ function setupTeacherBottomDock() {
 
     document.getElementById('quickAddSubjectBtn')?.addEventListener('click', () => {
         closeModal('teacherQuickActionModal');
+        renderModalSubjectList();
         openModal('addSubjectModal');
     });
 
@@ -794,12 +798,92 @@ function renderTeacherSubjectChips() {
                 <span class="subject-color-dot" style="background-color: ${s.color};"></span>
                 <span>${escapeHtml(s.name)}</span>
                 <span style="font-size:0.75rem; opacity:0.8;">(${studentCount}명)</span>
+                <button class="subject-chip-del" type="button" title="${escapeHtml(s.name)} 과목 삭제" aria-label="${escapeHtml(s.name)} 과목 삭제" onclick="deleteSubject(event, ${s.id})">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             </div>
         `;
     });
 
     container.innerHTML = html;
+    renderModalSubjectList();
 }
+
+function renderModalSubjectList() {
+    const listEl = document.getElementById('modalSubjectList');
+    const countEl = document.getElementById('modalSubjectCount');
+    if (!listEl) return;
+
+    if (countEl) countEl.textContent = `${mySubjects.length}개`;
+
+    if (mySubjects.length === 0) {
+        listEl.innerHTML = '<div style="color:var(--text-muted); font-size:0.82rem; padding:10px 0; text-align:center;">개설된 과목이 없습니다.</div>';
+        return;
+    }
+
+    listEl.innerHTML = mySubjects.map(s => {
+        const studentCount = s.enrollments ? s.enrollments.length : 0;
+        return `
+            <div class="modal-subject-item">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="subject-color-dot" style="background-color:${s.color};"></span>
+                    <span style="font-weight:600; color:var(--text-primary);">${escapeHtml(s.name)}</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">(${studentCount}명 수강)</span>
+                </div>
+                <button class="modal-subject-del-btn" type="button" onclick="deleteSubject(event, ${s.id})">
+                    삭제
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+window.deleteSubject = async function(event, subjectId) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
+    const subject = mySubjects.find(s => s.id === subjectId);
+    const subjectName = subject ? subject.name : '이 과목';
+    const studentCount = subject && subject.enrollments ? subject.enrollments.length : 0;
+
+    let confirmMsg = `'${subjectName}' 과목을 정말 삭제하시겠습니까?`;
+    if (studentCount > 0) {
+        confirmMsg += `\n\n⚠️ 주의: 현재 ${studentCount}명의 학생이 이 과목에 수강 등록되어 있습니다.\n과목을 삭제하면 해당 학생들의 수강 연결 및 관련 수업 일정도 함께 정리됩니다.`;
+    } else {
+        confirmMsg += '\n\n해당 과목의 수업 일정도 함께 삭제됩니다.';
+    }
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const res = await authFetch(`/api/subjects?id=${subjectId}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '과목 삭제 실패');
+
+        alert(`'${subjectName}' 과목이 삭제되었습니다.`);
+
+        // 현재 선택된 과목 필터가 삭제된 과목이면 전체 과목으로 리셋
+        if (currentSubjectFilter === subjectId) {
+            currentSubjectFilter = null;
+        }
+
+        await loadSubjects();
+        if (currentUser.role === 'admin' || currentUser.role === 'teacher') {
+            await loadStudents();
+            if (currentStudentId) loadStudentDetail(currentStudentId);
+        }
+        renderCalendar();
+    } catch (err) {
+        alert(err.message);
+    }
+};
 
 function renderStudentSubjectChips() {
     const container = document.getElementById('studentSubjectChips');

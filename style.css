@@ -714,6 +714,67 @@ input[type="file"] {
     flex-shrink: 0;
 }
 
+/* 개설 과목 삭제 (X) 버튼 */
+.subject-chip-del {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 3px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.subject-chip-del:hover {
+    background: var(--danger-light);
+    color: var(--danger);
+    transform: scale(1.15);
+}
+
+.subject-chip.active .subject-chip-del {
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--primary);
+}
+
+.subject-chip.active .subject-chip-del:hover {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+
+.modal-subject-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    font-size: 0.88rem;
+}
+
+.modal-subject-del-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-xs);
+    transition: all 0.15s ease;
+}
+
+.modal-subject-del-btn:hover {
+    background: var(--danger-light);
+}
+
 /* =========================================
    8. 그리드 및 학생 선택 리스트
    ========================================= */

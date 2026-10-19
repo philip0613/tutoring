@@ -488,6 +488,14 @@
             </div>
             
             <button id="saveSubjectBtn" class="primary-btn mt-20">과목 개설 완료</button>
+
+            <div id="modalSubjectListContainer" class="mt-20 pt-16" style="border-top: 1px solid var(--border-color);">
+                <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; color: var(--text-primary); display: flex; justify-content: space-between; align-items: center;">
+                    <span>현재 개설된 과목 목록</span>
+                    <span id="modalSubjectCount" class="badge" style="font-size: 0.72rem;">0개</span>
+                </div>
+                <div id="modalSubjectList" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto;"></div>
+            </div>
         </div>
     </div>
 
