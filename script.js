@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('enablePushBtn')?.addEventListener('click', requestPushPermission);
     document.getElementById('notificationBellBtn')?.addEventListener('click', toggleNotificationDropdown);
     document.getElementById('markAllReadBtn')?.addEventListener('click', markAllNotificationsAsRead);
+    syncPushNotificationState();
 
     // 4. 선생님 대시보드 이벤트
     document.getElementById('createStudentBtn')?.addEventListener('click', handleCreateStudent);
@@ -244,40 +245,128 @@ async function initServiceWorker() {
     }
 }
 
+// 푸시 알림 권한 및 UI 상태 동기화
+async function syncPushNotificationState(isUserAction = false) {
+    const enableBtn = document.getElementById('enablePushBtn');
+    const modalBtn = document.getElementById('modalPushBtn');
+
+    if (!('Notification' in window)) {
+        if (enableBtn) enableBtn.classList.add('hidden');
+        if (modalBtn) {
+            modalBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                <span>이 기기는 푸시 미지원</span>
+            `;
+            modalBtn.disabled = true;
+        }
+        if (isUserAction) alert('이 브라우저/기기는 웹 푸시 알림을 지원하지 않습니다.');
+        return;
+    }
+
+    const permission = Notification.permission;
+
+    if (permission === 'granted') {
+        // 이미 권한이 허용된 경우: 상단 '알림 켜기' 버튼 영구 숨김
+        if (enableBtn) enableBtn.classList.add('hidden');
+        localStorage.setItem('tutoring_push_permission', 'granted');
+
+        if (modalBtn) {
+            modalBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span style="color: #10b981; font-weight: 600;">웹 푸시 알림 허용됨 (정상 작동)</span>
+            `;
+            modalBtn.title = '이미 푸시 알림이 켜져 있습니다.';
+        }
+
+        // 백그라운드에서 조용히 푸시 구독 동기화 (alert 없이)
+        silentRegisterPush();
+
+        if (isUserAction) {
+            alert('이미 푸시 알림이 정상적으로 허용되어 있습니다.');
+        }
+    } else if (permission === 'denied') {
+        if (enableBtn) enableBtn.classList.add('hidden');
+        if (modalBtn) {
+            modalBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                <span style="color: #ef4444;">알림 차단됨 (설정에서 허용 필요)</span>
+            `;
+        }
+        if (isUserAction) {
+            alert('알림 권한이 차단되어 있습니다. 브라우저 또는 기기 설정에서 알림을 허용해 주세요.');
+        }
+    } else {
+        // 'default' (아직 권한을 묻지 않은 상태)
+        if (currentUser) {
+            if (enableBtn) enableBtn.classList.remove('hidden');
+        } else {
+            if (enableBtn) enableBtn.classList.add('hidden');
+        }
+        if (modalBtn) {
+            modalBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span>웹 푸시 알림 설정</span>
+            `;
+        }
+    }
+}
+
+async function silentRegisterPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const vapidRes = await authFetch('/api/push?action=vapid_public_key');
+        if (!vapidRes.ok) return;
+        const vapidData = await vapidRes.json();
+
+        if (vapidData.publicKey) {
+            let subscription = await registration.pushManager.getSubscription();
+            if (!subscription) {
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidData.publicKey)
+                });
+            }
+
+            if (subscription && currentUser) {
+                await authFetch('/api/push', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'subscribe', subscription })
+                });
+            }
+        }
+    } catch (err) {
+        // 백그라운드 동기화 실패는 조용히 로그만 기록
+        console.warn('푸시 백그라운드 등록 상태:', err.message);
+    }
+}
+
 async function requestPushPermission() {
     if (!('Notification' in window)) {
         alert('이 브라우저는 웹 푸시 알림을 지원하지 않습니다.');
         return;
     }
 
+    if (Notification.permission === 'granted') {
+        syncPushNotificationState(true);
+        return;
+    }
+
     try {
         const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
+        if (permission === 'granted') {
+            localStorage.setItem('tutoring_push_permission', 'granted');
+            await silentRegisterPush();
+            syncPushNotificationState();
+            alert('웹 푸시 알림이 활성화되었습니다.');
+        } else if (permission === 'denied') {
+            syncPushNotificationState();
             alert('알림 권한이 거부되었습니다. 브라우저 설정에서 알림을 허용해 주세요.');
-            return;
+        } else {
+            syncPushNotificationState();
         }
-
-        const registration = await navigator.serviceWorker.ready;
-        const vapidRes = await authFetch('/api/push?action=vapid_public_key');
-        const vapidData = await vapidRes.json();
-
-        if (vapidData.publicKey) {
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidData.publicKey)
-            });
-
-            await authFetch('/api/push', {
-                method: 'POST',
-                body: JSON.stringify({ action: 'subscribe', subscription })
-            });
-        }
-
-        alert('웹 푸시 알림이 활성화되었습니다.');
-        document.getElementById('enablePushBtn')?.classList.add('hidden');
     } catch (err) {
-        console.error('푸시 구독 실패:', err);
-        alert('푸시 알림 활성화 완료: 새로운 질문 및 답변 시 알림을 받습니다.');
+        console.error('푸시 권한 요청 실패:', err);
     }
 }
 
@@ -742,6 +831,7 @@ function openProfileModal() {
         passBtn.style.display = isTeacher ? 'none' : 'flex';
     }
 
+    syncPushNotificationState();
     openModal('accountProfileModal');
 }
 
@@ -835,6 +925,7 @@ function handleLogout() {
     localStorage.removeItem('tutoring_user_v2');
     sessionStorage.removeItem('tutoring_user_v2');
 
+    document.getElementById('enablePushBtn')?.classList.add('hidden');
     document.getElementById('loginSection').classList.remove('hidden');
     document.getElementById('userInfo').classList.add('hidden');
     document.getElementById('teacherDashboard').classList.add('hidden');
@@ -887,6 +978,7 @@ function updateUIForLoggedInUser() {
 
     loadNotifications();
     startNotificationPolling();
+    syncPushNotificationState();
     setTimeout(autoFitButtonText, 150);
 }
 
@@ -1801,6 +1893,13 @@ async function loadMyQuestions() {
                             ${subjectBadge}
                             ${statusBadge}
                         </div>
+                        ${!hasAnswer ? `
+                            <div style="display:flex; gap:6px;">
+                                <button class="danger-link-btn" onclick="deleteStudentQuestion(${q.id})" style="font-size:0.8rem; padding:4px 8px; display:inline-flex; align-items:center; gap:4px;" title="답변 대기 중 질문 삭제">
+                                    ${ICONS.trash} 삭제
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <div class="feed-title">
@@ -1834,6 +1933,22 @@ async function loadMyQuestions() {
         list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:30px 0;">질문 목록을 불러오지 못했습니다.</div>';
     }
 }
+
+window.deleteStudentQuestion = async function(id) {
+    if (!confirm('작성하신 질문을 삭제하시겠습니까?')) return;
+    try {
+        const res = await authFetch(`/api/askQuestion?id=${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '질문 삭제 실패');
+
+        alert('질문이 삭제되었습니다.');
+        loadMyQuestions();
+    } catch (err) {
+        alert(err.message);
+    }
+};
 
 async function loadMyFeedbacks() {
     const list = document.getElementById('myFeedbackList');
