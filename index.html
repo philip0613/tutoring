@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="과외노트">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261019_1715">
 </head>
 <body>
     <!-- 실시간 인앱 토스트 알림 컨테이너 -->
@@ -42,7 +42,7 @@
                 </button>
                 
                 <div class="notification-wrapper">
-                    <button id="notificationBellBtn" class="bell-btn" title="알림 센터" aria-label="알림 센터">
+                    <button id="notificationBellBtn" class="bell-btn" title="알림 센터" aria-label="알림 센터" onclick="handleBellClick(event)">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -792,6 +792,6 @@
         </div>
     </nav>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20261019_1715"></script>
 </body>
 </html>

@@ -1,4 +1,11 @@
 // sw.js - Web Push Notification Service Worker
+self.addEventListener('install', function(event) {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+    event.waitUntil(self.clients.claim());
+});
 
 self.addEventListener('push', function(event) {
     let data = { title: '과외노트 알림', body: '새로운 알림이 도착했습니다.', link: '/' };

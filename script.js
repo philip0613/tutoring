@@ -602,8 +602,12 @@ async function markAllNotificationsAsRead() {
     loadNotifications();
 }
 
-function toggleNotificationDropdown(e) {
-    e.stopPropagation();
+// 🔔 상단 알림 벨 클릭 핸들러 (인라인 onclick 및 리스너 공용)
+window.handleBellClick = function(e) {
+    if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
 
     // 📱 모바일 환경(768px 이하 또는 독 활성화)에서는 헤더 종 버튼 클릭 시
     // 하단 메뉴바 끝의 '알림·계정' 화면(바텀 시트)으로 즉시 열기
@@ -617,6 +621,10 @@ function toggleNotificationDropdown(e) {
     if (!dropdown?.classList.contains('hidden')) {
         loadNotifications();
     }
+};
+
+function toggleNotificationDropdown(e) {
+    window.handleBellClick(e);
 }
 
 document.addEventListener('click', (e) => {
@@ -921,7 +929,18 @@ function setupStudentBottomDock() {
 
 // 프로필 모달 열기 공통 함수
 function openProfileModal(fromBell = false) {
+    if (!currentUser) {
+        try {
+            const saved = localStorage.getItem('tutoring_user_v2') || sessionStorage.getItem('tutoring_user_v2');
+            if (saved) currentUser = JSON.parse(saved);
+        } catch (e) {}
+    }
     if (!currentUser) return;
+
+    // 1. 모달 즉시 노출 (지연 및 예외 차단)
+    openModal('accountProfileModal');
+
+    // 2. 유저 정보 표시
     const nameEl = document.getElementById('profileModalName');
     const roleEl = document.getElementById('profileModalRole');
     const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
@@ -945,9 +964,17 @@ function openProfileModal(fromBell = false) {
         passBtn.style.display = isTeacher ? 'none' : 'flex';
     }
 
-    syncPushNotificationState();
-    loadNotifications();
-    openModal('accountProfileModal');
+    try {
+        syncPushNotificationState();
+    } catch (e) {
+        console.warn('푸시 상태 동기화 실패:', e);
+    }
+
+    try {
+        loadNotifications();
+    } catch (e) {
+        console.warn('알림 로드 실패:', e);
+    }
 
     // 🔔 종(알림) 버튼을 눌러 들어온 경우 알림 센터 섹션으로 부드럽게 스크롤 및 하이라이트
     if (fromBell) {
