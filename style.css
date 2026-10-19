@@ -1234,6 +1234,42 @@ input[type="file"] {
     text-align: center;
 }
 
+.today-nav-btn {
+    min-height: 34px;
+    padding: 0 13px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-xs);
+}
+
+.today-nav-btn:hover {
+    border-color: #34d399;
+    color: var(--primary);
+    background: var(--gradient-brand-light);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.18);
+}
+
+.today-nav-btn:active {
+    transform: scale(0.96);
+}
+
+.calendar-cell.selected-date {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.25);
+}
+
 .calendar-grid-header {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -1995,6 +2031,22 @@ input[type="file"] {
         width: 12px;
         height: 12px;
     }
+
+    .today-nav-btn {
+        min-height: 30px;
+        padding: 0 10px;
+        font-size: 0.76rem;
+    }
+
+    .calendar-month-title {
+        font-size: 1.02rem;
+        min-width: 95px;
+    }
+
+    .icon-nav-btn {
+        width: 30px;
+        height: 30px;
+    }
 }
 
 @media (max-width: 360px) {
@@ -2003,6 +2055,11 @@ input[type="file"] {
     .danger-btn-sm {
         padding: 3px 6px;
         font-size: 0.70rem;
+    }
+
+    .today-nav-btn {
+        padding: 0 7px;
+        font-size: 0.72rem;
     }
 }
 

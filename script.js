@@ -75,8 +75,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. 캘린더 네비게이션 이벤트
     document.getElementById('prevMonthBtn')?.addEventListener('click', () => changeCalendarMonth(-1));
     document.getElementById('nextMonthBtn')?.addEventListener('click', () => changeCalendarMonth(1));
+    document.getElementById('todayBtn')?.addEventListener('click', goToToday);
     document.getElementById('studentPrevMonthBtn')?.addEventListener('click', () => changeCalendarMonth(-1));
     document.getElementById('studentNextMonthBtn')?.addEventListener('click', () => changeCalendarMonth(1));
+    document.getElementById('studentTodayBtn')?.addEventListener('click', goToToday);
     document.getElementById('openAddScheduleModalBtn')?.addEventListener('click', openScheduleModal);
     document.getElementById('saveScheduleBtn')?.addEventListener('click', handleSaveSchedule);
 
@@ -1961,6 +1963,17 @@ function changeCalendarMonth(offset) {
     renderCalendar();
 }
 
+function goToToday() {
+    const today = new Date();
+    calendarYear = today.getFullYear();
+    calendarMonth = today.getMonth();
+    renderCalendar();
+
+    // 오늘 일자 상세 일정 로드 (스크롤 이동 없이 부드럽게 선택)
+    const todayStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    selectCalendarDate(todayStr, false);
+}
+
 async function renderCalendar() {
     const isTeacher = currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher');
     const monthTitleId = isTeacher ? 'calendarCurrentMonthTitle' : 'studentCalendarMonthTitle';
@@ -2022,7 +2035,7 @@ async function renderCalendar() {
         });
 
         cellsHtml += `
-            <div class="calendar-cell ${isToday ? 'today' : ''}" onclick="selectCalendarDate('${dateStr}')">
+            <div class="calendar-cell ${isToday ? 'today' : ''}" data-date="${dateStr}" onclick="selectCalendarDate('${dateStr}')">
                 <div class="calendar-date-num">${d}</div>
                 ${eventsHtml}
             </div>
@@ -2038,7 +2051,7 @@ async function renderCalendar() {
     grid.innerHTML = cellsHtml;
 }
 
-window.selectCalendarDate = function(dateStr) {
+window.selectCalendarDate = function(dateStr, shouldScroll = true) {
     const isTeacher = currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher');
     const cardId = isTeacher ? 'selectedDateScheduleCard' : 'studentSelectedDateCard';
     const titleId = isTeacher ? 'selectedDateTitle' : 'studentSelectedDateTitle';
@@ -2048,6 +2061,11 @@ window.selectCalendarDate = function(dateStr) {
     const title = document.getElementById(titleId);
     const list = document.getElementById(listId);
     if (!card || !title || !list) return;
+
+    // 선택된 날짜 셀 하이라이트 표시
+    document.querySelectorAll('.calendar-cell').forEach(cell => cell.classList.remove('selected-date'));
+    const targetCell = document.querySelector(`.calendar-cell[data-date="${dateStr}"]`);
+    if (targetCell) targetCell.classList.add('selected-date');
 
     const daySchedules = currentMonthSchedules.filter(s => s.start_time.split('T')[0] === dateStr);
     title.textContent = `${dateStr} 수업 일정 (${daySchedules.length}건)`;
@@ -2090,7 +2108,9 @@ window.selectCalendarDate = function(dateStr) {
         `;
     }).join('');
 
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (shouldScroll) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 };
 
 window.toggleScheduleStatus = async function(id, newStatus) {
