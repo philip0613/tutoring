@@ -11,10 +11,36 @@ export default async function handler(req, res) {
 
         // 1. 학생 계정인 경우: 본인 프로필 정보만 반환
         if (auth.isStudent) {
-            return res.status(200).json([{ id: auth.userId, name: auth.name }]);
+            const login_id = auth.user?.email ? auth.user.email.replace('@tutor.com', '').split('@')[0] : '';
+            return res.status(200).json([{ id: auth.userId, name: auth.name, login_id }]);
         }
 
         // 2. 선생님 계정인 경우
+        // Supabase Auth 관리자 API를 통해 사용자 이메일(로그인 ID) 매핑 구축
+        const loginIdMap = new Map();
+        try {
+            const authUsersRes = await supabaseAdminFetch('/auth/v1/admin/users?per_page=1000');
+            const userList = Array.isArray(authUsersRes) ? authUsersRes : (authUsersRes?.users || []);
+            for (const u of userList) {
+                if (u && u.id) {
+                    const email = u.email || '';
+                    const metaLid = u.user_metadata?.login_id;
+                    const lid = metaLid || (email.endsWith('@tutor.com') ? email.replace('@tutor.com', '') : (email ? email.split('@')[0] : ''));
+                    if (lid) loginIdMap.set(u.id, lid);
+                }
+            }
+        } catch (authErr) {
+            console.warn('Auth user list fetch failed:', authErr.message);
+        }
+
+        const enrichStudent = (stu) => {
+            if (!stu) return stu;
+            return {
+                ...stu,
+                login_id: loginIdMap.get(stu.id) || ''
+            };
+        };
+
         // (1) 특정 과목의 수강생 목록 요청인 경우
         if (subject_id) {
             // 본인 과목인지 검증
@@ -29,7 +55,8 @@ export default async function handler(req, res) {
 
             const students = enrollments
                 .map(e => e.profiles)
-                .filter(Boolean);
+                .filter(Boolean)
+                .map(enrichStudent);
 
             return res.status(200).json(students);
         }
@@ -44,7 +71,7 @@ export default async function handler(req, res) {
             const allStudents = await supabaseAdminFetch(
                 '/rest/v1/profiles?role=eq.student&select=id,name&order=created_at.desc'
             );
-            return res.status(200).json(allStudents);
+            return res.status(200).json(allStudents.map(enrichStudent));
         }
 
         // 본인 과목들에 등록된 학생들 조회
@@ -64,7 +91,7 @@ export default async function handler(req, res) {
             '/rest/v1/profiles?role=eq.student&select=id,name&order=created_at.desc'
         );
 
-        return res.status(200).json(allStudents);
+        return res.status(200).json(allStudents.map(enrichStudent));
     } catch (err) {
         return res.status(err.status || 500).json({ error: err.message || '학생 목록을 불러오지 못했습니다.' });
     }

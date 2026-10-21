@@ -3315,18 +3315,31 @@ input[type="file"] {
 
 .qstat-box {
     background: var(--bg-subtle);
-    border: 1px solid var(--border-color);
+    border: 1.5px solid var(--border-color);
     border-radius: var(--radius-md);
     padding: 12px 8px;
     text-align: center;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    transition: transform 0.18s ease;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    font-family: inherit;
+    width: 100%;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .qstat-box:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    border-color: var(--text-muted);
+}
+
+.qstat-box:active {
+    transform: scale(0.96);
 }
 
 .qstat-num {
@@ -3345,6 +3358,16 @@ input[type="file"] {
     color: var(--text-primary);
 }
 
+.qstat-box.total.active {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.qstat-box.total.active .qstat-num {
+    color: var(--primary);
+}
+
 .qstat-box.waiting {
     background: rgba(245, 158, 11, 0.08);
     border-color: rgba(245, 158, 11, 0.25);
@@ -3354,6 +3377,12 @@ input[type="file"] {
     color: #d97706;
 }
 
+.qstat-box.waiting.active {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+
 .qstat-box.answered {
     background: rgba(16, 185, 129, 0.08);
     border-color: rgba(16, 185, 129, 0.25);
@@ -3361,6 +3390,12 @@ input[type="file"] {
 
 .qstat-box.answered .qstat-num {
     color: #059669;
+}
+
+.qstat-box.answered.active {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
 }
 
 /* 성적 추이 그래프 */

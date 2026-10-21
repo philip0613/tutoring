@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="과외노트">
-    <link rel="stylesheet" href="style.css?v=20261021_2245">
+    <link rel="stylesheet" href="style.css?v=20261021_2320">
 </head>
 <body>
     <!-- 실시간 인앱 토스트 알림 컨테이너 -->
@@ -628,18 +628,18 @@
                                 </button>
                             </div>
                             <div class="question-stats-grid mt-12">
-                                <div class="qstat-box total">
+                                <button type="button" class="qstat-box total active" id="qstatBoxTotal" onclick="filterStudentQuestions('all')" aria-label="전체 질문 필터">
                                     <span class="qstat-num" id="studyTotalQCount">0</span>
                                     <span class="qstat-lbl">전체 질문</span>
-                                </div>
-                                <div class="qstat-box waiting">
+                                </button>
+                                <button type="button" class="qstat-box waiting" id="qstatBoxWaiting" onclick="filterStudentQuestions('waiting')" aria-label="답변 대기 필터">
                                     <span class="qstat-num" id="studyWaitingQCount">0</span>
                                     <span class="qstat-lbl">답변 대기</span>
-                                </div>
-                                <div class="qstat-box answered">
+                                </button>
+                                <button type="button" class="qstat-box answered" id="qstatBoxAnswered" onclick="filterStudentQuestions('answered')" aria-label="답변 완료 필터">
                                     <span class="qstat-num" id="studyAnsweredQCount">0</span>
                                     <span class="qstat-lbl">답변 완료</span>
-                                </div>
+                                </button>
                             </div>
                         </div>
 
@@ -660,7 +660,10 @@
                         <!-- 5. 나의 질문 내역 -->
                         <div class="card">
                             <div class="section-header-inline mb-12">
-                                <h3 class="section-title">나의 질문 내역</h3>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <h3 class="section-title" id="myQuestionsHeaderTitle">나의 질문 내역</h3>
+                                    <span id="myQuestionsFilterBadge" class="badge" style="font-size:0.75rem; background:var(--bg-subtle); color:var(--text-muted); font-weight:700;">전체</span>
+                                </div>
                                 <button type="button" class="text-link-btn" onclick="loadMyQuestions()" style="font-size:0.82rem; font-weight:600;">새로고침</button>
                             </div>
                             <div id="myQuestionList" class="feed-list"></div>
@@ -1258,6 +1261,6 @@
         <div class="lightbox-bottom-hint">화면 아무 곳이나 탭하면 닫힙니다</div>
     </div>
 
-    <script src="script.js?v=20261021_2245"></script>
+    <script src="script.js?v=20261021_2320"></script>
 </body>
 </html>

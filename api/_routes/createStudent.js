@@ -33,7 +33,7 @@ export default async function handler(req, res) {
                 email,
                 password,
                 email_confirm: true,
-                user_metadata: { name: name.trim() }
+                user_metadata: { name: name.trim(), login_id: id.trim() }
             })
         });
 

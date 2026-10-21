@@ -2879,6 +2879,137 @@ async function loadMyExams() {
     }
 }
 
+let currentStudentQuestionFilter = 'all'; // 'all' | 'waiting' | 'answered'
+
+window.filterStudentQuestions = function(filter) {
+    currentStudentQuestionFilter = filter || 'all';
+    updateQuestionFilterUI();
+    renderStudentQuestionsFeed();
+    const listEl = document.getElementById('myQuestionList');
+    if (listEl) {
+        listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+};
+
+function updateQuestionFilterUI() {
+    const totalBox = document.getElementById('qstatBoxTotal');
+    const waitBox = document.getElementById('qstatBoxWaiting');
+    const ansBox = document.getElementById('qstatBoxAnswered');
+    const filterBadge = document.getElementById('myQuestionsFilterBadge');
+
+    if (totalBox) totalBox.classList.toggle('active', currentStudentQuestionFilter === 'all');
+    if (waitBox) waitBox.classList.toggle('active', currentStudentQuestionFilter === 'waiting');
+    if (ansBox) ansBox.classList.toggle('active', currentStudentQuestionFilter === 'answered');
+
+    if (filterBadge) {
+        if (currentStudentQuestionFilter === 'waiting') {
+            filterBadge.textContent = '답변 대기';
+            filterBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+            filterBadge.style.color = '#d97706';
+        } else if (currentStudentQuestionFilter === 'answered') {
+            filterBadge.textContent = '답변 완료';
+            filterBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+            filterBadge.style.color = '#059669';
+        } else {
+            filterBadge.textContent = '전체';
+            filterBadge.style.background = 'var(--bg-subtle)';
+            filterBadge.style.color = 'var(--text-muted)';
+        }
+    }
+}
+
+function renderStudentQuestionsFeed() {
+    const list = document.getElementById('myQuestionList');
+    if (!list) return;
+
+    if (!Array.isArray(myQuestionsCache) || myQuestionsCache.length === 0) {
+        list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0; font-size:0.88rem;">아직 질문한 내역이 없습니다.</div>';
+        return;
+    }
+
+    let filtered = myQuestionsCache;
+    if (currentStudentQuestionFilter === 'waiting') {
+        filtered = myQuestionsCache.filter(q => !(q.is_answered || (q.answer_text && q.answer_text.trim() !== '')));
+    } else if (currentStudentQuestionFilter === 'answered') {
+        filtered = myQuestionsCache.filter(q => Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== '')));
+    }
+
+    if (filtered.length === 0) {
+        let msg = '해당하는 질문이 없습니다.';
+        if (currentStudentQuestionFilter === 'waiting') {
+            msg = '현재 답변 대기 중인 질문이 없습니다. (모든 질문 답변 완료!)';
+        } else if (currentStudentQuestionFilter === 'answered') {
+            msg = '아직 답변이 완료된 질문이 없습니다.';
+        }
+        list.innerHTML = `
+            <div style="text-align:center; color:var(--text-muted); padding:32px 16px; font-size:0.88rem;">
+                <div style="font-size:1.8rem; margin-bottom:8px;">${currentStudentQuestionFilter === 'waiting' ? '🎉' : '💬'}</div>
+                <div style="font-weight:600; color:var(--text-primary); margin-bottom:4px;">${msg}</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">상단의 버튼을 눌러 다른 질문들을 확인할 수 있습니다.</div>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = filtered.map(q => {
+        const hasAnswer = Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''));
+        const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}15; color:${q.subjects.color}; border: 1px solid ${q.subjects.color}35;">${escapeHtml(q.subjects.name)}</span>` : '';
+        const statusBadge = hasAnswer
+            ? `<span class="badge badge-answered">${ICONS.check} 답변 완료</span>`
+            : `<span class="badge badge-waiting">${ICONS.clock} 풀이 작성 중</span>`;
+
+        return `
+            <div class="feed-card" id="question-${q.id}">
+                <div class="feed-header">
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        ${subjectBadge}
+                        ${statusBadge}
+                    </div>
+                    ${!hasAnswer ? `
+                        <div style="display:flex; gap:6px;">
+                            <button class="danger-link-btn" onclick="deleteStudentQuestion(${q.id})" style="font-size:0.8rem; padding:4px 8px; display:inline-flex; align-items:center; gap:4px;" title="답변 대기 중 질문 삭제">
+                                ${ICONS.trash} 삭제
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="feed-title">
+                    <span>Q. ${escapeHtml(q.question_text)}</span>
+                </div>
+
+                ${q.question_image_url ? `
+                    <div class="image-preview-wrapper" onclick="openImageLightbox('${escapeHtml(q.question_image_url)}', '문제 사진')" title="탭하여 원본 사진 보기">
+                        <img src="${q.question_image_url}" alt="문제 사진" loading="lazy">
+                        <div class="image-zoom-overlay">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            <span>탭하여 확대</span>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="answer-box">
+                    ${hasAnswer ? `
+                        <div class="answer-box-title" style="margin-bottom:4px;">선생님 풀이 해설</div>
+                        <p class="answer-box-content">${escapeHtml(q.answer_text || '')}</p>
+                        ${q.answer_image_url ? `
+                            <div class="image-preview-wrapper" style="margin-top:8px;" onclick="openImageLightbox('${escapeHtml(q.answer_image_url)}', '선생님 풀이 사진')" title="탭하여 풀이 사진 보기">
+                                <img src="${q.answer_image_url}" alt="풀이 사진" loading="lazy">
+                                <div class="image-zoom-overlay">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                    <span>탭하여 확대</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    ` : `
+                        <span style="color:var(--warning); font-weight:600; font-size:0.85rem;">선생님이 문제를 확인하고 풀이를 작성 중입니다.</span>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 async function loadMyQuestions() {
     const list = document.getElementById('myQuestionList');
     if (!list) return;
@@ -2908,68 +3039,8 @@ async function loadMyQuestions() {
         const qStat = document.getElementById('studentStatQuestions');
         if (qStat) qStat.textContent = totalCount;
 
-        if (!Array.isArray(questions) || questions.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0; font-size:0.88rem;">아직 질문한 내역이 없습니다.</div>';
-            return;
-        }
-
-        list.innerHTML = questions.map(q => {
-            const hasAnswer = Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''));
-            const subjectBadge = q.subjects ? `<span class="badge" style="background:${q.subjects.color}15; color:${q.subjects.color}; border: 1px solid ${q.subjects.color}35;">${escapeHtml(q.subjects.name)}</span>` : '';
-            const statusBadge = hasAnswer
-                ? `<span class="badge badge-answered">${ICONS.check} 답변 완료</span>`
-                : `<span class="badge badge-waiting">${ICONS.clock} 풀이 작성 중</span>`;
-
-            return `
-                <div class="feed-card" id="question-${q.id}">
-                    <div class="feed-header">
-                        <div style="display:flex; gap:6px; align-items:center;">
-                            ${subjectBadge}
-                            ${statusBadge}
-                        </div>
-                        ${!hasAnswer ? `
-                            <div style="display:flex; gap:6px;">
-                                <button class="danger-link-btn" onclick="deleteStudentQuestion(${q.id})" style="font-size:0.8rem; padding:4px 8px; display:inline-flex; align-items:center; gap:4px;" title="답변 대기 중 질문 삭제">
-                                    ${ICONS.trash} 삭제
-                                </button>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <div class="feed-title">
-                        <span>Q. ${escapeHtml(q.question_text)}</span>
-                    </div>
-
-                    ${q.question_image_url ? `
-                        <div class="image-preview-wrapper" onclick="openImageLightbox('${escapeHtml(q.question_image_url)}', '문제 사진')" title="탭하여 원본 사진 보기">
-                            <img src="${q.question_image_url}" alt="문제 사진" loading="lazy">
-                            <div class="image-zoom-overlay">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                                <span>탭하여 확대</span>
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <div class="answer-box">
-                        ${hasAnswer ? `
-                            <div class="answer-box-title" style="margin-bottom:4px;">선생님 풀이 해설</div>
-                            <p class="answer-box-content">${escapeHtml(q.answer_text || '')}</p>
-                            ${q.answer_image_url ? `
-                                <div class="image-preview-wrapper" style="margin-top:8px;" onclick="openImageLightbox('${escapeHtml(q.answer_image_url)}', '선생님 풀이 사진')" title="탭하여 풀이 사진 보기">
-                                    <img src="${q.answer_image_url}" alt="풀이 사진" loading="lazy">
-                                    <div class="image-zoom-overlay">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                                        <span>탭하여 확대</span>
-                                    </div>
-                                </div>
-                            ` : ''}
-                        ` : `
-                            <span style="color:var(--warning); font-weight:600; font-size:0.85rem;">선생님이 문제를 확인하고 풀이를 작성 중입니다.</span>
-                        `}
-                    </div>
-                </div>
-            `;
-        }).join('');
+        updateQuestionFilterUI();
+        renderStudentQuestionsFeed();
     } catch (err) {
         console.error('내 질문 로드 실패:', err);
         list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:30px 0;">질문 목록을 불러오지 못했습니다.</div>';
@@ -3982,6 +4053,33 @@ window.mypageDetailGoBack = function() {
     }
 };
 
+function formatStudentLoginId(stu) {
+    if (!stu) return '';
+    const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+
+    let lid = typeof stu === 'object' ? (stu.login_id || stu.loginId) : stu;
+    if (lid && !isUuid(lid)) {
+        return String(lid).trim();
+    }
+
+    const sid = typeof stu === 'object' ? (stu.id || stu.student_id) : stu;
+    if (sid) {
+        const studentPool = (Array.isArray(totalStudentsCache) && totalStudentsCache.length > 0)
+            ? totalStudentsCache
+            : (Array.isArray(allStudentsCache) ? allStudentsCache : []);
+        const found = studentPool.find(s => s && (s.id == sid || s.student_id == sid));
+        if (found && found.login_id && !isUuid(found.login_id)) {
+            return String(found.login_id).trim();
+        }
+    }
+
+    if (typeof stu === 'object' && stu.email && typeof stu.email === 'string') {
+        return stu.email.replace('@tutor.com', '').split('@')[0];
+    }
+
+    return '';
+}
+
 async function renderMypageDetailList(type) {
     const container = document.getElementById('mypageDetailListContainer');
     if (!container) return;
@@ -4097,18 +4195,21 @@ async function renderMypageDetailList(type) {
             container.innerHTML = '<div style="text-align:center; padding:28px 0; color:var(--text-muted);">등록된 담당 학생이 없습니다.</div>';
             return;
         }
-        container.innerHTML = studentList.map(stu => `
+        container.innerHTML = studentList.map(stu => {
+            const lid = formatStudentLoginId(stu);
+            return `
             <div class="drilldown-item-card" onclick="showMypageSubDetail('teacher-students', '${stu.id || stu.student_id}')">
                 <div class="drilldown-item-main">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span class="badge-student" style="font-size:0.75rem;">학생</span>
                         <span class="drilldown-item-title">${escapeHtml(stu.name || '학생')}</span>
                     </div>
-                    <div class="drilldown-item-desc">아이디: @${escapeHtml(stu.login_id || stu.id || '')}</div>
+                    <div class="drilldown-item-desc">${lid ? `아이디: @${escapeHtml(lid)}` : '수강생'}</div>
                 </div>
                 <svg class="drilldown-item-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     // 6. 선생님: 답변 대기 질문
@@ -4334,12 +4435,16 @@ window.showMypageSubDetail = function(type, id) {
                 <div style="font-size:0.84rem; font-weight:700; color:var(--text-primary); margin-bottom:8px;">수강생 명단</div>
                 ${enrollments.length > 0 ? `
                     <div style="display:flex; flex-direction:column; gap:6px;">
-                        ${enrollments.map(e => `
+                        ${enrollments.map(e => {
+                            const p = e.profiles || {};
+                            const lid = formatStudentLoginId(p.login_id ? p : (p.id ? p : e));
+                            return `
                             <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg-subtle); border-radius:8px; font-size:0.85rem;">
-                                <span style="font-weight:700;">${escapeHtml(e.profiles?.name || e.student_name || '학생')}</span>
-                                <span style="color:var(--text-muted); font-size:0.8rem;">@${escapeHtml(e.profiles?.login_id || e.student_id || '')}</span>
+                                <span style="font-weight:700;">${escapeHtml(p.name || e.student_name || '학생')}</span>
+                                ${lid ? `<span style="color:var(--text-muted); font-size:0.8rem;">@${escapeHtml(lid)}</span>` : '<span style="color:var(--text-muted); font-size:0.8rem;">수강생</span>'}
                             </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 ` : `
                     <div style="text-align:center; padding:12px; color:var(--text-muted); font-size:0.84rem;">등록된 수강생이 없습니다.</div>
@@ -4361,6 +4466,8 @@ window.showMypageSubDetail = function(type, id) {
         if (!item) return;
         if (titleEl) titleEl.textContent = `${item.name} 학생 상세`;
 
+        const lid = formatStudentLoginId(item);
+
         content.innerHTML = `
             <div class="drilldown-detail-header-card" style="display:flex; align-items:center; gap:14px;">
                 <div class="mypage-avatar student-avatar" style="width:50px; height:50px; font-size:1.1rem;">
@@ -4368,7 +4475,7 @@ window.showMypageSubDetail = function(type, id) {
                 </div>
                 <div>
                     <div class="drilldown-detail-title" style="margin:0 0 2px 0;">${escapeHtml(item.name)} 학생</div>
-                    <div style="font-size:0.82rem; color:var(--text-muted);">아이디: @${escapeHtml(item.login_id || item.id || '')}</div>
+                    <div style="font-size:0.82rem; color:var(--text-muted);">${lid ? `아이디: @${escapeHtml(lid)}` : '수강생'}</div>
                 </div>
             </div>
 
@@ -4378,7 +4485,7 @@ window.showMypageSubDetail = function(type, id) {
             </div>
             <div class="drilldown-detail-row">
                 <span class="drilldown-detail-label">로그인 아이디</span>
-                <span class="drilldown-detail-value">@${escapeHtml(item.login_id || item.id || '')}</span>
+                <span class="drilldown-detail-value">${lid ? `@${escapeHtml(lid)}` : '(아이디 없음)'}</span>
             </div>
 
             <button type="button" class="primary-btn mt-20" style="width:100%; height:44px;" onclick="closeModal('mypageDetailModal'); switchMainTab('teacherClassTab'); selectStudent('${item.id || item.student_id}');">

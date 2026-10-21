@@ -13,6 +13,32 @@ export default async function handler(req, res) {
                 const subjects = await supabaseAdminFetch(
                     `/rest/v1/subjects?teacher_id=eq.${auth.userId}&select=*,enrollments(student_id,profiles:student_id(id,name))&order=created_at.desc`
                 );
+
+                try {
+                    const authUsersRes = await supabaseAdminFetch('/auth/v1/admin/users?per_page=1000');
+                    const userList = Array.isArray(authUsersRes) ? authUsersRes : (authUsersRes?.users || []);
+                    const uMap = new Map();
+                    for (const u of userList) {
+                        if (u && u.id) {
+                            const email = u.email || '';
+                            const metaLid = u.user_metadata?.login_id;
+                            const lid = metaLid || (email.endsWith('@tutor.com') ? email.replace('@tutor.com', '') : (email ? email.split('@')[0] : ''));
+                            if (lid) uMap.set(u.id, lid);
+                        }
+                    }
+                    for (const s of subjects) {
+                        if (Array.isArray(s.enrollments)) {
+                            for (const enr of s.enrollments) {
+                                if (enr.profiles) {
+                                    enr.profiles.login_id = uMap.get(enr.profiles.id) || '';
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Auth user fetch in subjects failed:', e.message);
+                }
+
                 return res.status(200).json(subjects);
             } else {
                 // 학생: 본인이 수강 등록된 과목 목록 조회
