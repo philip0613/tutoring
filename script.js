@@ -1075,12 +1075,20 @@ function setupInstagramSwipeNavigation() {
     let wasSwiping = false;
     let touchStartTarget = null;
 
-    // 1. 스와이프 제스처 직후 손가락을 뗄 때 박스/버튼의 원치 않는 오발 클릭을 100% 캡처하여 차단
+    // 1. 스와이프 제스처 직후 손가락을 뗄 때 박스/버튼/입력창의 원치 않는 오발 클릭 및 포커스를 100% 캡처하여 차단
     window.addEventListener('click', (e) => {
         if (wasSwiping) {
             e.stopPropagation();
             e.stopImmediatePropagation();
             e.preventDefault();
+        }
+    }, true);
+
+    window.addEventListener('focusin', (e) => {
+        if (wasSwiping || isSwiping) {
+            if (e.target && typeof e.target.blur === 'function') {
+                e.target.blur();
+            }
         }
     }, true);
 
@@ -1110,8 +1118,9 @@ function setupInstagramSwipeNavigation() {
         return false;
     }
 
-    // 3. 진짜 스와이프에서 제외해야 할 최소 대상만 지정 (열려있는 모달 및 텍스트 타이핑 입력창)
-    const STRICT_EXCLUDED_SELECTORS = '.modal-overlay:not(.hidden), .image-lightbox-modal:not(.hidden), input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]), textarea, select';
+    // 3. 진짜 스와이프에서 제외해야 할 대상 (오직 열려있는 팝업 모달창 및 라이트박스 뷰어 내부만 제외)
+    // 텍스트 입력창(input, textarea) 위에서도 탭(클릭)이 아닌 가로 스와이프 시 자연스럽게 탭 전환이 동작하도록 포함
+    const STRICT_EXCLUDED_SELECTORS = '.modal-overlay:not(.hidden), .image-lightbox-modal:not(.hidden)';
 
     window.addEventListener('touchstart', (e) => {
         // 모바일 화면(768px 이하) 및 로그인 상태에서만 동작
@@ -1119,7 +1128,7 @@ function setupInstagramSwipeNavigation() {
 
         touchStartTarget = e.target;
 
-        // 열려있는 모달창이나 텍스트 입력창 내부 터치 시에만 스와이프 제외 (그 외 모든 카드, 박스, 버튼은 스와이프 허용)
+        // 열려있는 모달창이나 라이트박스 뷰어 내부 터치 시에만 스와이프 제외 (그 외 모든 카드, 박스, 입력창은 스와이프 허용)
         if (touchStartTarget.closest(STRICT_EXCLUDED_SELECTORS)) return;
 
         const isTeacher = (currentUser.role === 'admin' || currentUser.role === 'teacher');
@@ -1164,7 +1173,7 @@ function setupInstagramSwipeNavigation() {
         const absX = Math.abs(deltaX);
         const absY = Math.abs(deltaY);
 
-        // 제스처 방향 판별 단계 (지능형 각도 & 엄지손가락 자연 곡률 판별: 박스 위에서도 부드럽게 감지)
+        // 제스처 방향 판별 단계 (지능형 각도 & 엄지손가락 자연 곡률 판별: 박스 및 입력창 위에서도 부드럽게 감지)
         if (!directionLocked) {
             if (absX < 6 && absY < 6) {
                 return; // 미세한 초기 터치 떨림 무시
@@ -1198,6 +1207,14 @@ function setupInstagramSwipeNavigation() {
                 e.preventDefault();
             }
 
+            // 가로 스와이프 진행 중인 경우, 활성화된 입력창(키보드)이 있다면 즉시 블러하여 닫기
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT')) {
+                document.activeElement.blur();
+            }
+            if (touchStartTarget && typeof touchStartTarget.blur === 'function') {
+                touchStartTarget.blur();
+            }
+
             // 인스타그램 스타일 실시간 1:1 트랙 이동 계산
             const basePercent = -(currentIdx * 25);
             let shiftPercent = (deltaX / trackWidth) * 25;
@@ -1224,9 +1241,16 @@ function setupInstagramSwipeNavigation() {
         isSwiping = false;
         activeTrack.classList.remove('is-swiping');
 
-        // 스와이프 완료 직후 발생하는 클릭 이벤트를 200ms 동안 차단하여 카드/버튼 오작동 방지
+        // 스와이프 완료 직후 발생하는 클릭/포커스 이벤트를 250ms 동안 차단하여 카드/버튼/입력창 오작동 방지
         wasSwiping = true;
-        setTimeout(() => { wasSwiping = false; }, 200);
+        setTimeout(() => { wasSwiping = false; }, 250);
+
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT')) {
+            document.activeElement.blur();
+        }
+        if (touchStartTarget && typeof touchStartTarget.blur === 'function') {
+            touchStartTarget.blur();
+        }
 
         const touch = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
         const deltaX = touch ? (touch.clientX - touchStartX) : 0;

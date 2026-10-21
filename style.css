@@ -3131,11 +3131,11 @@ input[type="file"] {
         user-drag: none;
     }
 
-    /* 텍스트 입력창은 커서 이동 및 텍스트 선택 허용 */
+    /* 텍스트 입력창: 세로 스크롤은 브라우저에 맡기고, 가로 스와이프는 자바스크립트 제스처에 즉시 전달 */
     .tab-page input,
     .tab-page textarea,
     .tab-page select {
-        touch-action: auto;
+        touch-action: pan-y;
         -webkit-user-select: text;
         user-select: text;
     }
