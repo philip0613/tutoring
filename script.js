@@ -404,23 +404,46 @@ function showToast(title, body) {
 
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
+    toast.setAttribute('role', 'alert');
     toast.innerHTML = `
-        <div style="color: #34d399; margin-top: 1px; flex-shrink: 0;">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="toast-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         </div>
-        <div style="flex: 1;">
-            <div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; color: #ffffff;">${escapeHtml(title)}</div>
-            <div style="font-size: 0.82rem; color: #94a3b8; line-height: 1.4;">${escapeHtml(body)}</div>
+        <div class="toast-body-wrap">
+            <div class="toast-title">${escapeHtml(title)}</div>
+            <div class="toast-desc">${escapeHtml(body)}</div>
         </div>
+        <button type="button" class="toast-close-btn" aria-label="닫기">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
     `;
+
+    let dismissed = false;
+    const dismiss = () => {
+        if (dismissed) return;
+        dismissed = true;
+        toast.classList.add('toast-dismissing');
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 260);
+    };
+
+    // 토스트 본체 탭 시 부드럽게 닫기
+    toast.addEventListener('click', dismiss);
+
+    // 닫기 버튼 전용 클릭 시 이벤트 전파 차단 후 닫기
+    const closeBtn = toast.querySelector('.toast-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dismiss();
+        });
+    }
 
     container.appendChild(toast);
 
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-10px)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
+        dismiss();
     }, 4500);
 }
 
@@ -1367,7 +1390,7 @@ function updateMyPagePushStatus(role) {
         if (descEl) descEl.textContent = '실시간 푸시 알림 수신 중 (정상 연동됨)';
         if (btnEl) {
             btnEl.textContent = '테스트 알림';
-            btnEl.onclick = () => showToast('🔔 알림 테스트', '푸시 알림이 정상적으로 연동되어 있습니다.');
+            btnEl.onclick = () => showToast('알림 테스트', '푸시 알림이 정상적으로 연동되어 있습니다.');
         }
     } else if (Notification.permission === 'denied') {
         if (descEl) descEl.textContent = '브라우저 설정에서 알림 권한이 차단되어 있습니다.';
