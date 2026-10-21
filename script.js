@@ -1042,14 +1042,9 @@ function setupStudentBottomDock() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // 3. 중앙 질문하기 (+) - 질문 등록 입력창으로 즉시 포커스
+    // 3. 중앙 질문하기 (+) - 전용 바텀 시트 모달 호출 (선생님 페이지처럼 팝업)
     document.getElementById('dockStudentAsk')?.addEventListener('click', () => {
-        switchMainTab('studentStudyTab');
-        const qInput = document.getElementById('questionText');
-        if (qInput) {
-            qInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => qInput.focus(), 350);
-        }
+        openStudentAskModal();
     });
 
     // 4. 성적 & 일지 리포트
@@ -1096,17 +1091,16 @@ function setupInstagramSwipeNavigation() {
             if (el.classList.contains('tab-page') || el.classList.contains('tab-track') || el.classList.contains('tab-viewport')) {
                 break;
             }
-            const style = window.getComputedStyle(el);
-            const overflowX = style.overflowX;
-            if (overflowX === 'auto' || overflowX === 'scroll') {
+            // 오직 과목 칩 리스트나 가로 서브 탭 등 명시적인 가로 스크롤 컨테이너만 체크
+            if (el.classList.contains('subject-chip-list') || el.classList.contains('sub-tab-bar') || el.hasAttribute('data-horizontal-scroll')) {
                 const maxScroll = el.scrollWidth - el.clientWidth;
-                if (maxScroll > 6) {
+                if (maxScroll > 10) {
                     // 왼쪽으로 스와이프 (손가락 좌측 이동 -> 컨텐츠 우측으로 스크롤)
-                    if (deltaX < 0 && el.scrollLeft < maxScroll - 3) {
+                    if (deltaX < 0 && el.scrollLeft < maxScroll - 4) {
                         return true;
                     }
                     // 오른쪽으로 스와이프 (손가락 우측 이동 -> 컨텐츠 좌측으로 스크롤)
-                    if (deltaX > 0 && el.scrollLeft > 3) {
+                    if (deltaX > 0 && el.scrollLeft > 4) {
                         return true;
                     }
                 }
@@ -1170,31 +1164,31 @@ function setupInstagramSwipeNavigation() {
         const absX = Math.abs(deltaX);
         const absY = Math.abs(deltaY);
 
-        // 제스처 방향 판별 단계 (지능형 각도 & 엄지손가락 자연 곡률 판별)
+        // 제스처 방향 판별 단계 (지능형 각도 & 엄지손가락 자연 곡률 판별: 박스 위에서도 부드럽게 감지)
         if (!directionLocked) {
-            if (absX < 7 && absY < 7) {
+            if (absX < 6 && absY < 6) {
                 return; // 미세한 초기 터치 떨림 무시
             }
 
-            // 가로 이동이 감지되고, 엄지 곡률(수직 이동 대비 가로 비율 0.75 이상)을 만족할 때
-            if (absX >= 7 && absX > absY * 0.75) {
+            // 가로 이동이 감지되고 엄지 대각선 곡률을 만족할 때 (가로가 세로의 0.65배 이상)
+            if (absX >= 6 && absX > absY * 0.65) {
                 // 내부 가로 스크롤 가능 여부 체크 (칩 목록 등)
                 if (canElementScrollHorizontally(touchStartTarget, deltaX)) {
                     directionLocked = 'child-scroll';
                     isTracking = false;
                     return;
                 }
-                // 수평 탭 스와이프로 완벽 잠금
+                // 수평 탭 스와이프로 즉시 잠금
                 directionLocked = 'horizontal';
                 isSwiping = true;
                 activeTrack.classList.add('is-swiping');
-            } else if (absY >= 7 && absY > absX * 1.25) {
+            } else if (absY >= 9 && absY > absX * 1.4) {
                 // 명백한 세로 스크롤 의도 -> 브라우저 네이티브 세로 스크롤에 온전히 양보
                 directionLocked = 'vertical';
                 isTracking = false;
                 return;
             } else {
-                return; // 아직 방향이 명확하지 않은 경우 추가 이동 관찰
+                return; // 방향이 명확하지 않은 경우 추가 관찰
             }
         }
 
@@ -1669,6 +1663,8 @@ async function loadSubjects() {
             updateStudentSubjectSelectOptions();
             const subStat = document.getElementById('studentStatSubjects');
             if (subStat) subStat.textContent = mySubjects.length;
+            const subCountEl = document.getElementById('studentStudySubjectCount');
+            if (subCountEl) subCountEl.textContent = `${mySubjects.length}개 과목`;
         }
     } catch (err) {
         console.error('과목 로드 에러:', err);
@@ -1838,13 +1834,17 @@ function updateSubjectSelectOptions() {
 }
 
 function updateStudentSubjectSelectOptions() {
-    const sel = document.getElementById('askQuestionSubjectSelect');
-    if (!sel) return;
-    let html = '<option value="">질문할 과목 선택</option>';
-    mySubjects.forEach(s => {
-        html += `<option value="${s.id}">${escapeHtml(s.name)}</option>`;
+    ['askQuestionSubjectSelect', 'modalAskSubjectSelect'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const currentVal = sel.value;
+        let html = '<option value="">질문할 과목 선택</option>';
+        mySubjects.forEach(s => {
+            html += `<option value="${s.id}">${escapeHtml(s.name)}</option>`;
+        });
+        sel.innerHTML = html;
+        if (currentVal) sel.value = currentVal;
     });
-    sel.innerHTML = html;
 }
 
 async function handleCreateSubject() {
@@ -2820,7 +2820,8 @@ async function loadStudentData() {
     await Promise.all([
         loadMyExams(),
         loadMyQuestions(),
-        loadMyFeedbacks()
+        loadMyFeedbacks(),
+        loadUpcomingClass()
     ]);
 }
 
@@ -2840,6 +2841,9 @@ async function loadMyExams() {
 
         const examStat = document.getElementById('studentStatExams');
         if (examStat) examStat.textContent = myExamsCache.length;
+
+        // 📈 성적 추이 그래프 렌더링 호출
+        renderScoreTrendChart(myExamsCache);
 
         if (!Array.isArray(exams) || exams.length === 0) {
             list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px 0; font-size:0.86rem;">시험 기록이 없습니다.</div>';
@@ -2889,8 +2893,20 @@ async function loadMyQuestions() {
         const questions = await res.json();
         myQuestionsCache = Array.isArray(questions) ? questions : [];
 
+        // 질문 현황 통계 계산 및 UI 업데이트
+        const totalCount = myQuestionsCache.length;
+        const answeredCount = myQuestionsCache.filter(q => Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''))).length;
+        const waitingCount = totalCount - answeredCount;
+
+        const totalEl = document.getElementById('studyTotalQCount');
+        const waitEl = document.getElementById('studyWaitingQCount');
+        const ansEl = document.getElementById('studyAnsweredQCount');
+        if (totalEl) totalEl.textContent = totalCount;
+        if (waitEl) waitEl.textContent = waitingCount;
+        if (ansEl) ansEl.textContent = answeredCount;
+
         const qStat = document.getElementById('studentStatQuestions');
-        if (qStat) qStat.textContent = myQuestionsCache.length;
+        if (qStat) qStat.textContent = totalCount;
 
         if (!Array.isArray(questions) || questions.length === 0) {
             list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0; font-size:0.88rem;">아직 질문한 내역이 없습니다.</div>';
@@ -3578,3 +3594,903 @@ function processAndResizeImage(file) {
         reader.onerror = error => reject(error);
     });
 }
+
+// ==========================================
+// 📅 1. 다음 수업 안내 카드 (Upcoming Class)
+// ==========================================
+function formatDateShort(dateVal) {
+    if (!dateVal) return '';
+    try {
+        const d = new Date(dateVal);
+        if (isNaN(d.getTime())) return String(dateVal);
+        const m = d.getMonth() + 1;
+        const day = d.getDate();
+        const h = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${m}월 ${day}일 ${h}:${min}`;
+    } catch (e) {
+        return String(dateVal);
+    }
+}
+
+async function loadUpcomingClass() {
+    if (!currentUser || currentUser.role === 'admin' || currentUser.role === 'teacher') return;
+
+    try {
+        const now = new Date();
+        const res = await authFetch('/api/schedules');
+        if (!res.ok) return;
+        const schedules = await res.json();
+
+        if (!Array.isArray(schedules)) return;
+
+        // 끝난 시간(end_time)이 현재 시각 이후인 예정된 수업만 필터링 후 시작시간 오름차순
+        let filtered = schedules.filter(s => s.status !== 'cancelled' && new Date(s.end_time) >= now);
+        if (currentSubjectFilter) {
+            filtered = filtered.filter(s => s.subject_id === currentSubjectFilter);
+        }
+        filtered.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+        renderUpcomingClassCard(filtered[0] || null);
+    } catch (err) {
+        console.error('다음 수업 로드 실패:', err);
+    }
+}
+
+function renderUpcomingClassCard(schedule) {
+    const ddayEl = document.getElementById('upcomingClassDday');
+    const subEl = document.getElementById('upcomingClassSubject');
+    const titleEl = document.getElementById('upcomingClassTitle');
+    const timeEl = document.getElementById('upcomingClassTime');
+    const notesBox = document.getElementById('upcomingClassNotesBox');
+    const notesText = document.getElementById('upcomingClassNotes');
+
+    if (!schedule) {
+        if (ddayEl) {
+            ddayEl.textContent = '일정 없음';
+            ddayEl.style.background = 'var(--text-muted)';
+        }
+        if (subEl) subEl.textContent = '예정된 수업 없음';
+        if (titleEl) titleEl.textContent = '등록된 다음 수업 일정이 없습니다';
+        if (timeEl) timeEl.textContent = '선생님이 일정을 등록하면 실시간으로 안내됩니다.';
+        if (notesBox) notesBox.classList.add('hidden');
+        return;
+    }
+
+    const now = new Date();
+    const start = new Date(schedule.start_time);
+    const end = new Date(schedule.end_time);
+
+    // D-Day 계산
+    const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const diffDays = Math.round((startDate - nowDate) / (1000 * 60 * 60 * 24));
+
+    let ddayText = '다음 수업';
+    if (start <= now && now <= end) {
+        ddayText = '수업 진행 중';
+    } else if (diffDays === 0) {
+        ddayText = '오늘 수업';
+    } else if (diffDays === 1) {
+        ddayText = '내일 수업';
+    } else if (diffDays > 1) {
+        ddayText = `D-${diffDays}`;
+    }
+
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const month = start.getMonth() + 1;
+    const date = start.getDate();
+    const day = dayNames[start.getDay()];
+    const startHour = String(start.getHours()).padStart(2, '0');
+    const startMin = String(start.getMinutes()).padStart(2, '0');
+    const endHour = String(end.getHours()).padStart(2, '0');
+    const endMin = String(end.getMinutes()).padStart(2, '0');
+
+    if (ddayEl) {
+        ddayEl.textContent = ddayText;
+        ddayEl.style.background = '';
+    }
+    if (subEl) {
+        const subName = schedule.subjects ? schedule.subjects.name : '과외 수업';
+        subEl.textContent = subName;
+    }
+    if (titleEl) {
+        titleEl.textContent = schedule.title;
+    }
+    if (timeEl) {
+        timeEl.textContent = `${month}월 ${date}일 (${day}) ${startHour}:${startMin} ~ ${endHour}:${endMin}`;
+    }
+    if (schedule.notes && schedule.notes.trim()) {
+        if (notesText) notesText.textContent = schedule.notes;
+        if (notesBox) notesBox.classList.remove('hidden');
+    } else {
+        if (notesBox) notesBox.classList.add('hidden');
+    }
+}
+
+// ==========================================
+// 📈 2. 성적 추이 그래프 렌더링 (SVG Chart)
+// ==========================================
+function renderScoreTrendChart(exams) {
+    const container = document.getElementById('scoreChartContainer');
+    const avgBadge = document.getElementById('studyExamAvgBadge');
+    if (!container) return;
+
+    if (!Array.isArray(exams) || exams.length === 0) {
+        if (avgBadge) avgBadge.classList.add('hidden');
+        container.innerHTML = `
+            <div class="empty-chart-box">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                <p>등록된 시험 성적이 없습니다.</p>
+                <span class="sub-text">선생님이 시험 성적을 등록하면 이곳에 성적 추이 그래프가 나타납니다.</span>
+            </div>
+        `;
+        return;
+    }
+
+    // 날짜 오름차순 정렬 (과거 -> 최신)
+    const sorted = [...exams].sort((a, b) => {
+        const da = new Date(a.exam_date || a.created_at || 0);
+        const db = new Date(b.exam_date || b.created_at || 0);
+        return da - db;
+    });
+
+    const scores = sorted.map(e => Number(e.score) || 0);
+    const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    const maxScore = Math.max(...scores);
+
+    if (avgBadge) {
+        avgBadge.textContent = `평균 ${avgScore}점 (최고 ${maxScore}점)`;
+        avgBadge.classList.remove('hidden');
+    }
+
+    // SVG 차트 좌표 계산
+    const svgWidth = 400;
+    const svgHeight = 170;
+    const padLeft = 38;
+    const padRight = 24;
+    const padTop = 26;
+    const padBottom = 32;
+    const chartW = svgWidth - padLeft - padRight;
+    const chartH = svgHeight - padTop - padBottom;
+
+    // Y 좌표 매핑 (0 ~ 100점)
+    const getY = (val) => padTop + chartH - ((Math.min(Math.max(val, 0), 100) / 100) * chartH);
+
+    // X 좌표 매핑
+    const getX = (idx) => {
+        if (sorted.length === 1) return padLeft + chartW / 2;
+        return padLeft + (idx / (sorted.length - 1)) * chartW;
+    };
+
+    const points = sorted.map((e, idx) => ({
+        x: getX(idx),
+        y: getY(Number(e.score) || 0),
+        score: Number(e.score) || 0,
+        title: e.exam_title || '시험',
+        date: e.exam_date ? e.exam_date.substring(5, 10).replace('-', '/') : ''
+    }));
+
+    // SVG path 생성
+    let pathD = '';
+    let areaD = '';
+    if (points.length === 1) {
+        pathD = `M ${points[0].x - 24} ${points[0].y} L ${points[0].x + 24} ${points[0].y}`;
+    } else {
+        pathD = `M ${points[0].x} ${points[0].y}`;
+        for (let i = 1; i < points.length; i++) {
+            pathD += ` L ${points[i].x} ${points[i].y}`;
+        }
+        const bottomY = padTop + chartH;
+        areaD = `${pathD} L ${points[points.length - 1].x} ${bottomY} L ${points[0].x} ${bottomY} Z`;
+    }
+
+    const yGrid100 = getY(100);
+    const yGrid75 = getY(75);
+    const yGrid50 = getY(50);
+    const yGrid0 = getY(0);
+
+    const svgHtml = `
+        <svg class="score-chart-svg" viewBox="0 0 ${svgWidth} ${svgHeight}">
+            <defs>
+                <linearGradient id="scoreAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.28" />
+                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
+                </linearGradient>
+                <linearGradient id="scoreLineGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#3b82f6" />
+                    <stop offset="100%" stop-color="#2563eb" />
+                </linearGradient>
+            </defs>
+
+            <!-- Y축 그리드 가이드라인 및 라벨 -->
+            <line x1="${padLeft}" y1="${yGrid100}" x2="${svgWidth - padRight}" y2="${yGrid100}" stroke="var(--border-color)" stroke-dasharray="3,3" opacity="0.6"/>
+            <text x="${padLeft - 6}" y="${yGrid100 + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end" font-weight="600">100</text>
+
+            <line x1="${padLeft}" y1="${yGrid75}" x2="${svgWidth - padRight}" y2="${yGrid75}" stroke="var(--border-color)" stroke-dasharray="3,3" opacity="0.35"/>
+            <text x="${padLeft - 6}" y="${yGrid75 + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end">75</text>
+
+            <line x1="${padLeft}" y1="${yGrid50}" x2="${svgWidth - padRight}" y2="${yGrid50}" stroke="var(--border-color)" stroke-dasharray="3,3" opacity="0.35"/>
+            <text x="${padLeft - 6}" y="${yGrid50 + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end">50</text>
+
+            <line x1="${padLeft}" y1="${yGrid0}" x2="${svgWidth - padRight}" y2="${yGrid0}" stroke="var(--border-color)" opacity="0.8"/>
+            <text x="${padLeft - 6}" y="${yGrid0 + 3}" font-size="10" fill="var(--text-muted)" text-anchor="end">0</text>
+
+            <!-- 영역 채우기 -->
+            ${areaD ? `<path d="${areaD}" fill="url(#scoreAreaGrad)"/>` : ''}
+
+            <!-- 선 그래프 -->
+            <path d="${pathD}" fill="none" stroke="url(#scoreLineGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- 점 및 텍스트 라벨 -->
+            ${points.map(pt => `
+                <g class="chart-point-group">
+                    <circle cx="${pt.x}" cy="${pt.y}" r="5.5" fill="#ffffff" stroke="#2563eb" stroke-width="2.5" />
+                    <text x="${pt.x}" y="${pt.y - 9}" font-size="11" font-weight="800" fill="#1d4ed8" text-anchor="middle">${pt.score}점</text>
+                    <text x="${pt.x}" y="${padTop + chartH + 18}" font-size="10" font-weight="600" fill="var(--text-muted)" text-anchor="middle">${escapeHtml(pt.date || pt.title.substring(0, 5))}</text>
+                </g>
+            `).join('')}
+        </svg>
+    `;
+
+    container.innerHTML = svgHtml;
+}
+
+// ==========================================
+// 📸 3. 모르는 문제 질문하기 전용 바텀 시트 모달 핸들러
+// ==========================================
+window.openStudentAskModal = function() {
+    updateStudentSubjectSelectOptions();
+    openModal('studentAskModal');
+};
+
+window.handleModalQuestionImageChange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const previewWrapper = document.getElementById('modalQuestionImagePreview');
+    const previewImg = document.getElementById('modalQuestionImagePreviewImg');
+    const label = document.getElementById('modalQuestionUploadLabel');
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+        if (previewImg) previewImg.src = evt.target.result;
+        if (previewWrapper) previewWrapper.classList.remove('hidden');
+        if (label) label.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+};
+
+window.clearModalQuestionImage = function(e) {
+    if (e) e.stopPropagation();
+    const fileInput = document.getElementById('modalQuestionImage');
+    if (fileInput) fileInput.value = '';
+    const previewWrapper = document.getElementById('modalQuestionImagePreview');
+    if (previewWrapper) previewWrapper.classList.add('hidden');
+    const previewImg = document.getElementById('modalQuestionImagePreviewImg');
+    if (previewImg) previewImg.src = '';
+    const label = document.getElementById('modalQuestionUploadLabel');
+    if (label) label.textContent = '사진 촬영 또는 앨범에서 선택';
+};
+
+window.handleModalSubmitQuestion = async function() {
+    const textEl = document.getElementById('modalQuestionText');
+    const subSel = document.getElementById('modalAskSubjectSelect');
+    const fileEl = document.getElementById('modalQuestionImage');
+    const btn = document.getElementById('modalAskQuestionSubmitBtn');
+
+    const text = textEl ? textEl.value.trim() : '';
+    const subjectId = subSel ? subSel.value : '';
+    const file = fileEl && fileEl.files ? fileEl.files[0] : null;
+
+    if (!text) {
+        alert('질문 내용을 입력해 주세요.');
+        if (textEl) textEl.focus();
+        return;
+    }
+
+    setButtonLoading(btn, true, '질문 등록 중...');
+
+    try {
+        let imageBase64 = null;
+        let imageName = null;
+        if (file) {
+            imageBase64 = await processAndResizeImage(file);
+            imageName = file.name;
+        }
+
+        const res = await authFetch('/api/askQuestion', {
+            method: 'POST',
+            body: JSON.stringify({
+                question_text: text,
+                subject_id: subjectId ? parseInt(subjectId) : null,
+                image_base64: imageBase64,
+                image_name: imageName
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '질문 등록 실패');
+
+        showToast('질문 등록 완료', '선생님께 질문이 성공적으로 전송되었습니다.');
+        closeModal('studentAskModal');
+
+        // 입력 폼 초기화
+        if (textEl) textEl.value = '';
+        clearModalQuestionImage();
+
+        // 질문 목록 및 현황 통계 새로고침
+        await loadMyQuestions();
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
+
+// ==========================================
+// 🔍 4. 마이페이지 상세 내역 드릴다운 모달 (학생 & 선생 공용)
+// ==========================================
+let currentMypageDetailType = null;
+let currentMypageDetailItem = null;
+
+function setMypageDetailTitle(type) {
+    const titleEl = document.getElementById('mypageDetailTitle');
+    if (!titleEl) return;
+    switch(type) {
+        case 'student-subjects': titleEl.textContent = '📚 나의 수강 과목'; break;
+        case 'student-questions': titleEl.textContent = '❓ 나의 질문 내역'; break;
+        case 'student-exams': titleEl.textContent = '📝 나의 응시 시험'; break;
+        case 'teacher-subjects': titleEl.textContent = '📚 개설 과목 관리'; break;
+        case 'teacher-students': titleEl.textContent = '👥 담당 학생 목록'; break;
+        case 'teacher-unanswered': titleEl.textContent = '⚡ 답변 대기 질문'; break;
+        default: titleEl.textContent = '상세 내역';
+    }
+}
+
+window.openMypageDetail = async function(type) {
+    currentMypageDetailType = type;
+    currentMypageDetailItem = null;
+
+    const modal = document.getElementById('mypageDetailModal');
+    if (!modal) return;
+
+    const backBtn = document.getElementById('mypageDetailBackBtn');
+    const listView = document.getElementById('mypageDetailListView');
+    const subView = document.getElementById('mypageDetailSubView');
+
+    if (backBtn) backBtn.classList.add('hidden');
+    if (listView) listView.classList.remove('hidden');
+    if (subView) subView.classList.add('hidden');
+
+    setMypageDetailTitle(type);
+    openModal('mypageDetailModal');
+
+    await renderMypageDetailList(type);
+};
+
+window.mypageDetailGoBack = function() {
+    const backBtn = document.getElementById('mypageDetailBackBtn');
+    const listView = document.getElementById('mypageDetailListView');
+    const subView = document.getElementById('mypageDetailSubView');
+
+    if (backBtn) backBtn.classList.add('hidden');
+    if (subView) subView.classList.add('hidden');
+    if (listView) listView.classList.remove('hidden');
+
+    if (currentMypageDetailType) {
+        setMypageDetailTitle(currentMypageDetailType);
+    }
+};
+
+async function renderMypageDetailList(type) {
+    const container = document.getElementById('mypageDetailListContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align:center; padding:24px; color:var(--text-muted);">불러오는 중...</div>';
+
+    // 1. 학생: 수강 과목
+    if (type === 'student-subjects') {
+        if (!Array.isArray(mySubjects) || mySubjects.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:28px 0; color:var(--text-muted);">수강 중인 과목이 없습니다.</div>';
+            return;
+        }
+        container.innerHTML = mySubjects.map(s => `
+            <div class="drilldown-item-card" onclick="showMypageSubDetail('student-subjects', ${s.id})">
+                <div class="drilldown-item-main">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="subject-color-dot" style="background:${s.color};"></span>
+                        <span class="drilldown-item-title">${escapeHtml(s.name)}</span>
+                    </div>
+                    <div class="drilldown-item-desc">${s.target_grade ? escapeHtml(s.target_grade) : '전체 학년'} · ${s.room ? escapeHtml(s.room) : '교실 미지정'}</div>
+                </div>
+                <svg class="drilldown-item-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+        `).join('');
+    }
+
+    // 2. 학생: 질문 내역
+    else if (type === 'student-questions') {
+        if (!Array.isArray(myQuestionsCache) || myQuestionsCache.length === 0) {
+            await loadMyQuestions();
+        }
+        if (!Array.isArray(myQuestionsCache) || myQuestionsCache.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:28px 0; color:var(--text-muted);">등록된 질문 내역이 없습니다.</div>';
+            return;
+        }
+        container.innerHTML = myQuestionsCache.map(q => {
+            const hasAnswer = Boolean(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''));
+            return `
+                <div class="drilldown-item-card" onclick="showMypageSubDetail('student-questions', ${q.id})">
+                    <div class="drilldown-item-main">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                            ${q.subjects ? `<span class="badge" style="background:${q.subjects.color}15; color:${q.subjects.color}; font-size:0.75rem;">${escapeHtml(q.subjects.name)}</span>` : ''}
+                            ${hasAnswer 
+                                ? '<span class="badge badge-answered" style="font-size:0.75rem;">답변 완료</span>' 
+                                : '<span class="badge badge-waiting" style="font-size:0.75rem;">풀이 작성 중</span>'}
+                        </div>
+                        <div class="drilldown-item-title">Q. ${escapeHtml(q.question_text)}</div>
+                        <div class="drilldown-item-desc">${formatDateShort(q.created_at)}</div>
+                    </div>
+                    <svg class="drilldown-item-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 3. 학생: 응시 시험
+    else if (type === 'student-exams') {
+        if (!Array.isArray(myExamsCache) || myExamsCache.length === 0) {
+            await loadMyExams();
+        }
+        if (!Array.isArray(myExamsCache) || myExamsCache.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:28px 0; color:var(--text-muted);">응시한 시험 기록이 없습니다.</div>';
+            return;
+        }
+        container.innerHTML = myExamsCache.map(e => `
+            <div class="drilldown-item-card" onclick="showMypageSubDetail('student-exams', ${e.id})">
+                <div class="drilldown-item-main">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                        ${e.subjects ? `<span class="badge" style="background:${e.subjects.color}15; color:${e.subjects.color}; font-size:0.75rem;">${escapeHtml(e.subjects.name)}</span>` : ''}
+                        <span class="badge badge-score" style="font-size:0.75rem;">${e.score}점</span>
+                    </div>
+                    <div class="drilldown-item-title">${escapeHtml(e.exam_title)}</div>
+                    <div class="drilldown-item-desc">응시일: ${e.exam_date || formatDateShort(e.created_at)}</div>
+                </div>
+                <svg class="drilldown-item-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+        `).join('');
+    }
+
+    // 4. 선생님: 개설 과목
+    else if (type === 'teacher-subjects') {
+        if (!Array.isArray(mySubjects) || mySubjects.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:28px 0; color:var(--text-muted);">개설된 과목이 없습니다.</div>';
+            return;
+        }
+        container.innerHTML = mySubjects.map(s => {
+            const studentCount = s.enrollments ? s.enrollments.length : 0;
+            return `
+                <div class="drilldown-item-card" onclick="showMypageSubDetail('teacher-subjects', ${s.id})">
+                    <div class="drilldown-item-main">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="subject-color-dot" style="background:${s.color};"></span>
+                            <span class="drilldown-item-title">${escapeHtml(s.name)}</span>
+                        </div>
+                        <div class="drilldown-item-desc">수강생 ${studentCount}명 · ${s.target_grade ? escapeHtml(s.target_grade) : '전체 학년'}</div>
+                    </div>
+                    <svg class="drilldown-item-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 5. 선생님: 담당 학생
+    else if (type === 'teacher-students') {
+        if (!Array.isArray(totalStudentsCache) || totalStudentsCache.length === 0) {
+            await loadStudents();
+        }
+        const studentList = (Array.isArray(totalStudentsCache) && totalStudentsCache.length > 0)
+            ? totalStudentsCache
+            : allStudentsCache;
+
+        if (!Array.isArray(studentList) || studentList.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:28px 0; color:var(--text-muted);">등록된 담당 학생이 없습니다.</div>';
+            return;
+        }
+        container.innerHTML = studentList.map(stu => `
+            <div class="drilldown-item-card" onclick="showMypageSubDetail('teacher-students', '${stu.id || stu.student_id}')">
+                <div class="drilldown-item-main">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="badge-student" style="font-size:0.75rem;">학생</span>
+                        <span class="drilldown-item-title">${escapeHtml(stu.name || '학생')}</span>
+                    </div>
+                    <div class="drilldown-item-desc">아이디: @${escapeHtml(stu.login_id || stu.id || '')}</div>
+                </div>
+                <svg class="drilldown-item-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+        `).join('');
+    }
+
+    // 6. 선생님: 답변 대기 질문
+    else if (type === 'teacher-unanswered') {
+        if (!Array.isArray(teacherAllQuestionsCache) || teacherAllQuestionsCache.length === 0) {
+            await loadAllTeacherQuestions(true);
+        }
+        const unanswered = teacherAllQuestionsCache.filter(q => !(q.is_answered || (q.answer_text && q.answer_text.trim() !== '')));
+
+        if (unanswered.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:32px 16px; color:var(--text-muted);">
+                    <div style="font-size:1.8rem; margin-bottom:8px;">🎉</div>
+                    <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">현재 답변 대기 중인 질문이 없습니다!</div>
+                    <div style="font-size:0.82rem;">모든 학생의 질문에 답변이 완료되었습니다.</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = unanswered.map(q => `
+            <div class="drilldown-item-card" onclick="showMypageSubDetail('teacher-unanswered', ${q.id})">
+                <div class="drilldown-item-main">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                        <span class="badge-student" style="font-size:0.75rem;">${escapeHtml(q.profiles?.name || '학생')}</span>
+                        ${q.subjects ? `<span class="badge" style="background:${q.subjects.color}15; color:${q.subjects.color}; font-size:0.75rem;">${escapeHtml(q.subjects.name)}</span>` : ''}
+                        <span class="badge badge-waiting" style="font-size:0.75rem;">답변 대기</span>
+                    </div>
+                    <div class="drilldown-item-title">Q. ${escapeHtml(q.question_text)}</div>
+                    <div class="drilldown-item-desc">${formatDateShort(q.created_at)}</div>
+                </div>
+                <svg class="drilldown-item-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+        `).join('');
+    }
+}
+
+window.showMypageSubDetail = function(type, id) {
+    const backBtn = document.getElementById('mypageDetailBackBtn');
+    const listView = document.getElementById('mypageDetailListView');
+    const subView = document.getElementById('mypageDetailSubView');
+    const content = document.getElementById('mypageDetailContentContainer');
+    const titleEl = document.getElementById('mypageDetailTitle');
+
+    if (!content) return;
+
+    if (backBtn) backBtn.classList.remove('hidden');
+    if (listView) listView.classList.add('hidden');
+    if (subView) subView.classList.remove('hidden');
+
+    // 1. 학생: 수강 과목 상세
+    if (type === 'student-subjects') {
+        const item = mySubjects.find(s => s.id === Number(id));
+        if (!item) return;
+        if (titleEl) titleEl.textContent = item.name;
+
+        content.innerHTML = `
+            <div class="drilldown-detail-header-card">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="subject-color-dot" style="background:${item.color}; width:12px; height:12px;"></span>
+                    <span class="badge" style="background:${item.color}15; color:${item.color}; font-weight:700;">과목 정보</span>
+                </div>
+                <div class="drilldown-detail-title">${escapeHtml(item.name)}</div>
+                <div style="font-size:0.85rem; color:var(--text-muted);">${item.description ? escapeHtml(item.description) : '별도 설명 없음'}</div>
+            </div>
+
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">대상 학년</span>
+                <span class="drilldown-detail-value">${item.target_grade ? escapeHtml(item.target_grade) : '전체 학년'}</span>
+            </div>
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">강의 교실 / 장소</span>
+                <span class="drilldown-detail-value">${item.room ? escapeHtml(item.room) : '온라인 / 미지정'}</span>
+            </div>
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">담당 선생님</span>
+                <span class="drilldown-detail-value">선생님</span>
+            </div>
+
+            <button type="button" class="primary-btn mt-20" style="width:100%; height:44px;" onclick="closeModal('mypageDetailModal'); selectSubjectFilter(${item.id}); switchMainTab('studentCalendarTab');">
+                📅 이 과목 수업 일정 확인하기
+            </button>
+        `;
+    }
+
+    // 2. 학생: 질문 내역 상세
+    else if (type === 'student-questions') {
+        const item = myQuestionsCache.find(q => q.id === Number(id));
+        if (!item) return;
+        if (titleEl) titleEl.textContent = '질문 및 풀이 상세';
+
+        const hasAnswer = Boolean(item.is_answered || (item.answer_text && item.answer_text.trim() !== ''));
+
+        content.innerHTML = `
+            <div class="drilldown-detail-header-card">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                    ${item.subjects ? `<span class="badge" style="background:${item.subjects.color}15; color:${item.subjects.color};">${escapeHtml(item.subjects.name)}</span>` : ''}
+                    ${hasAnswer 
+                        ? '<span class="badge badge-answered">답변 완료</span>' 
+                        : '<span class="badge badge-waiting">풀이 작성 중</span>'}
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">질문 시각: ${formatDateShort(item.created_at)}</div>
+                <div class="drilldown-detail-title" style="font-size:1.02rem;">Q. ${escapeHtml(item.question_text)}</div>
+            </div>
+
+            ${item.question_image_url ? `
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:0.82rem; font-weight:700; color:var(--text-muted); margin-bottom:6px;">첨부한 문제 사진</div>
+                    <div class="image-preview-wrapper" onclick="openImageLightbox('${escapeHtml(item.question_image_url)}', '문제 사진')">
+                        <img src="${item.question_image_url}" alt="문제 사진" loading="lazy">
+                        <div class="image-zoom-overlay">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            <span>탭하여 확대</span>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="answer-box-completed" style="margin-top:12px;">
+                <div class="answer-box-completed-header">
+                    <span class="answer-completed-badge">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        선생님 풀이 해설
+                    </span>
+                </div>
+                ${hasAnswer ? `
+                    <p class="answer-box-content" style="margin-top:8px;">${escapeHtml(item.answer_text || '')}</p>
+                    ${item.answer_image_url ? `
+                        <div class="image-preview-wrapper" style="margin-top:10px;" onclick="openImageLightbox('${escapeHtml(item.answer_image_url)}', '선생님 풀이 사진')">
+                            <img src="${item.answer_image_url}" alt="풀이 사진" loading="lazy">
+                            <div class="image-zoom-overlay">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                <span>탭하여 확대</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                ` : `
+                    <p class="answer-box-content" style="color:var(--text-muted); font-size:0.85rem; padding:8px 0;">선생님이 문제 풀이를 확인하고 있습니다. 풀이가 등록되면 실시간 푸시 알림으로 알려드립니다.</p>
+                `}
+            </div>
+        `;
+    }
+
+    // 3. 학생: 응시 시험 상세 (날짜, 점수, 피드백, 시험지 사진)
+    else if (type === 'student-exams') {
+        const item = myExamsCache.find(e => e.id === Number(id));
+        if (!item) return;
+        if (titleEl) titleEl.textContent = '시험 성적 상세 리포트';
+
+        content.innerHTML = `
+            <div class="drilldown-detail-header-card" style="text-align:center; padding:20px 16px;">
+                <div style="display:inline-flex; align-items:center; gap:6px; margin-bottom:8px;">
+                    ${item.subjects ? `<span class="badge" style="background:${item.subjects.color}15; color:${item.subjects.color};">${escapeHtml(item.subjects.name)}</span>` : ''}
+                    <span style="font-size:0.8rem; color:var(--text-muted);">${item.exam_date || formatDateShort(item.created_at)} 응시</span>
+                </div>
+                <div class="drilldown-detail-title" style="margin-top:2px;">${escapeHtml(item.exam_title)}</div>
+                <div style="margin-top:14px;">
+                    <span style="font-size:2.4rem; font-weight:800; color:var(--primary); line-height:1;">${item.score}</span>
+                    <span style="font-size:1.1rem; color:var(--text-muted); font-weight:600;"> / 100점</span>
+                </div>
+            </div>
+
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">응시 일자</span>
+                <span class="drilldown-detail-value">${item.exam_date || formatDateShort(item.created_at)}</span>
+            </div>
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">시험 과목</span>
+                <span class="drilldown-detail-value">${item.subjects ? escapeHtml(item.subjects.name) : '과목 정보 없음'}</span>
+            </div>
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">선생님 총평</span>
+                <span class="drilldown-detail-value" style="font-weight:500; text-align:right; max-width:65%;">${item.feedback || item.notes || '피드백 코멘트가 없습니다.'}</span>
+            </div>
+
+            ${item.paper_image_url ? `
+                <div style="margin-top:16px;">
+                    <div style="font-size:0.82rem; font-weight:700; color:var(--text-muted); margin-bottom:6px;">시험지 원본 사진</div>
+                    <div class="image-preview-wrapper" onclick="openImageLightbox('${escapeHtml(item.paper_image_url)}', '${escapeHtml(item.exam_title)} 시험지')">
+                        <img src="${item.paper_image_url}" alt="시험지 사진" loading="lazy">
+                        <div class="image-zoom-overlay">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            <span>탭하여 확대</span>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+        `;
+    }
+
+    // 4. 선생님: 개설 과목 상세 (수강생 목록 포함)
+    else if (type === 'teacher-subjects') {
+        const item = mySubjects.find(s => s.id === Number(id));
+        if (!item) return;
+        if (titleEl) titleEl.textContent = item.name;
+
+        const enrollments = Array.isArray(item.enrollments) ? item.enrollments : [];
+
+        content.innerHTML = `
+            <div class="drilldown-detail-header-card">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="subject-color-dot" style="background:${item.color}; width:12px; height:12px;"></span>
+                    <span class="badge" style="background:${item.color}15; color:${item.color}; font-weight:700;">개설 과목</span>
+                </div>
+                <div class="drilldown-detail-title">${escapeHtml(item.name)}</div>
+                <div style="font-size:0.85rem; color:var(--text-muted);">${item.description ? escapeHtml(item.description) : '과목 설명 미입력'}</div>
+            </div>
+
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">대상 학년</span>
+                <span class="drilldown-detail-value">${item.target_grade ? escapeHtml(item.target_grade) : '전체 학년'}</span>
+            </div>
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">강의 교실</span>
+                <span class="drilldown-detail-value">${item.room ? escapeHtml(item.room) : '지정 교실 없음'}</span>
+            </div>
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">현재 수강 인원</span>
+                <span class="drilldown-detail-value">${enrollments.length}명</span>
+            </div>
+
+            <div style="margin-top:16px;">
+                <div style="font-size:0.84rem; font-weight:700; color:var(--text-primary); margin-bottom:8px;">수강생 명단</div>
+                ${enrollments.length > 0 ? `
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        ${enrollments.map(e => `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg-subtle); border-radius:8px; font-size:0.85rem;">
+                                <span style="font-weight:700;">${escapeHtml(e.profiles?.name || e.student_name || '학생')}</span>
+                                <span style="color:var(--text-muted); font-size:0.8rem;">@${escapeHtml(e.profiles?.login_id || e.student_id || '')}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div style="text-align:center; padding:12px; color:var(--text-muted); font-size:0.84rem;">등록된 수강생이 없습니다.</div>
+                `}
+            </div>
+
+            <button type="button" class="primary-btn mt-20" style="width:100%; height:44px;" onclick="closeModal('mypageDetailModal'); openScheduleModal(); document.getElementById('scheduleSubjectSelect').value = '${item.id}';">
+                🗓 이 과목 새 수업 일정 잡기
+            </button>
+        `;
+    }
+
+    // 5. 선생님: 담당 학생 상세
+    else if (type === 'teacher-students') {
+        const studentList = (Array.isArray(totalStudentsCache) && totalStudentsCache.length > 0)
+            ? totalStudentsCache
+            : allStudentsCache;
+        const item = studentList.find(s => (s.id == id || s.student_id == id));
+        if (!item) return;
+        if (titleEl) titleEl.textContent = `${item.name} 학생 상세`;
+
+        content.innerHTML = `
+            <div class="drilldown-detail-header-card" style="display:flex; align-items:center; gap:14px;">
+                <div class="mypage-avatar student-avatar" style="width:50px; height:50px; font-size:1.1rem;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div>
+                    <div class="drilldown-detail-title" style="margin:0 0 2px 0;">${escapeHtml(item.name)} 학생</div>
+                    <div style="font-size:0.82rem; color:var(--text-muted);">아이디: @${escapeHtml(item.login_id || item.id || '')}</div>
+                </div>
+            </div>
+
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">학생 성명</span>
+                <span class="drilldown-detail-value">${escapeHtml(item.name)}</span>
+            </div>
+            <div class="drilldown-detail-row">
+                <span class="drilldown-detail-label">로그인 아이디</span>
+                <span class="drilldown-detail-value">@${escapeHtml(item.login_id || item.id || '')}</span>
+            </div>
+
+            <button type="button" class="primary-btn mt-20" style="width:100%; height:44px;" onclick="closeModal('mypageDetailModal'); switchMainTab('teacherClassTab'); selectStudent('${item.id || item.student_id}');">
+                📂 학생 관리 페이지에서 전체 관리하기
+            </button>
+        `;
+    }
+
+    // 6. 선생님: 답변 대기 질문 상세 (현장에서 바로 풀이 작성 가능)
+    else if (type === 'teacher-unanswered') {
+        const item = teacherAllQuestionsCache.find(q => q.id === Number(id));
+        if (!item) return;
+        if (titleEl) titleEl.textContent = '풀이 답변 작성';
+
+        const studentName = item.profiles?.name || '학생';
+
+        content.innerHTML = `
+            <div class="drilldown-detail-header-card">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                    <span class="badge-student">${escapeHtml(studentName)} 학생</span>
+                    ${item.subjects ? `<span class="badge" style="background:${item.subjects.color}15; color:${item.subjects.color};">${escapeHtml(item.subjects.name)}</span>` : ''}
+                    <span class="badge badge-waiting">답변 대기</span>
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">질문 시각: ${formatDateShort(item.created_at)}</div>
+                <div class="drilldown-detail-title" style="font-size:1.02rem;">Q. ${escapeHtml(item.question_text)}</div>
+            </div>
+
+            ${item.question_image_url ? `
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:0.82rem; font-weight:700; color:var(--text-muted); margin-bottom:6px;">학생이 첨부한 문제 사진</div>
+                    <div class="image-preview-wrapper" onclick="openImageLightbox('${escapeHtml(item.question_image_url)}', '${escapeHtml(studentName)} 학생 질문 사진')">
+                        <img src="${item.question_image_url}" alt="문제 사진" loading="lazy">
+                        <div class="image-zoom-overlay">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            <span>탭하여 확대</span>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- 빠른 풀이 답변 작성 폼 -->
+            <div class="answer-card-form" style="margin-top:16px;">
+                <div class="answer-form-header">
+                    <span class="answer-form-title">✍️ ${escapeHtml(studentName)} 학생에게 풀이 답변 남기기</span>
+                </div>
+                <textarea id="subDetailAnsText" class="answer-textarea" rows="3" placeholder="${escapeHtml(studentName)} 학생을 위해 상세 풀이 과정이나 핵심 포인트를 입력해주세요."></textarea>
+                
+                <div class="answer-form-actions mt-8">
+                    <label class="custom-file-upload-label" for="subDetailAnsFile" style="cursor:pointer;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        <span>풀이 사진 첨부</span>
+                    </label>
+                    <input type="file" id="subDetailAnsFile" accept="image/*" class="sr-only-file-input" onchange="document.getElementById('subDetailAnsFileName').textContent = this.files[0] ? this.files[0].name : ''">
+                    <span id="subDetailAnsFileName" style="font-size:0.75rem; color:var(--primary); font-weight:600; margin-left:8px;"></span>
+                </div>
+
+                <button type="button" id="subDetailAnsSubmitBtn" class="primary-btn mt-16" style="width:100%; height:44px;" onclick="submitSubDetailAnswer(${item.id})">
+                    풀이 답변 등록하기
+                </button>
+            </div>
+        `;
+    }
+};
+
+window.submitSubDetailAnswer = async function(qId) {
+    const textEl = document.getElementById('subDetailAnsText');
+    const fileEl = document.getElementById('subDetailAnsFile');
+    const btn = document.getElementById('subDetailAnsSubmitBtn');
+    if (!textEl) return;
+
+    const answerText = textEl.value.trim();
+    if (!answerText) {
+        alert('풀이 해설 내용을 입력해 주세요.');
+        textEl.focus();
+        return;
+    }
+
+    setButtonLoading(btn, true, '풀이 등록 중...');
+
+    try {
+        let imageBase64 = null;
+        let imageName = null;
+        const file = fileEl && fileEl.files ? fileEl.files[0] : null;
+        if (file) {
+            imageBase64 = await processAndResizeImage(file);
+            imageName = file.name;
+        }
+
+        const res = await authFetch('/api/answerQuestion', {
+            method: 'POST',
+            body: JSON.stringify({
+                question_id: qId,
+                answer_text: answerText,
+                image_base64: imageBase64,
+                image_name: imageName
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '답변 등록 실패');
+
+        showToast('풀이 등록 완료', '학생에게 풀이 해설 알림이 성공적으로 전송되었습니다.');
+
+        // 캐시 및 대시보드 갱신
+        await loadAllTeacherQuestions(true);
+        updateTeacherMyPageStats();
+
+        // 모달 목록으로 복귀
+        mypageDetailGoBack();
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};

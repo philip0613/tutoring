@@ -2934,7 +2934,45 @@ input[type="file"] {
     text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    padding: 8px 4px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+}
+
+.mypage-stat-item:hover {
+    background: var(--bg-card);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.mypage-stat-item:active {
+    transform: scale(0.96);
+    background: var(--bg-card);
+}
+
+.mypage-stat-item::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 2px;
+    background: var(--primary);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.mypage-stat-item:hover::after {
+    opacity: 0.6;
 }
 
 .mypage-stat-label {
@@ -3157,6 +3195,377 @@ input[type="file"] {
         display: block !important;
     }
 }
+/* =========================================
+   17. 학생 개편 화면 (다음 수업, 질문 통계, 성적 차트)
+   ========================================= */
 
+/* 다음 수업 안내 카드 */
+.upcoming-class-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 249, 255, 0.88));
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    box-shadow: 0 4px 18px -2px rgba(59, 130, 246, 0.12);
+    position: relative;
+    overflow: hidden;
+}
 
+.upcoming-class-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3.5px;
+    background: var(--gradient-brand);
+}
 
+.upcoming-class-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.upcoming-class-badge-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.badge-dday {
+    background: var(--gradient-brand);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.76rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: -0.01em;
+}
+
+.upcoming-class-subname {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.upcoming-class-time-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.upcoming-clock-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.upcoming-class-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.upcoming-title {
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.35;
+    margin: 0 0 4px 0;
+    word-break: keep-all;
+}
+
+.upcoming-time-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.upcoming-notes-box {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 6px;
+}
+
+.upcoming-notes-label {
+    font-weight: 600;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+/* 질문 현황 그리드 */
+.question-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.qstat-box {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px 8px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: transform 0.18s ease;
+}
+
+.qstat-box:hover {
+    transform: translateY(-1px);
+}
+
+.qstat-num {
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.qstat-lbl {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.qstat-box.total .qstat-num {
+    color: var(--text-primary);
+}
+
+.qstat-box.waiting {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.25);
+}
+
+.qstat-box.waiting .qstat-num {
+    color: #d97706;
+}
+
+.qstat-box.answered {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.qstat-box.answered .qstat-num {
+    color: #059669;
+}
+
+/* 성적 추이 그래프 */
+.score-chart-container {
+    width: 100%;
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.score-chart-svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.empty-chart-box {
+    text-align: center;
+    padding: 28px 16px;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.empty-chart-box svg {
+    color: var(--border-color);
+    margin-bottom: 4px;
+}
+
+.empty-chart-box p {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.empty-chart-box .sub-text {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+/* =========================================
+   18. 마이페이지 상세 드릴다운 모달
+   ========================================= */
+.drilldown-list-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.drilldown-item-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.drilldown-item-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.drilldown-item-card:active {
+    transform: scale(0.98);
+}
+
+.drilldown-item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.drilldown-item-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    line-height: 1.35;
+    word-break: keep-all;
+}
+
+.drilldown-item-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.drilldown-item-arrow {
+    color: var(--text-muted);
+    margin-left: 10px;
+    flex-shrink: 0;
+}
+
+.modal-back-btn {
+    background: none;
+    border: none;
+    padding: 6px;
+    color: var(--text-primary);
+    cursor: pointer;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+}
+
+.modal-back-btn:hover {
+    background: var(--bg-subtle);
+}
+
+.drilldown-detail-view {
+    padding-top: 4px;
+    animation: fadeIn 0.22s ease;
+}
+
+.drilldown-detail-header-card {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.drilldown-detail-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 8px 0 4px 0;
+    line-height: 1.35;
+}
+
+.drilldown-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.88rem;
+}
+
+.drilldown-detail-row:last-child {
+    border-bottom: none;
+}
+
+.drilldown-detail-label {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.drilldown-detail-value {
+    color: var(--text-primary);
+    font-weight: 700;
+    text-align: right;
+}
+
+/* 커스텀 파일 업로드 & 미리보기 */
+.custom-file-upload-box {
+    border: 1.5px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--bg-subtle);
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.custom-file-upload-box:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.preview-remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #ffffff;
+    border: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
