@@ -21,16 +21,18 @@ export default async function handler(req, res) {
         }
         if (subject_id) {
             query += `&subject_id=eq.${subject_id}`;
-        } else if (auth.isTeacher && !student_id) {
-            // 선생님이 전체 질문 목록 조회 시: 본인 개설 과목의 질문 및 미분류 질문 조회
-            const mySubjects = await supabaseAdminFetch(`/rest/v1/subjects?teacher_id=eq.${auth.userId}&select=id`);
-            if (mySubjects && mySubjects.length > 0) {
-                const sIds = mySubjects.map(s => s.id);
-                query += `&or=(subject_id.in.(${sIds.join(',')}),subject_id.is.null)`;
-            }
         }
 
-        const data = await supabaseAdminFetch(query);
+        let data = await supabaseAdminFetch(query);
+
+        // 선생님이 전체 질문 목록 조회 시: 본인 개설 과목의 질문 및 과목 미지정 질문만 안전하게 필터링
+        if (auth.isTeacher && !student_id && !subject_id && Array.isArray(data)) {
+            const mySubjects = await supabaseAdminFetch(`/rest/v1/subjects?teacher_id=eq.${auth.userId}&select=id`);
+            if (Array.isArray(mySubjects) && mySubjects.length > 0) {
+                const sIds = new Set(mySubjects.map(s => s.id));
+                data = data.filter(q => q.subject_id === null || sIds.has(q.subject_id));
+            }
+        }
 
         // profiles 조인이 없는 경우 profiles 테이블에서 학생 이름 자동 보강
         if (Array.isArray(data) && data.length > 0) {

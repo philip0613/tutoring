@@ -7,7 +7,10 @@ let currentUser = null;          // { user, role, name, token }
 let currentStudentId = null;     // 관리 중인 학생 ID
 let currentSubjectFilter = null; // 과목 필터 (null: 전체)
 let mySubjects = [];             // 과목 목록
-let allStudentsCache = [];       // 전체 학생 캐시
+let allStudentsCache = [];       // 현재 학생 캐시
+let totalStudentsCache = [];     // 전체 학생 캐시 (필터와 무관한 전체 고유 목록)
+let myQuestionsCache = [];       // 학생 본인 질문 캐시
+let myExamsCache = [];           // 학생 본인 시험 캐시
 let tokenRefreshTimer = null;    // 로그인 세션 자동 연장 타이머
 let isRefreshingToken = false;   // 토큰 갱신 중복 방지 플래그
 let refreshPromise = null;       // 토큰 갱신 동시 요청 제어 프로미스
@@ -1242,6 +1245,38 @@ function setupInstagramSwipeNavigation() {
     window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 }
 
+// 📊 전체 담당 학생 수 계산 함수 (중복 제거된 고유 학생 수)
+function getTotalStudentCount() {
+    if (Array.isArray(totalStudentsCache) && totalStudentsCache.length > 0) {
+        return totalStudentsCache.length;
+    }
+    if (Array.isArray(mySubjects) && mySubjects.length > 0) {
+        const studentSet = new Set();
+        mySubjects.forEach(s => {
+            if (Array.isArray(s.enrollments)) {
+                s.enrollments.forEach(e => {
+                    if (e && e.student_id) studentSet.add(e.student_id);
+                });
+            }
+        });
+        if (studentSet.size > 0) return studentSet.size;
+    }
+    return Array.isArray(allStudentsCache) ? allStudentsCache.length : 0;
+}
+
+// 📊 전체 답변 대기 질문 수 계산 함수
+function getTotalUnansweredCount() {
+    if (Array.isArray(teacherAllQuestionsCache) && teacherAllQuestionsCache.length > 0) {
+        return teacherAllQuestionsCache.filter(q => !(q.is_answered || (q.answer_text && q.answer_text.trim() !== ''))).length;
+    }
+    const badge = document.getElementById('badgeUnansweredCount');
+    if (badge && badge.textContent && badge.textContent !== '0') {
+        const parsed = parseInt(badge.textContent, 10);
+        if (!isNaN(parsed)) return parsed;
+    }
+    return 0;
+}
+
 // 📱 마이페이지 실시간 데이터 렌더링 함수
 function renderMyPage() {
     if (!currentUser) return;
@@ -1256,20 +1291,31 @@ function renderMyPage() {
         if (typeof displayId === 'object' && displayId.email) displayId = displayId.email.replace('@tutor.com', '');
         if (idEl) idEl.textContent = `아이디: @${displayId}`;
 
-        // 개설 과목 수 통계
-        const chips = document.getElementById('teacherSubjectChips');
-        const subCount = chips ? chips.children.length : 0;
+        // 1. 개설 과목 수 통계 (전체 과목 칩 제외, 순수 과목 배열 길이)
         const subStat = document.getElementById('teacherStatSubjects');
-        if (subStat) subStat.textContent = subCount;
+        if (subStat) subStat.textContent = Array.isArray(mySubjects) ? mySubjects.length : 0;
 
-        // 담당 학생 수
+        // 2. 담당 학생 수 통계 (고유 담당 학생 수)
         const stuStat = document.getElementById('teacherStatStudents');
-        if (stuStat) stuStat.textContent = (cachedStudents && cachedStudents.length) ? cachedStudents.length : 0;
+        if (stuStat) stuStat.textContent = getTotalStudentCount();
 
-        // 답변 대기 질문 수
-        const unansBadge = document.getElementById('badgeUnansweredCount');
+        // 학생 목록이 아직 로드되지 않은 상태라면 비동기 로드 후 즉시 동기화
+        if (!allStudentsCache || allStudentsCache.length === 0) {
+            loadStudents().then(() => {
+                if (stuStat) stuStat.textContent = getTotalStudentCount();
+            });
+        }
+
+        // 3. 답변 대기 질문 수 통계
         const unansStat = document.getElementById('teacherStatUnanswered');
-        if (unansStat) unansStat.textContent = unansBadge?.textContent || '0';
+        if (unansStat) unansStat.textContent = getTotalUnansweredCount();
+
+        // 질문 목록이 아직 캐싱되지 않은 상태라면 비동기 로드 후 통계 갱신
+        if (!teacherAllQuestionsCache || teacherAllQuestionsCache.length === 0) {
+            loadAllTeacherQuestions().then(() => {
+                if (unansStat) unansStat.textContent = getTotalUnansweredCount();
+            });
+        }
 
         updateMyPagePushStatus('teacher');
     } else {
@@ -1281,21 +1327,23 @@ function renderMyPage() {
         if (typeof displayId === 'object' && displayId.email) displayId = displayId.email.replace('@tutor.com', '');
         if (idEl) idEl.textContent = `아이디: @${displayId}`;
 
-        // 수강 과목 수 통계
-        const chips = document.getElementById('studentSubjectChips');
-        const subCount = chips ? chips.children.length : 0;
+        // 1. 수강 과목 수 통계 (전체 과목 칩 제외, 순수 과목 배열 길이)
         const subStat = document.getElementById('studentStatSubjects');
-        if (subStat) subStat.textContent = subCount;
+        if (subStat) subStat.textContent = Array.isArray(mySubjects) ? mySubjects.length : 0;
 
-        // 질문 수
+        // 2. 질문 수 통계
         const qList = document.getElementById('myQuestionList');
-        const qCount = qList ? qList.querySelectorAll('.feed-item').length : 0;
+        const qCount = Array.isArray(myQuestionsCache) && myQuestionsCache.length > 0 
+            ? myQuestionsCache.length 
+            : (qList ? qList.querySelectorAll('.feed-card, .feed-item').length : 0);
         const qStat = document.getElementById('studentStatQuestions');
         if (qStat) qStat.textContent = qCount;
 
-        // 시험 수
+        // 3. 시험 수 통계
         const examList = document.getElementById('myExamList');
-        const examCount = examList ? examList.querySelectorAll('.feed-item').length : 0;
+        const examCount = Array.isArray(myExamsCache) && myExamsCache.length > 0 
+            ? myExamsCache.length 
+            : (examList ? examList.querySelectorAll('.feed-card, .feed-item').length : 0);
         const examStat = document.getElementById('studentStatExams');
         if (examStat) examStat.textContent = examCount;
 
@@ -1589,9 +1637,15 @@ async function loadSubjects() {
         if (currentUser.role === 'admin' || currentUser.role === 'teacher') {
             renderTeacherSubjectChips();
             updateSubjectSelectOptions();
+            const subStat = document.getElementById('teacherStatSubjects');
+            if (subStat) subStat.textContent = mySubjects.length;
+            const stuStat = document.getElementById('teacherStatStudents');
+            if (stuStat) stuStat.textContent = getTotalStudentCount();
         } else {
             renderStudentSubjectChips();
             updateStudentSubjectSelectOptions();
+            const subStat = document.getElementById('studentStatSubjects');
+            if (subStat) subStat.textContent = mySubjects.length;
         }
     } catch (err) {
         console.error('과목 로드 에러:', err);
@@ -1809,7 +1863,7 @@ async function handleCreateSubject() {
 async function initTeacherView() {
     await loadSubjects();
     await loadStudents();
-    loadAllTeacherQuestions();
+    await loadAllTeacherQuestions();
     renderCalendar();
 }
 
@@ -1826,6 +1880,12 @@ async function loadStudents() {
         if (!res.ok) throw new Error('학생 목록 로드 실패');
         const students = await res.json();
         allStudentsCache = students;
+        if (!currentSubjectFilter) {
+            totalStudentsCache = students;
+        }
+
+        const stuStat = document.getElementById('teacherStatStudents');
+        if (stuStat) stuStat.textContent = getTotalStudentCount();
 
         const list = document.getElementById('studentList');
         if (!list) return;
@@ -2041,6 +2101,10 @@ function renderTeacherQuestionsFeed() {
     if (badgeUnanswered) badgeUnanswered.textContent = unansweredCount;
     if (badgeAnswered) badgeAnswered.textContent = answeredCount;
     if (badgeAll) badgeAll.textContent = totalCount;
+
+    // 마이페이지 답변 대기 통계 숫자 동기화
+    const statUnanswered = document.getElementById('teacherStatUnanswered');
+    if (statUnanswered) statUnanswered.textContent = unansweredCount;
 
     // 상단 탭 및 하단 독 배지 동기화
     const qnaBadge = document.getElementById('teacherQnaBadge');
@@ -2730,9 +2794,11 @@ async function initStudentView() {
 }
 
 async function loadStudentData() {
-    loadMyExams();
-    loadMyQuestions();
-    loadMyFeedbacks();
+    await Promise.all([
+        loadMyExams(),
+        loadMyQuestions(),
+        loadMyFeedbacks()
+    ]);
 }
 
 async function loadMyExams() {
@@ -2747,6 +2813,10 @@ async function loadMyExams() {
     try {
         const res = await authFetch(url);
         const exams = await res.json();
+        myExamsCache = Array.isArray(exams) ? exams : [];
+
+        const examStat = document.getElementById('studentStatExams');
+        if (examStat) examStat.textContent = myExamsCache.length;
 
         if (!Array.isArray(exams) || exams.length === 0) {
             list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px 0; font-size:0.86rem;">시험 기록이 없습니다.</div>';
@@ -2794,6 +2864,10 @@ async function loadMyQuestions() {
     try {
         const res = await authFetch(url);
         const questions = await res.json();
+        myQuestionsCache = Array.isArray(questions) ? questions : [];
+
+        const qStat = document.getElementById('studentStatQuestions');
+        if (qStat) qStat.textContent = myQuestionsCache.length;
 
         if (!Array.isArray(questions) || questions.length === 0) {
             list.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:30px 0; font-size:0.88rem;">아직 질문한 내역이 없습니다.</div>';
