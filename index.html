@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="과외노트">
-    <link rel="stylesheet" href="style.css?v=20261021_2320">
+    <link rel="stylesheet" href="style.css?v=20261021_2330">
 </head>
 <body>
     <!-- 실시간 인앱 토스트 알림 컨테이너 -->
@@ -647,7 +647,7 @@
                         <div class="card mb-16">
                             <div class="section-header-inline">
                                 <div>
-                                    <h3 class="section-title">📈 성적 추이 그래프</h3>
+                                    <h3 class="section-title">성적 추이 그래프</h3>
                                     <p class="section-desc mt-2">최근 응시한 시험 성적 변화 추이입니다.</p>
                                 </div>
                                 <span id="studyExamAvgBadge" class="badge badge-accent hidden">평균 0점</span>
@@ -987,11 +987,12 @@
                 </div>
             </div>
 
-            <!-- 🔔 최근 알림 센터 섹션 (모바일에서 '알림·계정' 클릭 시 바로 확인) -->
+            <!-- 최근 알림 센터 섹션 (모바일에서 '알림·계정' 클릭 시 바로 확인) -->
             <div class="modal-notification-section">
                 <div class="modal-notif-header">
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary);">🔔 최근 알림 센터</span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary);">최근 알림 센터</span>
                         <span id="modalNotifCountBadge" class="badge badge-waiting hidden" style="font-size:0.72rem; padding: 1px 6px;">0</span>
                     </div>
                     <button id="modalMarkAllReadBtn" class="text-link-btn danger-text" style="font-size:0.78rem;">모두 지우기</button>
@@ -1018,12 +1019,12 @@
         </div>
     </div>
 
-    <!-- ⚡ 선생님 빠른 작업 바텀 시트 모달 -->
+    <!-- 선생님 빠른 작업 바텀 시트 모달 -->
     <div id="teacherQuickActionModal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-drag-handle"></div>
             <div class="modal-header">
-                <h3>⚡ 빠른 작업</h3>
+                <h3>빠른 작업</h3>
                 <button class="modal-close-btn" aria-label="닫기">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
@@ -1045,12 +1046,12 @@
         </div>
     </div>
 
-    <!-- 📸 학생 모르는 문제 질문하기 전용 바텀 시트 모달 (선생님 페이지처럼 중앙 +버튼 클릭 시 호출) -->
+    <!-- 학생 모르는 문제 질문하기 전용 바텀 시트 모달 (선생님 페이지처럼 중앙 +버튼 클릭 시 호출) -->
     <div id="studentAskModal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-drag-handle"></div>
             <div class="modal-header">
-                <h3>📸 모르는 문제 질문하기</h3>
+                <h3>모르는 문제 질문하기</h3>
                 <button class="modal-close-btn" aria-label="닫기">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
@@ -1261,6 +1262,6 @@
         <div class="lightbox-bottom-hint">화면 아무 곳이나 탭하면 닫힙니다</div>
     </div>
 
-    <script src="script.js?v=20261021_2320"></script>
+    <script src="script.js?v=20261021_2330"></script>
 </body>
 </html>

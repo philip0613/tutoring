@@ -2719,8 +2719,15 @@ input[type="file"] {
 }
 
 .empty-icon {
-    font-size: 2.2rem;
-    margin-bottom: 10px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
 }
 
 .empty-title {

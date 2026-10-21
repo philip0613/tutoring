@@ -1744,7 +1744,7 @@ window.deleteSubject = async function(event, subjectId) {
 
     let confirmMsg = `'${subjectName}' 과목을 정말 삭제하시겠습니까?`;
     if (studentCount > 0) {
-        confirmMsg += `\n\n⚠️ 주의: 현재 ${studentCount}명의 학생이 이 과목에 수강 등록되어 있습니다.\n과목을 삭제하면 해당 학생들의 수강 연결 및 관련 수업 일정도 함께 정리됩니다.`;
+        confirmMsg += `\n\n[주의] 현재 ${studentCount}명의 학생이 이 과목에 수강 등록되어 있습니다.\n과목을 삭제하면 해당 학생들의 수강 연결 및 관련 수업 일정도 함께 정리됩니다.`;
     } else {
         confirmMsg += '\n\n해당 과목의 수업 일정도 함께 삭제됩니다.';
     }
@@ -2170,15 +2170,19 @@ function renderTeacherQuestionsFeed() {
         if (currentTeacherQnaFilter === 'unanswered') {
             list.innerHTML = `
                 <div class="empty-state-box">
-                    <div class="empty-icon">🎉</div>
-                    <div class="empty-title">현재 답변 대기 중인 질문이 없습니다!</div>
+                    <div class="empty-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div class="empty-title">현재 답변 대기 중인 질문이 없습니다</div>
                     <div class="empty-subtitle">모든 학생의 질문에 답변을 완료했습니다. 학생이 새 질문을 등록하면 실시간으로 알림을 보내드립니다.</div>
                 </div>
             `;
         } else if (currentTeacherQnaFilter === 'answered') {
             list.innerHTML = `
                 <div class="empty-state-box">
-                    <div class="empty-icon">📝</div>
+                    <div class="empty-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    </div>
                     <div class="empty-title">아직 완료된 질문이 없습니다</div>
                     <div class="empty-subtitle">답변 대기 중인 질문을 확인하고 풀이를 등록해보세요.</div>
                 </div>
@@ -2186,7 +2190,9 @@ function renderTeacherQuestionsFeed() {
         } else {
             list.innerHTML = `
                 <div class="empty-state-box">
-                    <div class="empty-icon">💬</div>
+                    <div class="empty-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
                     <div class="empty-title">등록된 질문이 없습니다</div>
                     <div class="empty-subtitle">학생들이 등록한 질문이 이곳에 실시간으로 표시됩니다.</div>
                 </div>
@@ -2267,7 +2273,7 @@ function renderTeacherQuestionsFeed() {
                 ` : `
                     <div class="answer-card-form">
                         <div class="answer-form-header">
-                            <span class="answer-form-title">✍️ ${escapeHtml(studentName)} 학생에게 풀이 답변 남기기</span>
+                            <span class="answer-form-title">${escapeHtml(studentName)} 학생에게 풀이 답변 남기기</span>
                         </div>
                         <textarea id="ansText-${q.id}" class="answer-textarea" rows="3" placeholder="${escapeHtml(studentName)} 학생을 위해 상세 풀이 과정이나 핵심 포인트를 입력해주세요."></textarea>
                         
@@ -2941,11 +2947,16 @@ function renderStudentQuestionsFeed() {
         } else if (currentStudentQuestionFilter === 'answered') {
             msg = '아직 답변이 완료된 질문이 없습니다.';
         }
+        const emptyIconSvg = currentStudentQuestionFilter === 'waiting'
+            ? `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
+            : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
         list.innerHTML = `
-            <div style="text-align:center; color:var(--text-muted); padding:32px 16px; font-size:0.88rem;">
-                <div style="font-size:1.8rem; margin-bottom:8px;">${currentStudentQuestionFilter === 'waiting' ? '🎉' : '💬'}</div>
-                <div style="font-weight:600; color:var(--text-primary); margin-bottom:4px;">${msg}</div>
-                <div style="font-size:0.8rem; color:var(--text-muted);">상단의 버튼을 눌러 다른 질문들을 확인할 수 있습니다.</div>
+            <div style="text-align:center; color:var(--text-muted); padding:36px 16px; font-size:0.88rem;">
+                <div style="width:48px; height:48px; border-radius:50%; background:var(--bg-subtle); display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px; border:1px solid var(--border-color);">
+                    ${emptyIconSvg}
+                </div>
+                <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">${msg}</div>
+                <div style="font-size:0.82rem; color:var(--text-muted);">상단의 버튼을 눌러 다른 질문들을 확인할 수 있습니다.</div>
             </div>
         `;
         return;
@@ -4008,12 +4019,12 @@ function setMypageDetailTitle(type) {
     const titleEl = document.getElementById('mypageDetailTitle');
     if (!titleEl) return;
     switch(type) {
-        case 'student-subjects': titleEl.textContent = '📚 나의 수강 과목'; break;
-        case 'student-questions': titleEl.textContent = '❓ 나의 질문 내역'; break;
-        case 'student-exams': titleEl.textContent = '📝 나의 응시 시험'; break;
-        case 'teacher-subjects': titleEl.textContent = '📚 개설 과목 관리'; break;
-        case 'teacher-students': titleEl.textContent = '👥 담당 학생 목록'; break;
-        case 'teacher-unanswered': titleEl.textContent = '⚡ 답변 대기 질문'; break;
+        case 'student-subjects': titleEl.textContent = '나의 수강 과목'; break;
+        case 'student-questions': titleEl.textContent = '나의 질문 내역'; break;
+        case 'student-exams': titleEl.textContent = '나의 응시 시험'; break;
+        case 'teacher-subjects': titleEl.textContent = '개설 과목 관리'; break;
+        case 'teacher-students': titleEl.textContent = '담당 학생 목록'; break;
+        case 'teacher-unanswered': titleEl.textContent = '답변 대기 질문'; break;
         default: titleEl.textContent = '상세 내역';
     }
 }
@@ -4221,9 +4232,11 @@ async function renderMypageDetailList(type) {
 
         if (unanswered.length === 0) {
             container.innerHTML = `
-                <div style="text-align:center; padding:32px 16px; color:var(--text-muted);">
-                    <div style="font-size:1.8rem; margin-bottom:8px;">🎉</div>
-                    <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">현재 답변 대기 중인 질문이 없습니다!</div>
+                <div style="text-align:center; padding:36px 16px; color:var(--text-muted);">
+                    <div style="width:48px; height:48px; border-radius:50%; background:rgba(16, 185, 129, 0.1); display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px; border:1px solid rgba(16, 185, 129, 0.25);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">현재 답변 대기 중인 질문이 없습니다</div>
                     <div style="font-size:0.82rem;">모든 학생의 질문에 답변이 완료되었습니다.</div>
                 </div>
             `;
@@ -4289,8 +4302,9 @@ window.showMypageSubDetail = function(type, id) {
                 <span class="drilldown-detail-value">선생님</span>
             </div>
 
-            <button type="button" class="primary-btn mt-20" style="width:100%; height:44px;" onclick="closeModal('mypageDetailModal'); selectSubjectFilter(${item.id}); switchMainTab('studentCalendarTab');">
-                📅 이 과목 수업 일정 확인하기
+            <button type="button" class="primary-btn mt-20" style="width:100%; height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px;" onclick="closeModal('mypageDetailModal'); selectSubjectFilter(${item.id}); switchMainTab('studentCalendarTab');">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>이 과목 수업 일정 확인하기</span>
             </button>
         `;
     }
@@ -4451,8 +4465,9 @@ window.showMypageSubDetail = function(type, id) {
                 `}
             </div>
 
-            <button type="button" class="primary-btn mt-20" style="width:100%; height:44px;" onclick="closeModal('mypageDetailModal'); openScheduleModal(); document.getElementById('scheduleSubjectSelect').value = '${item.id}';">
-                🗓 이 과목 새 수업 일정 잡기
+            <button type="button" class="primary-btn mt-20" style="width:100%; height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px;" onclick="closeModal('mypageDetailModal'); openScheduleModal(); document.getElementById('scheduleSubjectSelect').value = '${item.id}';">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+                <span>이 과목 새 수업 일정 잡기</span>
             </button>
         `;
     }
@@ -4488,8 +4503,9 @@ window.showMypageSubDetail = function(type, id) {
                 <span class="drilldown-detail-value">${lid ? `@${escapeHtml(lid)}` : '(아이디 없음)'}</span>
             </div>
 
-            <button type="button" class="primary-btn mt-20" style="width:100%; height:44px;" onclick="closeModal('mypageDetailModal'); switchMainTab('teacherClassTab'); selectStudent('${item.id || item.student_id}');">
-                📂 학생 관리 페이지에서 전체 관리하기
+            <button type="button" class="primary-btn mt-20" style="width:100%; height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px;" onclick="closeModal('mypageDetailModal'); switchMainTab('teacherClassTab'); selectStudent('${item.id || item.student_id}');">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>학생 관리 페이지에서 전체 관리하기</span>
             </button>
         `;
     }
@@ -4529,7 +4545,7 @@ window.showMypageSubDetail = function(type, id) {
             <!-- 빠른 풀이 답변 작성 폼 -->
             <div class="answer-card-form" style="margin-top:16px;">
                 <div class="answer-form-header">
-                    <span class="answer-form-title">✍️ ${escapeHtml(studentName)} 학생에게 풀이 답변 남기기</span>
+                    <span class="answer-form-title">${escapeHtml(studentName)} 학생에게 풀이 답변 남기기</span>
                 </div>
                 <textarea id="subDetailAnsText" class="answer-textarea" rows="3" placeholder="${escapeHtml(studentName)} 학생을 위해 상세 풀이 과정이나 핵심 포인트를 입력해주세요."></textarea>
                 
