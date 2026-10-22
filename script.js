@@ -3894,8 +3894,8 @@ function renderScoreTrendChart(exams) {
 
     // 날짜 오름차순 정렬 (과거 -> 최신)
     const sorted = [...exams].sort((a, b) => {
-        const da = new Date(a.exam_date || a.created_at || 0);
-        const db = new Date(b.exam_date || b.created_at || 0);
+        const da = new Date(a.exam_date || a.created_at || 0).getTime();
+        const db = new Date(b.exam_date || b.created_at || 0).getTime();
         return da - db;
     });
 
@@ -3908,13 +3908,57 @@ function renderScoreTrendChart(exams) {
         avgBadge.classList.remove('hidden');
     }
 
-    // SVG 차트 좌표 계산
-    const svgWidth = 400;
-    const svgHeight = 170;
+    // 날짜 포맷팅 헬퍼 (M/D 형식으로 간결하게 반환)
+    function formatExamDateLabel(e) {
+        if (e.exam_date && typeof e.exam_date === 'string') {
+            const m = e.exam_date.match(/(?:(\d{4})[./-])?(\d{1,2})[./-](\d{1,2})/);
+            if (m) {
+                return `${parseInt(m[2], 10)}/${parseInt(m[3], 10)}`;
+            }
+        }
+        if (e.created_at) {
+            const d = new Date(e.created_at);
+            if (!isNaN(d.getTime())) {
+                return `${d.getMonth() + 1}/${d.getDate()}`;
+            }
+        }
+        return '';
+    }
+
+    // 과목 정보 추출 및 고유 과목 수집
+    const subjectMap = new Map();
+    sorted.forEach(e => {
+        const subId = e.subject_id || (e.subjects && e.subjects.id) || 'default';
+        if (!subjectMap.has(subId)) {
+            let name = (e.subjects && e.subjects.name) ? e.subjects.name : '';
+            let color = (e.subjects && e.subjects.color) ? e.subjects.color : '';
+
+            if (!name && e.subject_id && Array.isArray(mySubjects)) {
+                const found = mySubjects.find(s => s.id === e.subject_id);
+                if (found) {
+                    name = found.name;
+                    color = found.color;
+                }
+            }
+
+            subjectMap.set(subId, {
+                id: subId,
+                name: name || '공통 과목',
+                color: color || '#2563eb'
+            });
+        }
+    });
+
+    const uniqueSubjects = Array.from(subjectMap.values());
+    const isSingleSubject = uniqueSubjects.length === 1;
+
+    // SVG 차트 크기 & 여백
+    const svgWidth = 420;
+    const svgHeight = 175;
     const padLeft = 38;
     const padRight = 24;
     const padTop = 26;
-    const padBottom = 32;
+    const padBottom = 34;
     const chartW = svgWidth - padLeft - padRight;
     const chartH = svgHeight - padTop - padBottom;
 
@@ -3927,77 +3971,127 @@ function renderScoreTrendChart(exams) {
         return padLeft + (idx / (sorted.length - 1)) * chartW;
     };
 
-    const points = sorted.map((e, idx) => ({
-        x: getX(idx),
-        y: getY(Number(e.score) || 0),
-        score: Number(e.score) || 0,
-        title: e.exam_title || '시험',
-        date: e.exam_date ? e.exam_date.substring(5, 10).replace('-', '/') : ''
-    }));
+    const examPoints = sorted.map((e, idx) => {
+        const subId = e.subject_id || (e.subjects && e.subjects.id) || 'default';
+        const subInfo = subjectMap.get(subId) || { name: '과목', color: '#2563eb' };
+        return {
+            idx,
+            x: getX(idx),
+            y: getY(Number(e.score) || 0),
+            score: Number(e.score) || 0,
+            title: e.exam_title || '시험',
+            date: formatExamDateLabel(e),
+            subjectId: subId,
+            subjectName: subInfo.name,
+            color: subInfo.color
+        };
+    });
 
-    // SVG path 생성
-    let pathD = '';
-    let areaD = '';
-    if (points.length === 1) {
-        pathD = `M ${points[0].x - 24} ${points[0].y} L ${points[0].x + 24} ${points[0].y}`;
-    } else {
-        pathD = `M ${points[0].x} ${points[0].y}`;
-        for (let i = 1; i < points.length; i++) {
-            pathD += ` L ${points[i].x} ${points[i].y}`;
+    // 과목별 점 포인트 그룹화
+    const pointsBySubject = new Map();
+    examPoints.forEach(pt => {
+        if (!pointsBySubject.has(pt.subjectId)) {
+            pointsBySubject.set(pt.subjectId, []);
         }
-        const bottomY = padTop + chartH;
-        areaD = `${pathD} L ${points[points.length - 1].x} ${bottomY} L ${points[0].x} ${bottomY} Z`;
-    }
+        pointsBySubject.get(pt.subjectId).push(pt);
+    });
 
+    // 그리드 가이드라인 Y 위치
     const yGrid100 = getY(100);
     const yGrid75 = getY(75);
     const yGrid50 = getY(50);
     const yGrid0 = getY(0);
 
+    // 단일 과목일 때 은은한 그라데이션 배경 영역 채우기
+    let singleAreaDef = '';
+    let singleAreaPath = '';
+    if (isSingleSubject && sorted.length >= 2) {
+        const primaryColor = uniqueSubjects[0].color || '#2563eb';
+        singleAreaDef = `
+            <linearGradient id="scoreAreaGradSingle" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.2" />
+                <stop offset="100%" stop-color="${primaryColor}" stop-opacity="0.0" />
+            </linearGradient>
+        `;
+        let areaD = `M ${examPoints[0].x} ${examPoints[0].y}`;
+        for (let i = 1; i < examPoints.length; i++) {
+            areaD += ` L ${examPoints[i].x} ${examPoints[i].y}`;
+        }
+        const bottomY = padTop + chartH;
+        areaD += ` L ${examPoints[examPoints.length - 1].x} ${bottomY} L ${examPoints[0].x} ${bottomY} Z`;
+        singleAreaPath = `<path d="${areaD}" fill="url(#scoreAreaGradSingle)"/>`;
+    }
+
+    // 과목별 선 그래프 경로 생성
+    let linesHtml = '';
+    pointsBySubject.forEach((pts, subId) => {
+        const subColor = pts[0].color || '#2563eb';
+        if (pts.length >= 2) {
+            let lineD = `M ${pts[0].x} ${pts[0].y}`;
+            for (let i = 1; i < pts.length; i++) {
+                lineD += ` L ${pts[i].x} ${pts[i].y}`;
+            }
+            linesHtml += `<path d="${lineD}" fill="none" stroke="${subColor}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+        } else if (pts.length === 1 && !isSingleSubject) {
+            // 단일 시험인 과목은 선 대신 은은한 원형 표시
+            linesHtml += `<circle cx="${pts[0].x}" cy="${pts[0].y}" r="9" fill="none" stroke="${subColor}" stroke-width="1.2" stroke-dasharray="2,2" opacity="0.6" />`;
+        }
+    });
+
     const svgHtml = `
         <svg class="score-chart-svg" viewBox="0 0 ${svgWidth} ${svgHeight}">
             <defs>
-                <linearGradient id="scoreAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.28" />
-                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
-                </linearGradient>
-                <linearGradient id="scoreLineGrad" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stop-color="#3b82f6" />
-                    <stop offset="100%" stop-color="#2563eb" />
-                </linearGradient>
+                ${singleAreaDef}
             </defs>
 
             <!-- Y축 그리드 가이드라인 및 라벨 -->
             <line x1="${padLeft}" y1="${yGrid100}" x2="${svgWidth - padRight}" y2="${yGrid100}" stroke="var(--border-color)" stroke-dasharray="3,3" opacity="0.6"/>
-            <text x="${padLeft - 6}" y="${yGrid100 + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end" font-weight="600">100</text>
+            <text x="${padLeft - 8}" y="${yGrid100 + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end" font-weight="600">100</text>
 
             <line x1="${padLeft}" y1="${yGrid75}" x2="${svgWidth - padRight}" y2="${yGrid75}" stroke="var(--border-color)" stroke-dasharray="3,3" opacity="0.35"/>
-            <text x="${padLeft - 6}" y="${yGrid75 + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end">75</text>
+            <text x="${padLeft - 8}" y="${yGrid75 + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end">75</text>
 
             <line x1="${padLeft}" y1="${yGrid50}" x2="${svgWidth - padRight}" y2="${yGrid50}" stroke="var(--border-color)" stroke-dasharray="3,3" opacity="0.35"/>
-            <text x="${padLeft - 6}" y="${yGrid50 + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end">50</text>
+            <text x="${padLeft - 8}" y="${yGrid50 + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end">50</text>
 
             <line x1="${padLeft}" y1="${yGrid0}" x2="${svgWidth - padRight}" y2="${yGrid0}" stroke="var(--border-color)" opacity="0.8"/>
-            <text x="${padLeft - 6}" y="${yGrid0 + 3}" font-size="10" fill="var(--text-muted)" text-anchor="end">0</text>
+            <text x="${padLeft - 8}" y="${yGrid0 + 3}" font-size="10" fill="var(--text-muted)" text-anchor="end">0</text>
 
-            <!-- 영역 채우기 -->
-            ${areaD ? `<path d="${areaD}" fill="url(#scoreAreaGrad)"/>` : ''}
+            <!-- 단일 과목 배경 영역 채우기 -->
+            ${singleAreaPath}
 
-            <!-- 선 그래프 -->
-            <path d="${pathD}" fill="none" stroke="url(#scoreLineGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- 과목별 선 그래프 -->
+            ${linesHtml}
 
-            <!-- 점 및 텍스트 라벨 -->
-            ${points.map(pt => `
+            <!-- 데이터 포인트 및 날짜 라벨 -->
+            ${examPoints.map(pt => `
                 <g class="chart-point-group">
-                    <circle cx="${pt.x}" cy="${pt.y}" r="5.5" fill="#ffffff" stroke="#2563eb" stroke-width="2.5" />
-                    <text x="${pt.x}" y="${pt.y - 9}" font-size="11" font-weight="800" fill="#1d4ed8" text-anchor="middle">${pt.score}점</text>
-                    <text x="${pt.x}" y="${padTop + chartH + 18}" font-size="10" font-weight="600" fill="var(--text-muted)" text-anchor="middle">${escapeHtml(pt.date || pt.title.substring(0, 5))}</text>
+                    <circle cx="${pt.x}" cy="${pt.y}" r="5.2" fill="#ffffff" stroke="${pt.color}" stroke-width="2.6" />
+                    <text x="${pt.x}" y="${pt.y - 9}" font-size="11" font-weight="800" fill="${pt.color}" text-anchor="middle">${pt.score}점</text>
+                    <text x="${pt.x}" y="${padTop + chartH + 18}" font-size="10.5" font-weight="600" fill="var(--text-secondary)" text-anchor="middle">${escapeHtml(pt.date)}</text>
                 </g>
             `).join('')}
         </svg>
     `;
 
-    container.innerHTML = svgHtml;
+    // 왼쪽 아래 과목 범례 HTML (색상 점 + 과목명)
+    let legendHtml = '';
+    if (uniqueSubjects.length > 0) {
+        legendHtml = `
+            <div class="chart-legend-row">
+                <div class="chart-legend-list">
+                    ${uniqueSubjects.map(sub => `
+                        <div class="chart-legend-badge">
+                            <span class="legend-color-dot" style="background-color: ${sub.color};"></span>
+                            <span class="legend-text">${escapeHtml(sub.name)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = svgHtml + legendHtml;
 }
 
 // ==========================================
