@@ -30,7 +30,7 @@ export default async function handler(req, res) {
         });
 
         // 학생에게 알림 발송
-        const notifTitle = '오늘의 과외 일지(피드백)가 도착했습니다 📝';
+        const notifTitle = '[과외 일지] 오늘의 수업 피드백이 등록되었습니다.';
         const notifBody = feedback_text.length > 40 ? feedback_text.substring(0, 40) + '...' : feedback_text;
         const notifLink = '#feedback';
 

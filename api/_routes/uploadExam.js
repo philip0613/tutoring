@@ -55,8 +55,8 @@ export default async function handler(req, res) {
         });
 
         // 학생에게 알림 발송
-        const notifTitle = '새로운 시험 성적이 등록되었습니다 📊';
-        const notifBody = `${targetTitle}: ${score}점`;
+        const notifTitle = '[성적 등록] 새로운 시험 결과가 등록되었습니다.';
+        const notifBody = `${targetTitle} (${score}점)`;
         const notifLink = '#exam';
 
         await supabaseAdminFetch('/rest/v1/notifications', {

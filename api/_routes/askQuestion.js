@@ -110,7 +110,7 @@ export default async function handler(req, res) {
         }
 
         if (teacherId) {
-            const notifTitle = `새 질문 도착 🙋‍♂️ (${auth.name} 학생)`;
+            const notifTitle = `[새 질문] ${auth.name} 학생의 질문이 등록되었습니다.`;
             const notifBody = targetText.length > 40 ? targetText.substring(0, 40) + '...' : targetText;
             const notifLink = `#question-${inserted[0]?.id || ''}`;
 

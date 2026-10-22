@@ -93,7 +93,7 @@ export default async function handler(req, res) {
                 const dateObj = new Date(start_time);
                 const dateText = `${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일 ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-                const notifTitle = '📅 새로운 수업 일정이 등록되었습니다!';
+                const notifTitle = '[수업 일정] 새로운 수업 일정이 등록되었습니다.';
                 const notifBody = `[${subjectName}] ${title.trim()} (${dateText})`;
                 const notifLink = '#studentCalendarTab';
 

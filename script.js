@@ -398,9 +398,40 @@ let knownUnreadIds = new Set();
 let notificationPollTimer = null;
 let isFirstNotificationLoad = true;
 
+// 알림 텍스트 정제 함수 (인위적인 AI 이모지 및 부자연스러운 문구를 깔끔하고 전문적인 서비스 알림 양식으로 변환)
+function formatNotificationText(text) {
+    if (!text || typeof text !== 'string') return '';
+    let cleaned = text
+        .replace(/\p{Extended_Pictographic}/gu, '')
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}-\u{2B55}\u{203C}-\u{2049}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{FE0F}]/gu, '')
+        .replace(/!\s*$/, '.')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    // 기존 DB에 저장되어 있던 레거시 문구들도 깔끔한 규격으로 자동 마이그레이션
+    if (cleaned.startsWith('새 질문 도착')) {
+        const m = cleaned.match(/\((.*?)\s*학생\)/);
+        const name = m ? m[1] : '';
+        cleaned = name ? `[새 질문] ${name} 학생의 질문이 등록되었습니다.` : '[새 질문] 새로운 질문이 등록되었습니다.';
+    } else if (cleaned.includes('선생님의 풀이 답변이 등록되었습니다')) {
+        cleaned = '[풀이 완료] 질문하신 문제의 풀이 답변이 등록되었습니다.';
+    } else if (cleaned.includes('오늘의 과외 일지') || cleaned.includes('피드백)가 도착')) {
+        cleaned = '[과외 일지] 오늘의 수업 피드백이 등록되었습니다.';
+    } else if (cleaned.includes('새로운 시험 성적이 등록되었습니다')) {
+        cleaned = '[성적 등록] 새로운 시험 결과가 등록되었습니다.';
+    } else if (cleaned.includes('새로운 수업 일정이 등록되었습니다')) {
+        cleaned = '[수업 일정] 새로운 수업 일정이 등록되었습니다.';
+    }
+
+    return cleaned;
+}
+
 function showToast(title, body) {
     const container = document.getElementById('toastContainer');
     if (!container) return;
+
+    const cleanTitle = formatNotificationText(title);
+    const cleanBody = formatNotificationText(body);
 
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
@@ -410,8 +441,8 @@ function showToast(title, body) {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         </div>
         <div class="toast-body-wrap">
-            <div class="toast-title">${escapeHtml(title)}</div>
-            <div class="toast-desc">${escapeHtml(body)}</div>
+            <div class="toast-title">${escapeHtml(cleanTitle)}</div>
+            <div class="toast-desc">${escapeHtml(cleanBody)}</div>
         </div>
         <button type="button" class="toast-close-btn" aria-label="닫기">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -535,16 +566,20 @@ async function loadNotifications() {
             return;
         }
 
-        const itemsHtml = list.map(item => `
+        const itemsHtml = list.map(item => {
+            const displayTitle = formatNotificationText(item.title);
+            const displayBody = formatNotificationText(item.body);
+            return `
             <div class="notification-item unread" style="display:flex; justify-content:space-between; align-items:flex-start; padding: 12px 14px; margin-bottom: 8px; border-radius: var(--radius-sm); background: var(--bg-surface); border: 1px solid var(--border-color); box-shadow: var(--shadow-xs);">
                 <div style="flex: 1; cursor: pointer;" onclick="handleNotificationClick(${item.id}, '${escapeHtml(item.link || '')}')">
-                    <div style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${escapeHtml(item.title)}</div>
-                    <div style="color: var(--text-secondary); font-size: 0.84rem; margin-top: 3px; line-height: 1.4;">${escapeHtml(item.body)}</div>
+                    <div style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${escapeHtml(displayTitle)}</div>
+                    <div style="color: var(--text-secondary); font-size: 0.84rem; margin-top: 3px; line-height: 1.4;">${escapeHtml(displayBody)}</div>
                     <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 5px;">${new Date(item.created_at).toLocaleString()}</div>
                 </div>
                 <button class="danger-link-btn" style="padding: 3px 8px; font-size: 0.9rem; line-height: 1; margin-left: 8px;" onclick="handleNotificationClick(${item.id})" title="알림 확인 및 삭제">✕</button>
             </div>
-        `).join('');
+            `;
+        }).join('');
 
         container.innerHTML = itemsHtml;
         if (modalContainer) modalContainer.innerHTML = itemsHtml;

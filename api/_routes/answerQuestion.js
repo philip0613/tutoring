@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
         // 학생에게 알림 발송
         if (originalQuestion && originalQuestion.student_id) {
-            const notifTitle = '선생님의 풀이 답변이 등록되었습니다! 💡';
+            const notifTitle = '[풀이 완료] 질문하신 문제의 풀이 답변이 등록되었습니다.';
             const notifBody = targetText.length > 40 ? targetText.substring(0, 40) + '...' : targetText;
             const notifLink = `#question-${targetId}`;
 

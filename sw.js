@@ -18,8 +18,20 @@ self.addEventListener('push', function(event) {
         }
     }
 
+    let title = (data.title || '과외노트 알림')
+        .replace(/\p{Extended_Pictographic}/gu, '')
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}-\u{2B55}\u{203C}-\u{2049}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{FE0F}]/gu, '')
+        .replace(/!\s*$/, '.')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    let body = (data.body || '새로운 알림이 도착했습니다.')
+        .replace(/\p{Extended_Pictographic}/gu, '')
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}-\u{2B55}\u{203C}-\u{2049}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{FE0F}]/gu, '')
+        .trim();
+
     const options = {
-        body: data.body,
+        body: body,
         icon: '/icon.svg',
         badge: '/icon.svg',
         vibrate: [100, 50, 100],
@@ -29,7 +41,7 @@ self.addEventListener('push', function(event) {
     };
 
     event.waitUntil(
-        self.registration.showNotification(data.title, options)
+        self.registration.showNotification(title, options)
     );
 });
 
