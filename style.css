@@ -1244,6 +1244,231 @@ input[type="file"] {
 }
 
 /* =========================================
+   11-1. 학생 컴팩트 시험 결과 & 아코디언 피드백
+   ========================================= */
+
+/* 1. 컴팩트 시험 결과 리스트 */
+.compact-exam-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.exam-compact-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.exam-compact-row.has-photo {
+    cursor: pointer;
+}
+
+.exam-compact-row.has-photo:hover {
+    background: var(--bg-subtle);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.exam-compact-row:active {
+    transform: scale(0.99);
+}
+
+.exam-compact-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.exam-compact-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.exam-compact-date {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.exam-compact-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+.exam-photo-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    transition: background 0.15s ease;
+}
+
+.exam-compact-row:hover .exam-photo-chip {
+    background: rgba(16, 185, 129, 0.2);
+}
+
+/* 2. 아코디언 피드백 (과외 일지) */
+.feedback-accordion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.feedback-accordion-item {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feedback-accordion-item.expanded {
+    border-color: rgba(16, 185, 129, 0.45);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.feedback-accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 15px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    background: var(--bg-surface);
+    transition: background 0.15s ease;
+}
+
+.feedback-accordion-header:hover {
+    background: var(--bg-subtle);
+}
+
+.feedback-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.feedback-header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.feedback-accordion-title {
+    font-size: 0.94rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.35;
+}
+
+.feedback-accordion-date {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+}
+
+.feedback-header-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    color: var(--text-muted);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease, background 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 10px;
+}
+
+.feedback-accordion-item:hover .feedback-header-arrow {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+}
+
+.feedback-accordion-item.expanded .feedback-header-arrow {
+    transform: rotate(180deg);
+    color: var(--primary);
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.feedback-accordion-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feedback-accordion-item.expanded .feedback-accordion-content {
+    grid-template-rows: 1fr;
+}
+
+.feedback-accordion-body {
+    overflow: hidden;
+}
+
+.feedback-accordion-inner {
+    padding: 12px 15px 15px 15px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-surface);
+}
+
+.feedback-text-view {
+    font-size: 0.91rem;
+    color: var(--text-primary);
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--bg-subtle);
+    padding: 12px 14px;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border-color);
+}
+
+@media (max-width: 480px) {
+    .exam-compact-row {
+        padding: 10px 12px;
+    }
+    .exam-compact-title {
+        font-size: 0.88rem;
+    }
+    .exam-photo-chip span {
+        display: none;
+    }
+    .exam-photo-chip {
+        padding: 4px 6px;
+    }
+    .feedback-accordion-header {
+        padding: 12px 13px;
+    }
+    .feedback-accordion-title {
+        font-size: 0.9rem;
+    }
+}
+
+/* =========================================
    11. 수업 캘린더
    ========================================= */
 .calendar-card {

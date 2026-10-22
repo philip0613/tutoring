@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="과외노트">
-    <link rel="stylesheet" href="style.css?v=20261022_0955">
+    <link rel="stylesheet" href="style.css?v=20261022_1018">
 </head>
 <body>
     <!-- 실시간 인앱 토스트 알림 컨테이너 -->
@@ -712,16 +712,24 @@
             <div id="studentReportTab" class="tab-page">
                 <!-- 내 성적표 -->
                 <div class="card">
-                    <h3 class="section-title">나의 시험 결과</h3>
-                    <p class="section-desc">최근 응시한 시험 성적과 시험지 피드백입니다.</p>
-                    <div id="myExamList" class="feed-list scrollable-list mt-12" style="max-height: 290px;"></div>
+                    <div class="section-header-inline">
+                        <div>
+                            <h3 class="section-title">나의 시험 결과</h3>
+                            <p class="section-desc mt-2">시험 항목을 누르면 시험지 원본 사진을 바로 확인할 수 있습니다.</p>
+                        </div>
+                    </div>
+                    <div id="myExamList" class="compact-exam-list mt-12"></div>
                 </div>
 
                 <!-- 과외 일지 -->
                 <div class="card mt-20">
-                    <h3 class="section-title mb-12">선생님의 과외 일지</h3>
-                    <p class="section-desc">선생님이 남겨주신 수업 진도와 코멘트 피드백입니다.</p>
-                    <div id="myFeedbackList" class="feed-list mt-12"></div>
+                    <div class="section-header-inline">
+                        <div>
+                            <h3 class="section-title">선생님의 과외 일지</h3>
+                            <p class="section-desc mt-2">일지 제목을 누르면 상세 수업 진도와 코멘트가 펼쳐집니다.</p>
+                        </div>
+                    </div>
+                    <div id="myFeedbackList" class="feedback-accordion-list mt-12"></div>
                 </div>
             </div>
 
@@ -1262,6 +1270,6 @@
         <div class="lightbox-bottom-hint">화면 아무 곳이나 탭하면 닫힙니다</div>
     </div>
 
-    <script src="script.js?v=20261022_0955"></script>
+    <script src="script.js?v=20261022_1018"></script>
 </body>
 </html>

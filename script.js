@@ -2916,25 +2916,28 @@ async function loadMyExams() {
         }
 
         list.innerHTML = exams.map(e => {
-            const subjectBadge = e.subjects ? `<span class="badge" style="background:${e.subjects.color}15; color:${e.subjects.color}; border: 1px solid ${e.subjects.color}35;">${escapeHtml(e.subjects.name)}</span>` : '';
+            const subjectBadge = e.subjects ? `<span class="badge" style="background:${e.subjects.color}15; color:${e.subjects.color}; border: 1px solid ${e.subjects.color}35; font-size:0.75rem;">${escapeHtml(e.subjects.name)}</span>` : '';
+            const hasPhoto = Boolean(e.paper_image_url);
+            const dateStr = e.exam_date || (e.created_at ? formatDateShort(e.created_at) : '');
+
             return `
-                <div class="feed-card" style="padding:14px; margin-bottom:10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            ${subjectBadge}
-                            <span style="font-weight:600; font-size:0.95rem;">${escapeHtml(e.exam_title)}</span>
-                        </div>
-                        <span class="badge badge-score">${e.score}점</span>
+                <div class="exam-compact-row ${hasPhoto ? 'has-photo' : ''}" 
+                     ${hasPhoto ? `onclick="openImageLightbox('${escapeHtml(e.paper_image_url)}', '${escapeHtml(e.exam_title)} 시험지')"` : ''}
+                     title="${hasPhoto ? '탭하여 시험지 원본 사진 확인' : ''}">
+                    <div class="exam-compact-left">
+                        ${subjectBadge}
+                        <span class="exam-compact-title">${escapeHtml(e.exam_title)}</span>
+                        ${dateStr ? `<span class="exam-compact-date">${dateStr}</span>` : ''}
                     </div>
-                    ${e.paper_image_url ? `
-                        <div class="image-preview-wrapper" style="margin-top:8px;" onclick="openImageLightbox('${escapeHtml(e.paper_image_url)}', '${escapeHtml(e.exam_title)} 시험지')" title="시험지 원본 사진 보기">
-                            <img src="${e.paper_image_url}" alt="시험지 사진" loading="lazy">
-                            <div class="image-zoom-overlay">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                                <span>탭하여 확대</span>
-                            </div>
-                        </div>
-                    ` : ''}
+                    <div class="exam-compact-right">
+                        <span class="badge badge-score">${e.score}점</span>
+                        ${hasPhoto ? `
+                            <span class="exam-photo-chip">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                <span>사진</span>
+                            </span>
+                        ` : ''}
+                    </div>
                 </div>
             `;
         }).join('');
@@ -3152,17 +3155,31 @@ async function loadMyFeedbacks() {
         }
 
         list.innerHTML = feedbacks.map(f => {
-            const subjectBadge = f.subjects ? `<span class="badge" style="background:${f.subjects.color}15; color:${f.subjects.color}; border: 1px solid ${f.subjects.color}35;">${escapeHtml(f.subjects.name)}</span>` : '';
+            const subjectBadge = f.subjects ? `<span class="badge" style="background:${f.subjects.color}15; color:${f.subjects.color}; border: 1px solid ${f.subjects.color}35; font-size:0.75rem;">${escapeHtml(f.subjects.name)}</span>` : '';
+            const dateStr = f.created_at ? new Date(f.created_at).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+            const titleStr = f.feedback_title || '과외 일지';
+
             return `
-                <div class="feed-card">
-                    <div class="feed-header">
-                        ${subjectBadge}
-                        <span style="font-size:0.78rem; color:var(--text-muted);">${new Date(f.created_at).toLocaleDateString()}</span>
+                <div class="feedback-accordion-item" id="feedbackItem-${f.id}">
+                    <div class="feedback-accordion-header" onclick="toggleFeedbackAccordion(${f.id})">
+                        <div class="feedback-header-left">
+                            <div class="feedback-header-title-row">
+                                ${subjectBadge}
+                                <span class="feedback-accordion-title">${escapeHtml(titleStr)}</span>
+                            </div>
+                            ${dateStr ? `<span class="feedback-accordion-date">${dateStr}</span>` : ''}
+                        </div>
+                        <div class="feedback-header-arrow" title="일지 상세 펼치기/접기">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
                     </div>
-                    <div style="font-size:1.02rem; font-weight:700; color:var(--text-primary); margin-bottom: 6px;">
-                        ${escapeHtml(f.feedback_title || '과외 일지')}
+                    <div class="feedback-accordion-content">
+                        <div class="feedback-accordion-body">
+                            <div class="feedback-accordion-inner">
+                                <div class="feedback-text-view">${escapeHtml(f.feedback_text)}</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="feedback-box-content">${escapeHtml(f.feedback_text)}</div>
                 </div>
             `;
         }).join('');
@@ -3171,6 +3188,12 @@ async function loadMyFeedbacks() {
         list.innerHTML = '<div style="text-align:center; color:var(--danger); padding:30px 0;">피드백을 불러오지 못했습니다.</div>';
     }
 }
+
+window.toggleFeedbackAccordion = function(id) {
+    const item = document.getElementById(`feedbackItem-${id}`);
+    if (!item) return;
+    item.classList.toggle('expanded');
+};
 
 async function handleAskQuestion() {
     const text = document.getElementById('questionText').value.trim();
